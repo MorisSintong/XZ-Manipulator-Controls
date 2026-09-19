@@ -1,0 +1,112 @@
+﻿# ============================================================
+#  .gitignore - Proyek TA Machine Vision Kapasitor
+#  Husein Alhamid (4212301035)
+# ============================================================
+
+# ------------------------------------------------------------
+# Model Weights (terlalu besar, simpan di GitHub Release)
+# ------------------------------------------------------------
+*.pt
+*.pth
+*.onnx
+*.engine
+*.tflite
+03_Models/
+
+# ------------------------------------------------------------
+# Dataset Images (ribuan citra, berat)
+#     Labels (.txt) tetap ditrack, images dikecualikan
+# ------------------------------------------------------------
+02_Dataset/**/images/
+
+# ------------------------------------------------------------
+# File Video & Audio
+# ------------------------------------------------------------
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wmv
+*.flv
+
+# ------------------------------------------------------------
+# Dokumen Privat Tugas Akhir
+# ------------------------------------------------------------
+01_Dokumen_TA/
+TA_2026_extracted.txt
+
+# ------------------------------------------------------------
+# Hasil Pengujian Berat (gambar beranotasi batch)
+# ------------------------------------------------------------
+05_Hasil_Pengujian/offline_batch_results/annotated_images/
+05_Hasil_Pengujian/frame_read_test/
+05_Hasil_Pengujian/video_test_results/
+05_Hasil_Pengujian/sample_images_results/
+
+# ------------------------------------------------------------
+# Python Cache & Environment
+# ------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+
+# Virtual Environment
+venv/
+env/
+.env
+.venv
+ENV/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# ------------------------------------------------------------
+# File Output Sementara
+# ------------------------------------------------------------
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Output training YOLO
+runs/
+
+# ------------------------------------------------------------
+# OS & IDE
+# ------------------------------------------------------------
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm / JetBrains
+.idea/
+*.iml
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ------------------------------------------------------------
+# Credential & Config Sensitif
+# ------------------------------------------------------------
+.env
+*.key
+secrets.yaml
+config_local.py
