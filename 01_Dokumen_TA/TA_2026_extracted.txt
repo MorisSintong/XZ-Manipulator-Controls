@@ -1,0 +1,4397 @@
+
+=== Halaman 1 ===
+ 
+ 
+ 
+i 
+ 
+wh 
+ 
+ 
+ 
+  
+  
+  
+Integrasi Computer Vision dan Sistem Sortasi 
+Konveyor untuk Pengendalian Kualitas (Quality 
+Control) Komponen Kapasitor Berdasarkan Polaritas  
+  
+  
+  
+  
+  
+Proposal Tugas Akhir 
+  
+  
+  
+Oleh: 
+Husein Alhamid (4212301035) 
+Moris Sintong HL (4212301036) 
+Audi Aulia Ikhsan (4212301058) 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+=== Halaman 2 ===
+ 
+ 
+ 
+1 
+ 
+Lembar Pengesahan 
+ 
+Proposal Tugas Akhir disusun untuk digunakan sebagai rencana kerja pada 
+pelaksanaan Tugas Akhir 
+ 
+ 
+ 
+Disusun oleh:  
+Husein Alhamid (4212301035)  
+Moris Sintong HL (4212301036) 
+Audi Aulia Ikhsan (4212301058)  
+ 
+Tanggal Seminar: 07 Juli 2026 
+ 
+Disetujui oleh: 
+ 
+ 
+ 
+ 
+ 
+1. Ir Daniel Sutopo Pamungkas S.T.,M.T., Ph.D 
+ NIK: 197511282012121002 
+ 
+ 
+ 
+ 
+ 
+1. Diono, S.Tr. T., M.Sc 
+ NIK: 120243 
+ 
+ 
+ 
+ 
+ 
+2. Dr. Ir Budi Sugandi S.T., M.Eng 
+ NIK: 197303212021211005 
+ 
+ 
+ 
+ 
+ 
+2. Adlian Jefiza, S.Pd., M.T. 
+ NIK: 199112022019031016 
+ 
+ 
+
+=== Halaman 3 ===
+ 
+ 
+ 
+2 
+ 
+Integrasi Computer vision dan Sistem Sortasi Konveyor 
+untuk Pengendalian Kualitas (Quality control) Komponen 
+Kapasitor Berdasarkan Polaritas 
+ 
+Abstrak 
+Perkembangan teknologi otomasi industri menuntut adanya sistem 
+pengendalian kualitas (quality control) yang lebih cepat, akurat, dan konsisten. 
+Pada industri elektronika, proses inspeksi komponen seperti kapasitor masih 
+banyak dilakukan secara manual, sehingga berpotensi menimbulkan kesalahan 
+akibat faktor manusia serta kurang mampu memenuhi kebutuhan proses produksi 
+secara real-time. Selain itu, sebagian sistem inspeksi otomatis yang telah 
+dikembangkan umumnya hanya berfokus pada deteksi dan klasifikasi objek, tanpa 
+dilengkapi dengan mekanisme koreksi posisi atau orientasi komponen. Oleh 
+karena itu, penelitian ini bertujuan untuk merancang dan mengimplementasikan 
+sistem pengendalian kualitas berbasis computer vision menggunakan metode 
+YOLO26 yang terintegrasi dengan sistem konveyor dan Cartesian manipulator 2-
+axis (XZ) untuk mendeteksi serta memperbaiki orientasi kapasitor secara 
+otomatis. 
+Metode yang digunakan meliputi pengumpulan dataset kapasitor polar dan 
+non-polar, pelabelan data, pelatihan model YOLO26, serta integrasi sistem dengan 
+konveyor dan mikrokontroler. Sistem dirancang menggunakan diagram alir 
+(flowchart) yang menggambarkan proses mulai dari deteksi objek, pemeriksaan 
+orientasi, perbaikan posisi menggunakan Cartesian manipulator 2-axis (XZ), 
+hingga proses sortasi ke jig. Pengujian dilakukan untuk mengevaluasi akurasi 
+deteksi, waktu respons sistem, serta keberhasilan proses sortasi. 
+Hasil yang diharapkan dari penelitian ini adalah sistem yang mampu 
+mendeteksi kapasitor secara real-time dengan tingkat akurasi tinggi, melakukan 
+koreksi posisi secara otomatis, serta meningkatkan efisiensi dan konsistensi dalam 
+proses quality controlpada industri elektronika. 
+ 
+ 
+ 
+ 
+Kata kunci: computer vision, YOLO26, kapasitor, konveyor, quality control 
+
+=== Halaman 4 ===
+ 
+ 
+ 
+3 
+ 
+Integration of Computer vision and Conveyor Sorting 
+Systems for Quality controlof Capacitor Components Based 
+on Polarity  
+ 
+ 
+Abstract 
+The advancement of industrial automation technology demands a quality 
+controlsystem that is faster, more accurate, and consistent. In the electronics 
+industry, the inspection process of components such as capacitors is still often 
+performed manually, leading to potential human errors and limitations in real-
+time processing. Furthermore, most existing automated inspection systems mainly 
+focus on object detection and classification without incorporating mechanisms for 
+correcting object orientation. Therefore, this study aims to design and implement 
+a computer vision-based quality controlsystem using the YOLO26 method 
+integrated with a conveyor system and T-style Cartesian manipulator (XZ) to 
+automatically detect and correct capacitor orientation. 
+The proposed method includes dataset collection of polar and non-polar 
+capacitors, data labeling, YOLO26 model training, and system integration with 
+conveyor and microcontroller. The system is designed using a flowchart that 
+describes the process from object detection, orientation checking, position 
+correction using a Cartesian manipulator, to the sorting process into a jig. System 
+testing is conducted to evaluate detection accuracy, response time, and sorting 
+performance. 
+The expected result of this study is a system capable of real-time capacitor 
+detection with high accuracy, automatic position correction, and improved 
+efficiency and consistency in quality controlprocesses in the electronics 
+manufacturing industry. 
+ 
+ 
+Keywords: computer vision, YOLO26, capacitor, conveyor, quality control 
+ 
+ 
+
+=== Halaman 5 ===
+ 
+ 
+ 
+4 
+ 
+Daftar Isi 
+ 
+Lembar Pengesahan................................................................................................. 1 
+Abstrak ..................................................................................................................... 2 
+Abstract ................................................................................................................... 3 
+Daftar Isi .................................................................................................................. 4 
+Daftar Gambar ......................................................................................................... 8 
+Daftar Tabel ............................................................................................................. 9 
+Bab 1. Pendahuluan ............................................................................................... 10 
+1.1. Latar Belakang ..................................................................................... 10 
+1.2. Rumusan Masalah................................................................................ 12 
+1.3. Tujuan .................................................................................................. 12 
+1.4. Manfaat ............................................................................................... 13 
+1.5. Batasan ................................................................................................ 13 
+1.6. Work Breakdown Structure .................................................................. 14 
+Bab 2. Tinjauan Pustaka ......................................................................................... 15 
+2.1 Kapasitor Polar ...................................................................................... 15 
+2.2 Computer vision dalam Inspeksi Industri .............................................. 15 
+2.3 YOLO (You Only Look Once) .................................................................. 16 
+2.3.1 YOLO26 ......................................................................................... 16 
+2.3.2 Strategi meningkatkan Akurasi YOLO26........................................ 18 
+2.4 Sistem Konveyor ................................................................................... 19 
+2.5 STM32F446RE ....................................................................................... 19 
+2.6 DMA (Direct Memory Access) ............................................................... 20 
+2.7 RTOS (Real-time Operating System) ..................................................... 21 
+2.8 Programmable Logic Controller OMRON CP2E-N ................................. 22 
+2.9 Encoder Magnet AS5600 ...................................................................... 23 
+2.10 Universal Asynchronous Receiver Transmitter (UART), Framing, dan 
+Parsing Data ...................................................................................................... 23 
+
+=== Halaman 6 ===
+ 
+ 
+ 
+5 
+ 
+2.11 Protokol Komunikasi Modbus TCP/IP ................................................. 24 
+2.12 Driver Motor Stepper TMC2240 ......................................................... 24 
+2.13 Cartesian Manipulator ........................................................................ 25 
+2.14 Standar Industri .................................................................................. 25 
+2.14.1 Standar Mekanis ......................................................................... 25 
+2.14.2 Standar Keselamatan .................................................................. 26 
+2.14.3 Standar Motor dan Aktuator ....................................................... 26 
+2.14.4 Standar Elektronik dan Assembly................................................ 27 
+2.15 Studi Literatur dan Analisis Penelitian terdahulu................................ 27 
+2.16 Analisis Gap Penelitian ........................................................................ 32 
+Bab 3. Metodologi Penelitian ................................................................................ 33 
+3.1 Perancangan Penelitian ........................................................................ 33 
+3.1.1 Studi Literatur ............................................................................... 33 
+3.1.2 Perancangan dan Pembangunan Sistem ....................................... 34 
+3.1.3 Pelatihan Model ............................................................................ 36 
+3.1.4 Pengujian dan Evaluasi.................................................................. 36 
+3.1.5 Integrasi Sistem ............................................................................. 37 
+3.1.6 Analisis Data, Pembahasan, dan Kesimpulan ................................ 37 
+3.2 Perancangan Akuisisi dan Pengelolaan Dataset ................................... 38 
+3.2.1 Perencanaan Dataset .................................................................... 39 
+3.2.2 Konfigurasi Kamera dan Area Akuisisi Dataset ............................. 39 
+3.2.3 Matriks Variasi dan Distribusi Dataset .......................................... 40 
+3.2.4 Prosedur Pengambilan Dataset .................................................... 42 
+3.2.5 Ekstraksi Frame dan Pengendalian Duplikasi Data........................ 42 
+3.2.6 Kriteria dan Prosedur Seleksi Kelayakan Data Citra ...................... 43 
+3.2.7 Penamaan File dan Metadata Dataset .......................................... 46 
+3.2.8 Anotasi dan Validasi Anotasi ......................................................... 46 
+3.2.9 Pembagian Dataset dan Pencegahan Data Leakage ..................... 47 
+3.2.10 Pengendalian Versi dan Penyimpanan Dataset .......................... 48 
+
+=== Halaman 7 ===
+ 
+ 
+ 
+6 
+ 
+3.2.11 Ketertelusuran dan Rekapitulasi Data ......................................... 48 
+3.2.12 Perancangan Test Case ............................................................... 49 
+3.2.13 Perancangan Dataset Uji Generalisasi ........................................ 49 
+3.3 Sistem Deteksi menggunakan YOLO26 ................................................. 49 
+3.3.1 Akuisisi Citra .................................................................................. 50 
+3.3.2 YOLO26 Inference ......................................................................... 50 
+3.3.3 Threshold Filter ............................................................................. 50 
+3.3.4 Non-Maximum Suppression Free (NMS) ...................................... 50 
+3.3.5 Post-processing & Visualisasi ........................................................ 50 
+3.3.6 Simpan Output .............................................................................. 51 
+3.4 Pengujian Machine Vision ..................................................................... 51 
+3.4.1 Confussion Matrix ......................................................................... 51 
+3.4.2 Perhitungan Metrix Evaluasi ......................................................... 51 
+3.4.3 Hasil Pengujian YOLO26 ................................................................ 53 
+3.5 Perancangan Elektrikal dan Mekanikal ................................................. 55 
+3.5.1 Perancangan Elektrikal .................................................................. 55 
+3.5.2 Perancangan Mekanikal ................................................................ 59 
+3.6 Perancangan Sistem Pergerakan Manipulator XZ ................................. 66 
+3.6.1 Akuisisi Citra dan Deteksi Objek .................................................... 66 
+3.6.2 Pemrosesan Data dan Perencanaan Jalur ..................................... 67 
+3.6.3 Pergerakan Manipulator ke Posisi Target ..................................... 68 
+3.6.4 Pengambilan dan Reorientasi Kapasitor ....................................... 69 
+3.7 Pengujian Elektrikal dan Mekanikal ...................................................... 69 
+3.7.1 Pengujian Akurasi dan Repeatability (ISO 9283) ........................... 69 
+3.7.2 Pengujian Kegagalan Daya (ISO 10218)......................................... 70 
+3.7.3 Pengujian Sensorless Homing (TMC2240) ..................................... 70 
+3.7.4 Pengujian Getaran Transien .......................................................... 71 
+3.8 Pengujian Akusisi dataset dan Sistem Terintergrasi ............................. 71 
+
+=== Halaman 8 ===
+ 
+ 
+ 
+7 
+ 
+3.8.1 Metode dan Skenario Pengujian ................................................... 71 
+3.8.2 Pengujian Kelayakan Hasil Akuisisi Dataset .................................. 72 
+3.8.3 Pengujian Kelengkapan Metadata dan Penamaan File ................. 73 
+3.8.4 Pengujian Pembagian Dataset dan Pencegahan Data Leakage .... 74 
+3.8.5 Pengujian Komunikasi Data Antarperangkat ................................ 75 
+3.8.6 Pengujian Alur Sistem Terintegrasi ............................................... 76 
+3.8.7 Pengujian Waktu Siklus Sistem ..................................................... 76 
+3.8.8 Analisis kegagalan dan pengujian Ulang ....................................... 77 
+Bab 4. Jadwal Pelaksanaan .................................................................................... 78 
+Daftar Pustaka ....................................................................................................... 79 
+Lampiran ................................................................................................................ 82 
+ 
+ 
+ 
+
+=== Halaman 9 ===
+ 
+ 
+ 
+8 
+ 
+Daftar Gambar 
+Gambar 2. 1 Kapasitor Elco .................................................................................... 15 
+Gambar 2. 2 Flowchart Arsitektur YOLO26 ............................................................ 17 
+Gambar 2. 3 Modul Nucleo-STM32F446RE ........................................................... 19 
+Gambar 2. 4 PLC OMRON CP2E-N .......................................................................... 22 
+Gambar 2. 5 Encoder Magnet A5600 ..................................................................... 23 
+Gambar 2. 6 Driver Motor Stepper TMC2240 ........................................................ 24 
+Gambar 3. 1 Flowchart Perancangan Penelitian .................................................... 33 
+Gambar 3. 2 Flowchart Perancangan Sistem ......................................................... 35 
+Gambar 3. 3 Flowchart Pelatihan Model YOLO26 ................................................. 36 
+Gambar 3. 4 Flowchart Perancangan Akuisisi Dataset dan Pengelolaan Dataset . 38 
+Gambar 3. 5 Contoh Variasi Orientasi Kapasitor pada Akuisisi Dataset. (a) 
+Menunjukkan Contoh Orientasi Kapasitor 90°, (b) Menunjukkan Contoh Kapasitor 
+0°, dan (c) Menunjukkan Contoh Kapasitor 60°. .................................................... 40 
+Gambar 3. 6 Flowchart Sistem Deteksi .................................................................. 49 
+Gambar 3. 7 Desain Sistem Keseluruhan ............................................................... 55 
+Gambar 3. 8 Diagram Elektrikal Sistem.................................................................. 55 
+Gambar 3. 9 Render Perancangan Elektrikal Sistem .............................................. 58 
+Gambar 3. 10 Render Perancangan Mekanikal Sistem .......................................... 59 
+Gambar 3. 11 Defleksi Cantilever Profil 2020 ........................................................ 60 
+Gambar 3. 12 Cadangan Torsi Motor NEMA 17 ..................................................... 61 
+Gambar 3. 13 Torsi Lead Screw terhadap Gaya Aksial ........................................... 61 
+Gambar 3. 14 Ekspektasi Encoder vs Jumlah Pulsa Step ........................................ 63 
+Gambar 3. 15 Pemetaan Posisi Sumbu Z dan X ..................................................... 64 
+Gambar 3. 16 Pemetaan Deviasi ke Rotasi Servo .................................................. 65 
+Gambar 3. 17 Akuisisi Citra dan Deteksi Objek ...................................................... 66 
+Gambar 3. 18 Pemrosesan Data dan Perencanaan Jalur ....................................... 67 
+Gambar 3. 19 Pergerakan Manipulator ke Posisi Target ....................................... 68 
+Gambar 3. 20 Proses Reorientasi Kapasitor ........................................................... 69 
+ 
+ 
+ 
+
+=== Halaman 10 ===
+ 
+ 
+ 
+9 
+ 
+Daftar Tabel 
+Tabel 1. 1 Work Breakdown Structure ................................................................... 14 
+Tabel 2. 1 Strategi Meningkatkan Akurasi YOLO26 ................................................ 18 
+Tabel 2. 2 Studi Literatur dan Analisis Penelitian Terdahulu ................................. 27 
+Tabel 3. 1 Variasi Parameter Dataset .................................................................... 41 
+Tabel 3. 2 Karakteristik Layak dan Tidak Layak ...................................................... 45 
+Tabel 3. 3 Hasil Pengujian Akurasi Deteksi ............................................................ 53 
+Tabel 3. 4 Hasil Pengujian mAP dan Akurasi Keseluruhan ..................................... 53 
+Tabel 3. 5 Hasil Pengujian Sistem Real-time pada Konveyor ................................. 53 
+Tabel 3. 6 Confusion Matrix Hasil Pengujian Model YOLO26 ................................. 54 
+Tabel 3. 7 Konfigurasi Pin SPI TMC2240................................................................. 56 
+Tabel 3. 8 Konfigurasi Pin Motor 0 (Sumbu X) ....................................................... 57 
+Tabel 3. 9 Konfigurasi Pin Motor 1 (Sumbu Z) ....................................................... 57 
+Tabel 3. 10 Koneksi Umum Driver TMC2240 ......................................................... 57 
+Tabel 3. 11 Konfigurasi Pin Encoder 1 (I2C1) ......................................................... 57 
+Tabel 3. 12 Konfigurasi Pin Encoder 2 (I2C3) ......................................................... 58 
+Tabel 3. 13 Aspek Pengujian Sistem ...................................................................... 72 
+Tabel 3. 14 Data Akuisisi Dataset ........................................................................... 73 
+Tabel 3. 15 Kelengkapan Metadata ....................................................................... 74 
+Tabel 3. 16 Pengujian Pembagian Dataset ............................................................ 74 
+Tabel 3. 17 Pengujian Komunikasi Data ................................................................. 75 
+Tabel 3. 18 Pengujian Alur Sistem Terintegrasi...................................................... 76 
+Tabel 3. 19 Pengujian Waktu Siklus Sistem ............................................................ 77 
+Tabel 3. 20 Analisis Kegagalan ............................................................................... 77 
+Tabel 4. 1 Jadwal Pelaksanaan ...................................................................... .......78 
+ 
+ 
+
+=== Halaman 11 ===
+ 
+ 
+ 
+10 
+ 
+Pendahuluan 
+1.1. Latar Belakang 
+Perkembangan teknologi otomasi industri pada era Revolusi Industri 4.0 telah 
+memberikan dampak signifikan terhadap peningkatan efisiensi, produktivitas, dan 
+akurasi dalam proses manufaktur. Salah satu aspek krusial yang mendapat 
+perhatian besar adalah pengendalian kualitas (quality control), yang berperan 
+penting dalam memastikan setiap produk yang dihasilkan memenuhi standar yang 
+telah ditetapkan. Menurut Islam et al. [1], transformasi digital dalam sektor 
+manufaktur telah mengalami percepatan signifikan dalam beberapa tahun 
+terakhir, dengan adopsi teknologi kecerdasan buatan dan computer vision yang 
+meningkat secara eksponensial untuk aplikasi pengendalian kualitas [1]. 
+Pada industri manufaktur elektronika, proses pengendalian kualitas 
+komponen memiliki peran yang sangat vital mengingat kompleksitas dan variasi 
+komponen yang dihasilkan. Kapasitor sebagai salah satu komponen elektronika 
+pasif yang paling banyak digunakan, terbagi dalam dua jenis utama yaitu kapasitor 
+polar dan non-polar. Kapasitor polar memiliki polaritas tertentu dengan terminal 
+positif dan negatif yang harus dipasang sesuai orientasi yang benar. Kesalahan 
+orientasi kapasitor polar dapat mengakibatkan kegagalan fungsi pada rangkaian 
+elektronik, bahkan menyebabkan kerusakan permanen pada produk akhir [3]. 
+Proses inspeksi orientasi kapasitor pada banyak industri masih dilakukan 
+secara manual oleh operator manusia. Pendekatan konvensional ini memiliki 
+beberapa keterbatasan yang signifikan, antara lain: (1) hasil inspeksi sangat 
+bergantung pada ketelitian dan kondisi fisik operator, sehingga rentan terhadap 
+human error; (2) konsistensi hasil inspeksi yang bervariasi akibat faktor kelelahan 
+dan kepenatan kerja; (3) kecepatan inspeksi yang tidak mampu mengimbangi laju 
+produksi secara real-time; dan (4) biaya operasional yang tinggi untuk 
+mempertahankan tenaga inspeksi manual dalam jangka panjang, [2], [3]. 
+Berdasarkan studi literatur yang telah dilakukan, kesalahan orientasi dan 
+peletakan komponen elektronik merupakan salah satu jenis defek yang paling 
+umum terjadi pada proses manufaktur elektronika. Hütten et al. [4] melaporkan 
+bahwa dalam inspeksi visual industri, kesalahan orientasi komponen termasuk 
+dalam kategori defek kritis yang memerlukan perhatian khusus karena dapat 
+mengakibatkan kegagalan fungsi produk akhir. Ren et al. [3] juga menegaskan 
+bahwa deteksi kesalahan orientasi merupakan tantangan signifikan dalam sistem 
+Machine Vision, di mana akurasi deteksi sangat bergantung pada kualitas citra dan 
+algoritma yang digunakan. 
+Perkembangan teknologi computer vision dan kecerdasan buatan telah 
+membuka peluang baru untuk mengatasi keterbatasan inspeksi manual. 
+Computer vision merupakan bidang kecerdasan buatan yang memungkinkan 
+
+=== Halaman 12 ===
+ 
+ 
+ 
+11 
+ 
+sistem komputer untuk menganalisis, memproses, dan memperoleh informasi 
+dari citra digital. Dalam konteks inspeksi industri, Ren et al. [3] menunjukkan 
+bahwa sistem Machine Vision mampu mencapai tingkat akurasi deteksi yang 
+superior dibandingkan metode manual, dengan kemampuan bekerja secara 
+kontinyu tanpa dipengaruhi oleh faktor kelelahan manusia. Hütten et al. [4] juga 
+melaporkan bahwa implementasi deep learning dalam inspeksi visual industri 
+telah menunjukkan peningkatan signifikan dalam akurasi dan kecepatan deteksi, 
+[5]. 
+Di antara berbagai metode deep learning yang tersedia, algoritma YOLO (You 
+Only Look Once) telah menjadi salah satu pendekatan yang paling populer untuk 
+deteksi objek real-time. YOLO menggunakan pendekatan single-stage detection 
+yang memungkinkan deteksi dan klasifikasi objek dilakukan secara simultan dalam 
+satu proses forward pass. Ultralytics YOLO26, sebagai generasi terbaru dari 
+keluarga YOLO yang dirilis pada Januari 2026, menawarkan peningkatan signifikan 
+dalam hal akurasi dan efisiensi komputasi, dengan mAP (mean Average Precision) 
+mencapai 40,9–57,5 pada dataset COCO benchmark [6], [7]. 
+Meskipun teknologi computer vision dan YOLO telah banyak digunakan dalam 
+sistem inspeksi industri, berdasarkan hasil studi literatur, sebagian besar 
+penelitian sebelumnya masih berfokus pada tahap deteksi dan klasifikasi objek 
+tanpa dilengkapi dengan mekanisme koreksi atau tindak lanjut terhadap objek 
+yang tidak sesuai. Sistem inspeksi yang telah dikembangkan umumnya hanya 
+mampu mengidentifikasi produk cacat atau tidak sesuai standar, namun belum 
+memiliki kemampuan untuk melakukan koreksi orientasi secara otomatis [4], [6]. 
+Kondisi ini menunjukkan adanya kesenjangan (gap) antara kemampuan sistem 
+deteksi yang sudah ada dengan kebutuhan industri yang sesungguhnya. Dalam 
+praktik manufaktur, identifikasi kesalahan saja tidak cukup; diperlukan sistem 
+yang mampu melakukan tindakan korektif secara otomatis untuk meminimalkan 
+scrap rate dan meningkatkan efisiensi produksi. Oleh karena itu, diperlukan 
+pendekatan baru yang mengintegrasikan teknologi computer vision dengan 
+mekanisme koreksi fisik untuk menciptakan sistem quality control yang lebih 
+komprehensif, [1], [4]. 
+Berdasarkan permasalahan dan kesenjangan yang telah diidentifikasi, 
+penelitian ini mengusulkan perancangan dan implementasi sistem pengendalian 
+kualitas berbasis computer vision yang terintegrasi dengan sistem konveyor dan 
+Cartesian manipulator 2-axis (XZ). Sistem ini menggunakan metode YOLO26 untuk 
+mendeteksi kapasitor polar dan non-polar berdasarkan orientasinya, kemudian 
+melakukan koreksi posisi secara otomatis menggunakan manipulator yang 
+dilengkapi vacuum suction cup dan micro-servo untuk rotasi kapasitor, [1], [6], [8]. 
+Mekanisme kerja sistem dimulai dari proses akuisisi citra oleh kamera yang 
+dipasang di atas konveyor, diikuti oleh inferensi model YOLO26 pada PC untuk 
+mendeteksi posisi dan orientasi kapasitor. Data hasil deteksi kemudian dikirim ke 
+
+=== Halaman 13 ===
+ 
+ 
+ 
+12 
+ 
+mikrokontroler STM32F446RE melalui komunikasi UART, yang selanjutnya 
+mengendalikan 
+pergerakan 
+Cartesian 
+manipulator 
+untuk 
+mengambil, 
+memperbaiki orientasi, dan menempatkan kapasitor pada posisi yang benar. 
+Seluruh proses berlangsung secara real-time dan terintegrasi dengan sistem 
+konveyor yang dikendalikan oleh PLC OMRON CP2E-N [6], [9], [10]. 
+Dengan implementasi sistem ini, diharapkan dapat dicapai beberapa manfaat 
+utama: (1) peningkatan akurasi dan konsistensi proses inspeksi orientasi kapasitor 
+dibandingkan metode manual; (2) reduksi ketergantungan terhadap tenaga 
+inspeksi manusia sehingga meminimalkan human error; (3) kemampuan 
+melakukan koreksi orientasi secara otomatis dan real-time tanpa menghentikan 
+lini produksi; (4) peningkatan efisiensi produksi dan penurunan scrap rate pada 
+manufaktur elektronika; serta (5) kontribusi akademis dalam pengembangan 
+sistem otomasi berbasis computer vision untuk aplikasi quality control di industri 
+Indonesia, [1], [2]. 
+1.2. Rumusan Masalah 
+1. 
+Bagaimana merancang sistem computer vision berbasis metode 
+YOLO26 untuk mendeteksi komponen kapasitor berdasarkan 
+polaritas dan orientasinya? 
+2. 
+Bagaimana mengintegrasikan sistem computer vision dengan sistem 
+konveyor dalam proses pengendalian kualitas (quality control) 
+secara real-time? 
+3. 
+Bagaimana merancang mekanisme koreksi posisi kapasitor secara 
+otomatis menggunakan Cartesian manipulator 2-axis (XZ) tipe T-
+Style dan vacuum suction berdasarkan hasil deteksi sistem? 
+4. 
+Bagaimana tingkat akurasi sistem dalam mendeteksi serta 
+mengklasifikasikan kapasitor berdasarkan polaritas dan orientasi? 
+5. 
+Bagaimana tingkat keberhasilan sistem dalam melakukan proses 
+sortasi dan penempatan kapasitor secara otomatis? 
+1.3. Tujuan 
+1. 
+Merancang dan mengimplementasikan sistem computer vision 
+dengan 
+menggunakan 
+metode 
+YOLO26 
+untuk 
+mendeteksi 
+komponen kapasitor berdasarkan polaritas dan orientasinya. 
+2. 
+Mengembangkan sistem yang terintegrasi antara computer vision 
+dengan sistem konveyor dalam proses pengendalian kualitas 
+(quality control) secara real-time. 
+3. 
+Merancang dan mengimplementasikan mekanisme koreksi posisi 
+kapasitor secara otomatis menggunakan Cartesian manipulator 2-
+
+=== Halaman 14 ===
+ 
+ 
+ 
+13 
+ 
+axis (XZ) tipe T-Style yang dilengkapi vacuum suction berdasarkan 
+hasil deteksi yang telah dilakukan oleh sistem. 
+4. 
+Menganalisis tingkat akurasi sistem dalam mendeteksi dan 
+mengklasifikasikan kapasitor berdasarkan polaritas dan orientasi. 
+5. 
+Mengevaluasi tingkat keberhasilan sistem dalam melakukan proses 
+sortasi dan penempatan kapasitor secara otomatis.  
+ 
+ 
+1.4. Manfaat 
+Manfaat dari penelitian ini yaitu sistem integrasi computer vision dan sistem 
+sortasi konveyor untuk pengendalian kualitas (quality control) komponen 
+kapasitor berdasarkan polaritas dengan metode Yolo26 yang terintegrasi dengan 
+sistem konveyor dan Cartesian manipulator 2-axis (XZ) dengan vacuum suction 
+cup adalah sebagai berikut: 
+1. 
+Membantu meningkatkan efisiensi dan akurasi dalam proses quality 
+control, khususnya pada proses sortasi komponen kapasitor. 
+2. 
+Mengurangi ketergantungan terhadap proses inspeksi manual 
+sehingga dapat meminimalkan kesalahan akibat faktor manusia 
+(human error). 
+3. 
+Memberikan solusi sistem otomatis yang mampu mendeteksi 
+sekaligus dapat melakukan koreksi posisi kapasitor secara real-time. 
+4. 
+Meningkatkan konsistensi hasil inspeksi serta mempercepat proses 
+produksi pada industri manufaktur elektronika. 
+5. 
+Menjadi referensi dalam pengembangan sistem otomasi berbasis 
+computer vision dan deep learning di bidang industri. 
+1.5. Batasan 
+1. 
+Sistem 
+yang 
+dikembangkan 
+hanya 
+mendeteksi 
+dan 
+mengklasifikasikan kapasitor dengan kondisi tertentu sesuai dengan 
+dataset yang digunakan. 
+2. 
+Sistem konveyor yang digunakan merupakan skala prototipe 
+(miniatur), bukan skala industri. 
+3. 
+Mekanisme reorientasi (rotasi) posisi kapasitor menggunakan 
+aktuator mikro-servo sederhana bekerja secara open-loop, terpisah 
+dari sistem Manipulator XZ yang menggunakan kontrol closed-loop. 
+4. 
+Pada penelitian ini tidak membahas perbandingan performa 
+antarmodel deteksi lainnya. 
+5. 
+Sistem ini hanya akan bekerja dengan baik ketika cahaya pada 
+ruangan terkontrol dengan baik. 
+
+=== Halaman 15 ===
+ 
+ 
+ 
+14 
+ 
+1.6. Work Breakdown Structure  
+Tabel 1. 1 Work Breakdown Structure 
+No 
+Nama 
+Tugas dan Tanggung Jawab dalam Tim 
+1 
+Husein Alhamid 
+Machine Vision 
+2 
+Moris Sintong HL 
+Mekanikal dan Elektrikal 
+3 
+Audi Aulia Ikhsan 
+Perancangan Akuisisi Dataset, Validasi 
+Data, dan Pengujian Sistem. 
+ 
+ 
+
+=== Halaman 16 ===
+ 
+ 
+ 
+15 
+ 
+Bab 1. Tinjauan Pustaka 
+2.1 Kapasitor Polar 
+ 
+ 
+Gambar 2. 1 Kapasitor Elco 
+Kapasitor merupakan komponen elektronika pasif yang berfungsi untuk 
+menyimpan dan melepaskan muatan listrik untuk sementara waktu [2]. Kapasitor 
+polar adalah kapasitor yang memiliki polaritas, komponen ini memiliki 2 terminal 
+yaitu positif (+) dan negatif (-) yang harus dipasang sesuai polaritas tegangan yang 
+diberikan. Komponen ini pada umumnya menggunakan elektrolit padat atau cair 
+sebagai dielektriknya. Pada kapasitor elektrolitik khusus nya aluminium memiliki 
+kapasitansi dengan nilai yang besar (mulai dari 1 µF hingga puluhan ribu µF) dan 
+tegangan kerja yang beragam. Secara visual, kapasitor polar memiliki ciri yaitu 
+tanda strip negatif (-) yang tercetak pada bodi silindrisnya, perbedaan nya terletak 
+pada panjang kaki (kaki yang lebih panjang menandakan positif), serta bodi yang 
+umum pada kapasitor adalah biru, hitam, atau abu-abu [2]. 
+2.2 Computer vision dalam Inspeksi Industri 
+Computer vision termasuk dalam bidang kecerdasan buatan pada sistem 
+komputer guna menganalisis, memproses dan memperoleh data dari citra digital. 
+Penggunaan teknologi ini di implementasikan di bidang otomasi industri, 
+khususnya pada proses pengendalian kualitas dan inspeksi. Penggunaan computer 
+vision mampu meningkatkan akurasi dan presisi dibandingkan metode 
+konvensional karena sistem dapat bekerja berkelanjutan tanpa dipengaruhi akibat 
+kelelahan manusia. Dalam kajian komprehensifnya menyatakan bahwa sistem 
+inspeksi yang menggunakan computer vision dapat mencapai akurasi deteksi 
+
+=== Halaman 17 ===
+ 
+ 
+ 
+16 
+ 
+cacat pada objek diatas 95% dengan kecepatan inspeksi diatas kemampuan 
+manusia normal [3], [4]. 
+ 
+Sistem inspeksi industri menggunakan pengolahan citra melibatkan beberapa 
+tahap: (1) pengambilan data menggunakan kamera, (2) preprocessing yaitu untuk 
+mengubah format data, membersihkan data dan menyiapkan data, (3) Melakukan 
+segmentasi dan feature extraction, (4) klasifikasi berbasis machine learning, (5) 
+hasil klasifikasi diambil berdasarkan tahap kontribusi pada akurasi dan kecepatan 
+sistem secara keseluruhan, [3], [4]. 
+2.3 YOLO (You Only Look Once)  
+You Only Look Once (YOLO) merupakan algoritma deteksi berbasis deep 
+learning yang bekerja menggunakan pendekatan single-stage-detection, sehingga 
+dapat melakukan deteksi objek secara real-time dengan kecepatan tinggi. YOLO 
+memiliki kemampuan untuk memprediksi dan mengklasifikasikan objek secara 
+bersamaan dalam satu proses. Output prediksi dapat dinyatakan sebagai berikut 
+[6], [7]: 
+Output per sel = 𝐵× [𝑥, 𝑦, 𝑤, ℎ,conf] + 𝐶 
+ 
+Di mana (x,y) adalah koordinat pusat bounding box, (w,h) adalah dimensinya, 
+conf adalah skor kepercayaan, dan C adalah jumlah kelas objek [6]. 
+2.3.1 YOLO26 
+YOLO26 merupakan generasi terbaru dari keluarga YOLO yang dikembangkan 
+oleh Ultralytics dan dipublikasikan melalui paper "Ultralytics YOLO26: Unified 
+Real-time End-to-End Vision Models" [6]. YOLO26 dirancang untuk mengatasi 
+keterbatasan versi YOLO sebelumnya melalui sejumlah inovasi arsitektur dan 
+pipeline pelatihan yang menyeluruh. 
+a. 
+Inovasi Utama YOLO26 
+YOLO26 memperkenalkan empat inovasi utama: 
+1) 
+Native End-to-End Inference (NMS-Free) YOLO26 menggunakan 
+desain dual-head yang memungkinkan inferensi tanpa post-
+processing Non-Maximum Suppression (NMS). Pada versi YOLO 
+sebelumnya, NMS merupakan operasi pasca-inferensi yang 
+membatasi kecepatan dan sulit dioptimasi pada hardware khusus. 
+Dengan eliminasi NMS, YOLO26 mencapai latensi yang lebih rendah 
+dan pipeline inferensi yang lebih sederhana [6]. 
+2) 
+DFL-Free Detection Head YOLO26 menghilangkan Distribution Focal 
+Loss (DFL) secara penuh, menghasilkan detection head yang lebih 
+ringan dengan rentang regresi yang tidak dibatasi (unconstrained 
+regression range). Hal ini memungkinkan model memprediksi 
+
+=== Halaman 18 ===
+ 
+ 
+ 
+17 
+ 
+bounding box dengan lebih fleksibel tanpa mengorbankan akurasi 
+regresi [6]. 
+3) 
+MuSGD Optimizer, MuSGD adalah optimizer hibrida yang 
+mengintegrasikan SGD dengan pembaruan gaya Muon (Muon-style 
+updates), yang diadaptasi dari penelitian pelatihan Large Language 
+Model (LLM) untuk meningkatkan optimasi model visi. MuSGD 
+terbukti mempercepat konvergensi dan meningkatkan stabilitas 
+pelatihan [6]. 
+4) 
+STAL (Small-Target Aware Label Assignment) STAL adalah strategi 
+penugasan label yang menjamin setiap objek kecil mendapatkan 
+setidaknya satu positive label assignment selama proses training. 
+Pada versi sebelumnya, objek berukuran kecil sering kali tidak 
+mendapat label positif yang cukup, sehingga performa deteksi objek 
+kecil kurang optimal [6]. 
+ 
+b. 
+Arsitektur YOLO26 
+Terdiri dari 3 komponen utama yang bekerja secara keseluruhan: 
+ 
+Gambar 2. 2 Flowchart Arsitektur YOLO26 
+1. 
+Backbone: Mengekstrak feature map pada tiga tingkatan resolusi 
+(P3, P4, P5) untuk menangkap objek kecil, sedang, dan besar secara 
+bersamaan [6]. 
+2. 
+Neck (PAN-FPN): Menggabungkan informasi dari berbagai skala 
+resolusi secara dua arah (top-down dan bottom-up) untuk 
+menghasilkan representasi fitur yang kaya di setiap skala [6]. 
+3. 
+Dual Head: Terdiri dari training head yang menggunakan penugasan 
+label penuh selama training, dan inference head yang dioptimasi 
+untuk keluaran langsung tanpa NMS [6]. 
+
+=== Halaman 19 ===
+ 
+ 
+ 
+18 
+ 
+ 
+ 
+ 
+ 
+2.3.2 Strategi meningkatkan Akurasi YOLO26 
+Tabel 2. 1 Strategi Meningkatkan Akurasi YOLO26 
+Aspek 
+Parameter 
+Nilai 
+Rekom
+endasi 
+Pengaruh terhadap Akurasi 
+Model 
+model 
+YOLO26
+m.pt 
+Gunakan pretrained weights (transfer 
+learning); meningkatkan akurasi pada 
+dataset kecil secara signifikan  
+Pelatihan 
+epochs 
+100 
+Lebih banyak epoch membuat model lebih 
+matang; gunakan patience=50 untuk early 
+stopping  
+Pelatihan 
+optimizer 
+AdamW 
+Konvergensi lebih stabil dan generalisasi 
+lebih baik dibanding SGD standar pada 
+dataset kecil 
+Pelatihan 
+lr0 
+0.001 
+Learning rate awal; terlalu besar 
+menyebabkan tidak konvergen, terlalu kecil 
+memperlambat training 
+Pelatihan 
+batch 
+16 
+Gradien lebih stabil; sesuaikan dengan 
+kapasitas VRAM GPU yang tersedia 
+Pelatihan 
+imgsz 
+320/64
+0 
+Gunakan 1280 jika objek target berukuran 
+kecil dalam frame; resolusi lebih tinggi 
+meningkatkan deteksi detail 
+Pelatihan 
+weight_ 
+decay 
+0.0005 
+Regularisasi L2 mencegah overfitting pada 
+dataset berukuran terbatas 
+Augmentasi 
+mosaic 
+1 
+Menggabungkan 4 gambar sekaligus; 
+efektif meningkatkan deteksi objek kecil 
+dan variasi skala 
+Augmentasi 
+fliplr 
+0.5 
+Pembalikan horizontal acak; meningkatkan 
+invarians model terhadap orientasi objek 
+Augmentasi 
+hsv_s 
+0.7 
+Variasi saturasi warna; membuat model 
+tahan terhadap perbedaan kondisi 
+pencahayaan 
+Augmentasi 
+hsv_v 
+0.4 
+Variasi kecerahan; simulasi kondisi gelap 
+dan terang pada lingkungan produksi 
+
+=== Halaman 20 ===
+ 
+ 
+ 
+19 
+ 
+Inferensi 
+conf 
+0.25–
+0.5 
+Naikkan untuk mengurangi false positive; 
+turunkan untuk mengurangi false negative 
+Inferensi 
+iou 
+0.45–
+0.5 
+Turunkan jika banyak deteksi duplikat 
+muncul pada objek yang berdekatan 
+ 
+2.4 Sistem Konveyor 
+Konveyor 
+Adalah 
+sistem 
+mekanik 
+yang 
+diimplementasikan 
+untuk 
+memindahkan objek dari satu tempat ke tempat lainnya secara otomatis dan 
+berkelanjutan. Komveyor banyak digunakan dalam industry manufaktur untuk 
+meningkatkan efisiensi pada proses produksi dan mengurangi keterlibatan 
+manusia. Integrasi sistem sensor dan kontrol memungkinkan terciptanya sistem 
+sortasi otomatis berbasis data secara real-time [11], [12]. 
+Pada tugas akhir ini, sistem konveyor berfungsi untuk transportasi kapasitor 
+dari area input menuju area deteksi, dan berakhir di area output/jig. Konveyor 
+digerakkan menggunakan motor DC yang dilengkapi dengan speed controller. 
+untuk sumbu translasi pada Cartesian Manipulator, sistem menggunakan 
+konfigurasi closed-loop dengan tambahan magnetic rotary encoder absolut untuk 
+menjamin presisi posisi, [2], [11]. 
+2.5 STM32F446RE 
+ 
+Gambar 2. 3 Modul Nucleo-STM32F446RE 
+STM32F446RE merupakan bagian dari STM32F4 32-bit berbasis arsitektur 
+ARM Cortex-M4 yang dikembangkan oleh STMicroelectronics. Mikrokontroler ini 
+termasuk dalam salah satu seri berperforma tinggi dari keluarga STM32F4. 
+Mikrokontroler ini mampu pada frekuensi clock maksimum 180MHz. dengan 
+penggabungan floating-point unit memungkinkan komputasi matematis efisien 
+
+=== Halaman 21 ===
+ 
+ 
+ 
+20 
+ 
+dan cepat. Kapasitas RAM sebesar 128KB dan memori flash sebesar 512KB 
+menjadikannya cocok dalam aplikasi yang membutuhkan pemrosesan data secara 
+real-time [9]. 
+Mikrokontroler ini memiliki peran yaitu sebagai kontroler utama yang 
+memproses sinyal dari encoder magnet AS5600 serta mengatur motor stepper 
+melalui driver TMC2240. Perangkat ini mendukung berbagai antarmuka 
+komunikasi seperti UART, SPI, I2C, sehingga memudahkan dalam integrasi dengan 
+komponen lain kedalam sistem. Proses pengembangan firmware pada 
+Mikrokontroler STM32F446RE dapat diimplementasikan melalui STM32CubeIDE, 
+dengan memanfaatkan library Hardware Abstraction Layer (HAL) yang disediakan 
+oleh STMicroelectronics [9]. 
+ 
+ 
+2.6 DMA (Direct Memory Access) 
+DMA (Direct Memory Access) merupakan fitur perangkat keras yang tersedia 
+pada mikrokontroler STM32F446RE yang memungkinkan transfer data antara 
+peripheral dan memori secara langsung tanpa melibatkan CPU secara aktif. 
+Mekanisme ini sangat penting dalam sistem terbenam yang memerlukan 
+throughput tinggi, karena CPU tidak perlu menangani setiap byte data secara 
+individual. Pada arsitektur ARM Cortex-M4, DMA controller dapat dikonfigurasi 
+untuk berbagai mode transfer seperti memory-to-memory, peripheral-to-memory, 
+dan memory-to-peripheral dengan prioritas yang dapat diatur secara fleksibel [9]. 
+Dalam sistem ini, DMA dimanfaatkan untuk menangani komunikasi UART 
+antara STM32F446RE dengan PC yang mengirimkan data hasil deteksi YOLO26. 
+Dengan menggunakan DMA pada jalur UART, proses penerimaan data dapat 
+berlangsung di latar belakang (background) tanpa mengganggu siklus kerja utama 
+CPU yang sedang memproses logika kendali motor stepper dan pembacaan 
+encoder. DMA pada STM32F446RE mendukung hingga 16 stream dengan 8 
+channel per stream, sehingga beberapa peripheral dapat beroperasi secara 
+simultan tanpa bottleneck pada CPU. Konfigurasi DMA untuk UART menggunakan 
+circular buffer yang memastikan data yang masuk tidak hilang meskipun CPU 
+sedang sibuk menjalankan tugas lain [9]. 
+Keunggulan penggunaan DMA pada sistem ini adalah mengurangi latency 
+dalam pemrosesan data komunikasi, meningkatkan efisiensi penggunaan CPU, 
+dan memungkinkan sistem merespons perintah dari PC secara lebih cepat. Tanpa 
+DMA, CPU harus melakukan polling atau interrupt-driven I/O yang dapat 
+menyebabkan penurunan performa pada tugas-tugas real-time lainnya seperti 
+kontrol posisi manipulator [9]. 
+
+=== Halaman 22 ===
+ 
+ 
+ 
+21 
+ 
+2.7 RTOS (Real-time Operating System) 
+RTOS (Real-time Operating System) adalah sistem operasi yang dirancang 
+untuk menangani tugas-tugas dengan batasan waktu yang ketat (deterministic), di 
+mana setiap tugas harus diselesaikan dalam jangka waktu yang dapat diprediksi. 
+Berbeda dengan sistem operasi umum yang mengoptimalkan throughput, RTOS 
+mengutamakan kepastian waktu respons (worst-case response time). Pada 
+mikrokontroler STM32F446RE, RTOS dapat diimplementasikan menggunakan 
+framework seperti FreeRTOS yang ringan dan dioptimalkan untuk arsitektur ARM 
+Cortex-M [9]. 
+RTOS bekerja berdasarkan mekanisme scheduler yang mengatur eksekusi 
+beberapa tugas (task) secara konkuren melalui teknik preemptive multitasking. 
+Setiap tugas memiliki prioritas, dan scheduler akan menjalankan tugas dengan 
+prioritas tertinggi yang siap dieksekusi. Komunikasi antar tugas dilakukan melalui 
+mekanisme seperti queue, semaphore, dan mutex yang memastikan sinkronisasi 
+data tanpa race condition [9]. 
+Dalam sistem sortasi kapasitor ini, RTOS digunakan untuk mengelola beberapa 
+tugas kritis yang harus berjalan secara paralel: (1) task komunikasi UART dengan 
+PC melalui DMA untuk menerima data deteksi YOLO26, (2) task kontrol motor 
+stepper yang mengatur posisi Cartesian manipulator melalui driver TMC2240, (3) 
+task pembacaan magnetic encoder AS5600 untuk umpan balik posisi, dan (4) task 
+monitoring status sistem secara keseluruhan. Dengan RTOS, setiap tugas dapat 
+berjalan dengan prioritas yang berbeda sehingga tugas kritis seperti kontrol motor 
+tidak terganggu oleh tugas dengan prioritas lebih rendah [9]. 
+Penggunaan RTOS pada STM32F446RE memberikan beberapa keuntungan 
+signifikan, antara lain responsivitas sistem yang lebih baik terhadap perubahan 
+kondisi, kemampuan menangani beberapa peripheral secara simultan, serta 
+struktur program yang lebih terorganisir dan mudah dikembangkan. FreeRTOS 
+yang digunakan pada sistem ini memiliki footprint memori yang kecil (sekitar 6-10 
+KB ROM dan beberapa ratus byte RAM), sehingga sangat sesuai untuk aplikasi 
+embedded dengan resource terbatas [9]. 
+
+=== Halaman 23 ===
+ 
+ 
+ 
+22 
+ 
+2.8 Programmable Logic Controller OMRON CP2E-N 
+ 
+Gambar 2. 4 PLC OMRON CP2E-N 
+Programmable Logic Controller (PLC) adalah perangkat komputasi industri 
+yang dibuat khusus untuk mengontrol proses otomasi secara real-time. Salah satu 
+jenis PLC compact yang digunakan pada penelitian ini Adalah tipe Omron seri 
+CP2E sebagai pengendali utama pada subsistem konveyor. PLC CP2E merupakan 
+jenis micro PLC yang dirancang untuk mesin skala kecil hingga menengah serta 
+mendukung pengendalian I/O, Komunikasi antar perangkat, dan pemrosesan 
+logika yang berulang dengan melalui sistem Cyclic scan [10]. 
+PLC OMRON CP2E-N mempunyai beberapa varian dengan jumlah I/O, jenis 
+catu daya, tipe output, kapasitas program, dan bisa menggunakan komunikasi 
+yang berbeda tergantung jenis atau seri PLC nya. Oleh karena itu, pemilihan tipe 
+PLC disesuaikan dengan jumlah sensor dan aktuator yang akan di 
+implementasikan pada sistem. Pada penelitian ini, PLC CP2E yang dilengkapi 
+komunikasi Ethernet digunakan untuk mendukung pertukaran data antara 
+komputer dan PLC melalui protokol ModBus TCP/IP. Selain itu, konfigurasi sistem 
+kendali pada bagian produksi dapat dilakukan secara fleksibel melalui 
+pemrograman berbasis Ladder Diagram (LD) [10]. 
+Pada sistem ini, PLC berfungsi sebagai penghubung antara PC dan aktuator. PC 
+sebagai master mengirimkan perintah melalui Modbus TCP/IP, kemudian PLC 
+sebagai slave menjalankan perintah tersebut dan status sistem akan dikembalikan 
+ke PC untuk mengambil keputusan kedepannya, [10], [13]. 
+
+=== Halaman 24 ===
+ 
+ 
+ 
+23 
+ 
+2.9 Encoder Magnet AS5600 
+ 
+Gambar 2. 5 Encoder Magnet A5600 
+AS5600 adalah encoder magnet absolut yang memiliki resolusi tinggi yang di 
+kembangkan oleh OSRAM. Perangkat ini bekerja dengan prinsip efek Hall untuk 
+mendeteksi posisi sudut magnet diametral yang diletakkan diatas chip secara 
+tidak langsung. Keunggulan dari AS5600 mampu mengukur rotasi penuh 360ᵒ 
+dengan resolusi output hingga 12-bit, sehingga menampilkan posisi yang sangat 
+presisi [14]. 
+sistem conveyor menggunakan motor stepper, sensor ini dimanfaatkan 
+sebagai sensor umpan balik posisi untuk menjamin akurasi pergerakan belt dan 
+sistem sortasi. Perangkat ini akan dikomunikasikan ke mikrokontroler 
+STM32F446RE melalui antarmuka I2C menggunakan alamat yang bisa 
+dikonfigurasi. Keunggulan dari AS5600 yaitu memiliki ketahanan yang tinggi 
+terhadap debu sehingga sangat ideal diaplikasikan pada lingkungan industri, [14], 
+[15]. 
+2.10 Universal Asynchronous Receiver Transmitter (UART), 
+Framing, dan Parsing Data 
+Universal Asynchronous Receiver Transmitter (UART) merupakan protokol 
+data serial asinkron secara luas digunakan untuk pertukaran data antar perangkat. 
+Transmit (TX) dan Receiver (RX) adalah dua jalur utama komunikasi UART, 
+strukturnya lebih sederhana yaitu tidak memerlukan sinyal clock terpisah 
+dibandingkan dengan protokol lainnya [11]. 
+Sistem ini, UART diimplementasikan sebagai jalur komunikasi antara 
+mikrokontroler dengan modul atau perangkat pendukung lainnya. Kriteria 
+pengujian komunikasi UART biasanya meliputi baud rate, banyak bit data, dan 
+stop bit yang harus dikonfigurasi khusus pada kedua sisi perangkat yang saling 
+berkomunikasi. UART juga digunakan sebagai antarmuka debugging dalam 
+
+=== Halaman 25 ===
+ 
+ 
+ 
+24 
+ 
+pengembangan firmware, memungkinkan status sistem secara real-time melalui 
+terminal sesial dan monitoring data [9]. 
+2.11 Protokol Komunikasi Modbus TCP/IP 
+Modbus merupakan protokol komunikasi serial yang pertama kali 
+dikembangkan oleh Modicon pada tahun 1979 dan hingga kini masih menjadi 
+salah satu standar komunikasi industri yang paling banyak digunakan. Modbus 
+TCP/IP adalah varian Modbus yang dikemas dalam paket TCP/IP sehingga dapat 
+berjalan di atas jaringan Ethernet standar. Protokol ini menggunakan model 
+master-slave (atau client-server), di mana master menginisiasi permintaan dan 
+slave memberikan respons [10]. 
+Dalam sistem sortasi otomatis yang dikembangkan, Modbus TCP/IP berfungsi 
+sebagai protokol komunikasi antara PLC CP2E dengan komputer host atau sistem 
+SCADA untuk pertukaran data status sistem, perintah kendali, dan hasil deteksi 
+secara real-time. Modbus TCP/IP menggunakan port default 502 dan mendukung 
+berbagai fungsi seperti pembacaan dan penulisan register holding, coil, serta 
+input register yang merepresentasikan status dan data proses dari perangkat yang 
+terhubung [10]. 
+2.12 Driver Motor Stepper TMC2240 
+ 
+Gambar 2. 6 Driver Motor Stepper TMC2240 
+TMC2240 adalah driver motor stepper canggih yang dikembangkan oleh 
+Trinamic (TRINAMIC Motion Control GmbH, kini bagian dari Analog Devices). 
+Driver ini mendukung arus motor hingga 3A RMS dengan tegangan suplai antara 
+4,5V hingga 36V, menjadikannya kompatibel dengan berbagai jenis motor stepper 
+termasuk NEMA17. Salah satu fitur unggulan TMC2240 adalah teknologi 
+SpreadCycle dan StealthChop yang memungkinkan operasi motor yang senyap 
+dan efisien dengan getaran minimal [16]. 
+
+=== Halaman 26 ===
+ 
+ 
+ 
+25 
+ 
+TMC2240 mendukung microstepping hingga 256 langkah per langkah penuh, 
+yang secara signifikan meningkatkan resolusi dan kehalusan gerak dibandingkan 
+mode 
+full-step 
+maupun 
+half-step. 
+Komunikasi 
+dengan 
+mikrokontroler 
+STM32F446RE dilakukan melalui antarmuka SPI, memungkinkan konfigurasi 
+parameter driver secara dinamis seperti arus kerja, mode chopper, dan 
+pembacaan status diagnosis secara real-time. Fitur StallGuard yang dimiliki 
+TMC2240 juga memungkinkan deteksi beban berlebih pada motor, yang berguna 
+sebagai mekanisme proteksi sistem [16]. 
+2.13 Cartesian Manipulator 
+Cartesian manipulator merupakan salah satu jenis robot industri yang 
+bergerak dengan sumbu koordinat kartesian (X,Y,Z) dengan gerakan linear untuk 
+setiap sumbunya, kartesian tipe (XZ) yang digunakan pada tugas akhir ini memiliki 
+pengaturan di mana penggerak sumbu Z (vertikal) membawa seluruh carriage 
+sumbu X (Horizontal). Konfigurasi tersebut, gripper mampu menjangkau setiap 
+posisi pada bidang XZ secara presisi, [8], [17], [18]. 
+End effector (gripper) yang digunakan adalah vacuum suction cup yang 
+terhubung dengan pompa kompresor. Sistem vakum ini memudahkan 
+pengambilan komponen kapasitor dari belt conveyor secara halus. Hal ini 
+dikarenakan pemerataan gaya angkat pada seluruh permukaan kontak cup agar 
+tidak merusak komponen saat diangkat. Setelah itu, pada proses rotasi dan 
+reposisi orientasi kapasitor sebelum dikembalikan ke posisi akhir, [19], [20], [21], 
+[22]. 
+ 
+2.14 Standar Industri  
+Dalam perancangan sistem integrasi computer vision dan konveyor untuk 
+pengendalian kualitas komponen kapasitor, beberapa standar industri digunakan 
+sebagai acuan untuk memastikan desain memenuhi persyaratan teknis dan 
+keselamatan yang berlaku. Standar-standar ini mencakup aspek mekanis, elektris, 
+dan keselamatan sistem. 
+ 
+2.14.1 Standar Mekanis 
+a) 
+DIN 103 / ISO 2901–2904 Spesifikasi Lead Screw Trapesium 
+Standar ini menentukan profil, dimensi dasar, dan toleransi ulir 
+trapesium yang digunakan pada aplikasi power transmission seperti 
+lead screw. Lead screw T8 yang digunakan pada sumbu Z mengikuti 
+penamaan DIN 103 (Tr8), dengan diameter nominal 8 mm,4 start, 
+
+=== Halaman 27 ===
+ 
+ 
+ 
+26 
+ 
+dan pitch 2 mm per start sehingga menghasilkan lead 8 mm per 
+putaran. Padanan internasionalnya diatur dalam keluarga ISO 2901 
+(profil dasar), ISO 2902 (general plan), ISO 2903 (toleransi), dan ISO 
+2904 (dimensi dasar). Standar ini memastikan kompatibilitas antara 
+lead screw dan nut, serta menentukan klasifikasi kepresisian 
+berdasarkan aplikasi. 
+ 
+b) 
+ISO 13050 Spesifikasi Sabuk Timing Sinkron 
+Standar ini mengatur spesifikasi sabuk timing sinkron (timing belt) 
+untuk transmisi daya. Sabuk GT2 yang digunakan pada sumbu X 
+mengikuti standar ini, dengan pitch 2 mm dan lebar 6 mm. Standar 
+ini menentukan profil gigi sabuk, kekuatan tarik, dan kompatibilitas 
+dengan pulley, sehingga memastikan transmisi daya yang efisien 
+dan tanpa slip. 
+ 
+ 
+ 
+c) 
+ISO 9283 Pengujian Performa Manipulator 
+Standar ini menentukan metode pengujian untuk mengevaluasi 
+performa 
+manipulator 
+industri, 
+termasuk 
+akurasi 
+posisi, 
+repeatability, dan kecepatan. Pengujian yang dilakukan pada subbab 
+3.7 mengacu pada standar ini untuk memvalidasi presisi pergerakan 
+Cartesian manipulator XZ. 
+ 
+2.14.2 Standar Keselamatan 
+ISO 10218 Keselamatan Robot Industri: Standar ini menetapkan persyaratan 
+keselamatan untuk robot dan sistem robot industri. Dalam penelitian ini, standar 
+ISO 10218 digunakan sebagai acuan untuk fitur self-locking pada lead screw 
+trapesium, yang memastikan sumbu Z tidak jatuh saat daya listrik diputus. Fitur ini 
+penting untuk mencegah kecelakaan kerja dan melindungi operator serta 
+peralatan. 
+2.14.3 Standar Motor dan Aktuator 
+NEMA ICS 16 Standar Motor Stepper: Standar dari National Electrical 
+Manufacturers Association (NEMA) ini menentukan spesifikasi untuk motor 
+stepper, termasuk dimensi fisik, karakteristik torsi, dan klasifikasi performa. 
+Motor NEMA 17 yang digunakan pada kedua sumbu mengikuti standar ini, 
+dengan torsi 52 N.cm pada sumbu X dan 73 N.cm pada sumbu Z. Standar ini 
+memastikan motor memiliki karakteristik yang sesuai untuk aplikasi manipulator. 
+
+=== Halaman 28 ===
+ 
+ 
+ 
+27 
+ 
+2.14.4 Standar Elektronik dan Assembly 
+IPC-A-610 Acceptability of Electronic Assemblies: Standar ini menentukan 
+kriteria penerimaan visual untuk rakitan elektronik, termasuk klasifikasi kondisi 
+assembly ke dalam tiga kelas keandalan serta kriteria penempatan dan orientasi 
+komponen. Standar ini secara eksplisit mengatur kriteria orientasi untuk 
+komponen berpolaritas (polarized components) seperti kapasitor elektrolitik dan 
+dioda, yang orientasinya wajib sesuai dengan tanda silkscreen/dokumentasi 
+assembly kesalahan orientasi pada komponen tersebut dikategorikan sebagai 
+critical defect. Karena itu, IPC-A-610 menjadi acuan yang relevan baik untuk 
+klasifikasi cacat rakitan elektronik secara umum maupun untuk mendefinisikan 
+kriteria keberhasilan sistem sortasi orientasi kapasitor pada penelitian ini. 
+Dengan mengacu pada standar-standar industri tersebut, perancangan sistem 
+dalam penelitian ini memenuhi persyaratan teknis dan keselamatan yang berlaku, 
+serta memastikan kompatibilitas dengan praktik manufaktur modern. 
+2.15 Studi Literatur dan Analisis Penelitian terdahulu 
+Tabel 2. 2 Studi Literatur dan Analisis Penelitian Terdahulu 
+No 
+Tahun 
+Penulis 
+Jurnal 
+Metode 
+Kelemahan 
+1 
+2024 
+Raisul 
+Islam et 
+al. 
+IEEE Access 
+Systematic 
+review terhadap 
+teknik Deep 
+Learning dan 
+Computer Vision 
+untuk deteksi 
+cacat otomatis 
+pada proses 
+manufaktur 
+Bersifat tinjauan 
+pustaka tanpa 
+implementasi sistem 
+nyata; belum 
+membahas mekanisme 
+koreksi fisik terhadap 
+objek yang terdeteksi 
+salah, sehingga 
+menjadi salah satu 
+dasar gap penelitian ini 
+2 
+2022 
+Ren et 
+al. 
+International 
+Journal of 
+Precision 
+Engineering 
+and 
+Manufacturi
+ng-Green 
+Tinjauan 
+sistematis 
+terhadap 
+pencahayaan 
+optik, akuisisi 
+citra, 
+pemrosesan 
+Fokus pembahasan 
+hanya pada tahap 
+deteksi cacat, belum 
+menjangkau aspek 
+tindak lanjut atau 
+koreksi otomatis 
+terhadap objek yang 
+
+=== Halaman 29 ===
+ 
+ 
+ 
+28 
+ 
+Technology 
+citra, dan 
+penerapan deep 
+learning pada 
+machine vision 
+untuk deteksi 
+cacat 
+terdeteksi menyimpang 
+3 
+2024 
+Hütten 
+et al. 
+Applied 
+System 
+Innovation 
+Survei 
+sistematis 
+terhadap 196 
+publikasi open-
+access 
+mengenai 
+penerapan deep 
+learning untuk 
+inspeksi visual 
+otomatis di 
+bidang 
+manufaktur dan 
+maintenance 
+Menunjukkan bahwa 
+sebagian besar 
+penelitian yang disurvei 
+masih berhenti pada 
+tahap 
+deteksi/klasifikasi, dan 
+belum ada yang 
+mengintegrasikan 
+mekanisme koreksi 
+posisi/orientasi objek 
+secara otomatis 
+4 
+2026 
+Jocher 
+et al. 
+Preprint/arXi
+v 
+(Ultralytics) 
+Arsitektur 
+YOLO26 dengan 
+desain dual-
+head NMS-free, 
+optimizer 
+MuSGD, dan 
+strategi label 
+assignment 
+STAL untuk 
+deteksi objek 
+real-time yang 
+akurat dan 
+efisien 
+Sebagai model deteksi 
+umum (general-
+purpose), YOLO26 
+belum divalidasi secara 
+khusus pada objek 
+berukuran kecil dan 
+simetris seperti 
+kapasitor elektrolitik 
+dengan variasi orientasi 
+yang halus 
+
+=== Halaman 30 ===
+ 
+ 
+ 
+29 
+ 
+5 
+2023 
+Hussain 
+Machines 
+(MDPI) 
+Tinjauan 
+literatur 
+perkembangan 
+arsitektur YOLO 
+versi 1 hingga 8 
+serta 
+penerapannya 
+pada deteksi 
+cacat 
+permukaan di 
+bidang 
+manufaktur 
+Bersifat tinjauan 
+pustaka; pembahasan 
+penerapan YOLO masih 
+terbatas pada deteksi 
+cacat permukaan, 
+belum menyentuh 
+kasus deteksi 
+orientasi/polaritas 
+komponen elektronik 
+kecil 
+6 
+2023 
+Vu et 
+al. 
+Procedia 
+Computer 
+Science 
+Model deteksi 
+objek berbasis 
+YOLO untuk 
+mendeteksi 
+cacat kemasan 
+(packaging 
+defect) secara 
+real-time pada 
+lini produksi 
+Sistem berhenti pada 
+tahap deteksi dan 
+pelaporan cacat, tanpa 
+mekanisme untuk 
+memperbaiki atau 
+mengoreksi produk 
+yang terdeteksi cacat 
+secara otomatis 
+7 
+2023 
+Yevsiei
+ev et al. 
+Applied 
+Mathematic
+s & 
+Information 
+Sciences 
+Sistem 
+identifikasi 
+objek berbasis 
+computer vision 
+menggunakan 
+Raspberry Pi 4 
+dengan 
+pemrosesan 
+citra QR code 
+pada conveyor 
+sortasi 
+Sistem hanya 
+melakukan identifikasi 
+dan pembacaan kode 
+(QR code) objek pada 
+konveyor, belum 
+mencakup deteksi 
+orientasi fisik maupun 
+mekanisme koreksi 
+posisi komponen 
+
+=== Halaman 31 ===
+ 
+ 
+ 
+30 
+ 
+8 
+2024 
+Citlak 
+and 
+Pillay 
+Automation 
+(MDPI) 
+Deteksi dan 
+klasifikasi objek 
+secara real-time 
+menggunakan 
+model Mask R-
+CNN dari citra 
+kamera video 
+pada conveyor 
+line pelapisan 
+enamel 
+Sistem hanya 
+melakukan klasifikasi 
+jenis part logam yang 
+lewat pada konveyor 
+untuk pelaporan data 
+produksi, tanpa aksi 
+korektif terhadap posisi 
+maupun orientasi objek 
+9 
+2023 
+Muntas
+hir et 
+al. 
+Jurnal 
+Integrasi 
+Kendali motor 
+stepper Nema 
+17 
+menggunakan 
+PLC Omron 
+CP1L-M30DT-D, 
+encoder E6B2-
+CWZ6C, dan 
+HMI Omron 
+NB7W-TW00B 
+untuk setting 
+fast shot & slow 
+shot valve die 
+casting 
+Sistem kendali motor 
+stepper berbasis PLC 
+hanya diterapkan 
+untuk pengaturan valve 
+mesin die casting, 
+belum diintegrasikan 
+dengan sistem 
+computer vision 
+maupun mekanisme 
+sortasi otomatis 
+10 
+2022 
+Peng 
+and Bi 
+Energies 
+(MDPI) 
+Kontrol closed-
+loop sensorless 
+menggunakan 
+Extended 
+Kalman Filter 
+observer untuk 
+mengestimasi 
+posisi rotor 
+pada motor 
+stepper hybrid 
+Metode kontrol 
+difokuskan pada 
+performa motor secara 
+internal (torsi, noise, 
+losses), belum 
+membahas 
+penerapannya pada 
+sistem manipulator 
+untuk keperluan 
+quality 
+
+=== Halaman 32 ===
+ 
+ 
+ 
+31 
+ 
+tiga fasa 
+controlkomponen 
+11 
+2024 
+Jiang et 
+al. 
+Robotics 
+(MDPI) 
+Grasp planner 
+berbasis 
+konvolusi 3D 
+dengan neural 
+network untuk 
+menentukan 
+posisi 
+penggenggaman 
+multi-suction-
+cup vacuum 
+gripper pada 
+scene yang 
+cluttered 
+Fokus penelitian adalah 
+efisiensi pengambilan 
+multi-objek dalam bin 
+picking, bukan pada 
+koreksi orientasi objek 
+tunggal dengan 
+polaritas tertentu 
+seperti kapasitor 
+12 
+2023 
+Fontan
+a et al. 
+Micromachi
+nes (MDPI) 
+Desain micro-
+gripper hybrid 
+dua jari yang 
+menggabungkan 
+teknologi 
+vacuum dan 
+friction untuk 
+perakitan 
+komponen SMT 
+berukuran kecil 
+Penelitian berfokus 
+pada desain mekanis 
+gripper untuk 
+perakitan, belum 
+mengintegrasikan 
+sistem computer vision 
+untuk deteksi otomatis 
+posisi dan orientasi 
+komponen sebelum 
+digenggam 
+13 
+2022 
+Zhao 
+and 
+Hua 
+Prosiding 
+IEEE ICCBE 
+Kontrol 
+kecepatan 
+motor DC 
+berbasis PID 
+menggunakan 
+mikrokontroler 
+STM32F103C8T
+6 dan driver H-
+bridge ganda 
+Penelitian hanya 
+berfokus pada kontrol 
+kecepatan motor DC 
+secara umum, belum 
+diterapkan pada 
+konteks kontrol motor 
+stepper untuk 
+manipulator sortasi 
+berbasis hasil deteksi 
+
+=== Halaman 33 ===
+ 
+ 
+ 
+32 
+ 
+MX1508 
+computer vision 
+ 
+2.16 Analisis Gap Penelitian 
+Berdasarkan studi literatur yang telah dilakukan, dapat disimpulkan bahwa: 
+1. 
+Sebagian besar penelitian hanya berfokus pada deteksi dan 
+klasifikasi objek. Sistem ini beralih dari mekanisme pendorong 
+berbasis servo konvensional menjadi Cartesian Manipulator XZ 
+untuk translasi ruang, yang dilengkapi dengan rotational end-
+effector berbasis micro-servo untuk mengoreksi sudut orientasi 
+kapasitor. 
+2. 
+Sistem yang ada belum mampu melakukan analisis orientasi objek 
+secara spesifik, terutama pada komponen kecil seperti kapasitor. 
+3. 
+Integrasi antara computer vision, sistem konveyor, dan manipulator 
+koreksi masih terbatas pada fungsi dasar sortasi tanpa koreksi posisi 
+otomatis. 
+4. 
+Tidak ada penelitian yang secara spesifik menangani permasalahan 
+orientasi kapasitor polar dalam konteks sistem quality control 
+terintegrasi. 
+ 
+Oleh karena itu, penelitian ini mengusulkan sistem yang: 
+1. 
+Menggunakan YOLO26 untuk deteksi objek secara real-time 
+2. 
+Mampu mendeteksi polaritas dan orientasi kapasitor 
+3. 
+Mengimplementasikan mekanisme koreksi otomatis menggunakan 
+Cartesian manipulator 2-axis (XZ) dengan vacuum suction 
+4. 
+Terintegrasi dengan sistem konveyor berbasis otomasi 
+ 
+ 
+
+=== Halaman 34 ===
+ 
+ 
+ 
+33 
+ 
+Bab 2. Metodologi Penelitian 
+3.1 Perancangan Penelitian  
+ 
+Gambar 3. 1 Flowchart Perancangan Penelitian 
+3.1.1 Studi Literatur 
+Tahap awal dari penelitian ini Adalah studi literatur, yaitu proses 
+pengumpulan dan penelaahan, dan analisis referensi ilmiah yang linear dengan 
+penelitian ini. Tahap ini bertujuan membangun landasan teori yang kuat serta 
+memahami perkembangan teknologi modern dibidang computer vision, sistem 
+conveyor otomatis, dan quality control pada dunia industri, [1], [4]. 
+Sumber referensi yang digunakan mencakup jurnal ilmiah dari beberapa 
+sumber yang berbeda-beda. Dari hasil studi literatur, ditemukan bahwa sebagian 
+besar penelitian terdahulu hanya berfokus pada deteksi dan klasifikasi objek 
+tanpa mekanisme koreksi orientasi secara otomatis, sehingga mengidentifikasi 
+celah (research gap) yang menjadi dasar kontribusi penelitian ini, [1], [4]. 
+Oleh karena itu, studi literatur juga dilakukan terhadap teknologi dan 
+komponen yang akan dipakai meliputi YOLO26, STM32F446RE, PLC OMRON CP2E-
+N, driver motor stepper TMC2240, encoder magnet AS5600, serta protokol 
+komunikasi UART dan Modbus TCP/IP. Pemahaman mendalam terhadap setiap 
+komponen ini diperlukan untuk merancang sistem yang terintegrasi dan dapat 
+bekerja secara maksimal dan optimal, [1], [4]. 
+ 
+ 
+ 
+
+=== Halaman 35 ===
+ 
+ 
+ 
+34 
+ 
+3.1.2 Perancangan dan Pembangunan Sistem 
+Sistem 
+dirancang 
+berdasarkan 
+diagram 
+alur 
+yang 
+menggambarkan 
+keseluruhan proses kerja secara sekuensial dan kondisional. Proses diawali 
+dengan inisiasi sistem, yaitu tahap persiapan seluruh komponen sebelum sistem 
+beroperasi. Pada tahap ini, mikrokontroler STM32F446RE dan PLC OMRON CP2E-
+N melakukan pengecekan koneksi, inisialisasi driver motor stepper TMC2240, 
+kalibrasi posisi home pada Cartesian manipulator 2-axis (XZ), serta verifikasi 
+koneksi komunikasi UART dan Modbus TCP/IP antara PC, PLC, dan mikrokontroler. 
+Sistem dinyatakan siap beroperasi apabila seluruh komponen telah terdeteksi dan 
+terhubung dengan baik. 
+Setelah inisiasi berhasil, sistem memberikan perintah untuk menjalankan 
+konveyor. Motor yang dikontrol kecepatannya melalui speed controller 
+menggerakkan belt konveyor dengan kecepatan yang telah dikonfigurasi, 
+membawa kapasitor dari area input menuju area deteksi secara berkelanjutan. 
+Selama konveyor berjalan, kamera diaktifkan untuk melakukan pemantauan 
+secara real-time terhadap area deteksi. Model YOLO26 yang telah dilatih 
+melakukan inferensi pada setiap frame yang ditangkap oleh kamera untuk 
+mendeteksi keberadaan kapasitor. Apabila tidak ada kapasitor yang terdeteksi 
+pada area pengamatan, sistem tetap menjaga kamera dalam kondisi aktif dan 
+konveyor terus berjalan sambil menunggu kapasitor berikutnya memasuki area 
+deteksi. 
+Apabila kapasitor berhasil terdeteksi, sistem segera mengirimkan sinyal 
+melalui Modbus TCP/IP ke PLC untuk menghentikan konveyor. Penghentian ini 
+dilakukan agar posisi kapasitor stabil dan tidak bergeser selama proses 
+pemeriksaan orientasi berlangsung. Selanjutnya, sistem melakukan analisis 
+terhadap hasil deteksi model untuk memeriksa orientasi kapasitor. Model YOLO26 
+mengklasifikasikan apakah kapasitor berada pada orientasi yang benar atau salah 
+berdasarkan posisi polaritasnya. Apabila orientasi kapasitor sudah benar, tidak 
+diperlukan proses koreksi dan sistem langsung menjalankan kembali konveyor 
+untuk meneruskan kapasitor menuju jig sortasi pada area output. 
+Apabila orientasi kapasitor terdeteksi salah, sistem melakukan perhitungan 
+untuk menentukan besaran koreksi yang diperlukan. Berdasarkan data deteksi 
+dari model YOLO26, sistem menghitung posisi aktual kapasitor pada konveyor 
+dalam koordinat X dan Z, serta sudut rotasi yang dibutuhkan agar kapasitor dapat 
+dikembalikan ke orientasi polaritas yang benar. Hasil perhitungan tersebut 
+kemudian dikirimkan oleh PC ke mikrokontroler STM32F446RE melalui UART 
+untuk menggerakkan Cartesian manipulator 2-axis (XZ) menuju koordinat 
+kapasitor. Sumbu X dan Z bergerak secara terkoordinasi hingga end effector 
+berupa vacuum suction cup berada tepat di atas kapasitor yang akan dikoreksi. 
+
+=== Halaman 36 ===
+ 
+ 
+ 
+35 
+ 
+Setelah manipulator mencapai posisi kapasitor, vacuum suction cup diaktifkan 
+untuk mengangkat kapasitor dari permukaan belt konveyor. Manipulator 
+kemudian melakukan rotasi sesuai sudut koreksi yang telah dihitung sehingga 
+kapasitor berada pada orientasi polaritas yang benar. Setelah rotasi selesai, 
+kapasitor diletakkan kembali ke posisi semula pada belt konveyor dan vacuum 
+suction cup dinonaktifkan. Konveyor kembali dijalankan dan kapasitor yang telah 
+terkoreksi diteruskan menuju jig sortasi sebagai tempat penempatan akhir. Siklus 
+ini berulang secara otomatis untuk setiap kapasitor berikutnya hingga seluruh 
+batch kapasitor berhasil diproses. 
+Selain perancangan perangkat keras, tahap ini juga mencakup perancangan 
+perangkat lunak (software), meliputi arsitektur komunikasi antara PC, PLC 
+OMRON CP2E-N melalui protokol Modbus TCP/IP, dan mikrokontroler 
+STM32F446RE melalui antarmuka UART. Hasil dari tahap ini adalah dokumen 
+rancangan sistem lengkap beserta skema wiring, diagram blok, dan flowchart 
+sistem yang menjadi acuan dalam proses pembangunan fisik. 
+ 
+Gambar 3. 2 Flowchart Perancangan Sistem 
+ 
+ 
+ 
+ 
+ 
+     
+               
+                 
+           
+     
+          
+             
+         
+     
+                                 
+       
+                               
+         
+                           
+                 
+                             
+       
+  
+     
+  
+     
+ 
+ 
+       
+         
+  
+     
+
+=== Halaman 37 ===
+ 
+ 
+ 
+36 
+ 
+3.1.3 Pelatihan Model  
+ 
+Gambar 3. 3 Flowchart Pelatihan Model YOLO26 
+Setelah dataset tersedia, tahap selanjutnya adalah pelatihan model deteksi 
+objek menggunakan algoritma YOLO26. YOLO26 dipilih karena kemampuannya 
+dalam mendeteksi objek berukuran kecil secara real-time dengan akurasi tinggi, 
+serta efisiensi komputasi yang lebih baik dibandingkan versi YOLO sebelumnya [6]. 
+Proses pelatihan model dilakukan pada perangkat komputasi yang dilengkapi 
+dengan GPU untuk mempercepat proses training. Parameter pelatihan yang 
+dikonfigurasi meliputi learning rate, jumlah epoch, batch size, serta ukuran input 
+gambar. Transfer learning diterapkan dengan memanfaatkan bobot pre-trained 
+dari dataset COCO sebagai titik awal pelatihan (pretrained weights), sehingga 
+model lebih cepat konvergen dan memerlukan data latih yang lebih sedikit [6]. 
+Selama proses pelatihan, performa model dipantau menggunakan metrik 
+evaluasi seperti mAP (mean Average Precision), precision, recall, dan F1-score. 
+Augmentasi data seperti rotasi, flipping, perubahan kecerahan, dan penambahan 
+noise diterapkan untuk memperkaya variasi dataset dan meningkatkan 
+kemampuan generalisasi model terhadap kondisi yang belum pernah dilihat 
+sebelumnya [6]. 
+ 
+3.1.4 Pengujian dan Evaluasi 
+Tahap pengujian dan evaluasi dilakukan untuk mengukur performa sistem 
+secara komprehensif sebelum dilakukan integrasi penuh. Pengujian mencakup 
+dua aspek utama, yaitu pengujian performa model deteksi dan pengujian 
+performa subsistem mekanik. 
+
+=== Halaman 38 ===
+ 
+ 
+ 
+37 
+ 
+Pengujian performa model deteksi dilakukan dengan menggunakan data uji 
+(test set) yang belum pernah digunakan selama proses pelatihan. Metrik yang 
+dievaluasi meliputi akurasi deteksi, nilai mAP, presisi, recall, serta waktu inferensi 
+per frame (frame rate). Hasil pengujian dianalisis untuk menentukan apakah 
+model telah memenuhi ambang batas performa yang ditetapkan. Apabila 
+performa belum memadai, dilakukan penyesuaian pada parameter pelatihan atau 
+penambahan data latih. 
+Pengujian performa subsistem mekanik meliputi pengujian akurasi gerak 
+Cartesian manipulator pada sumbu X dan Z, pengujian keberhasilan pickup dan 
+placement kapasitor menggunakan vacuum suction cup, serta pengujian 
+kecepatan dan konsistensi gerak konveyor. Pengujian komunikasi antara PC, PLC, 
+dan mikrokontroler juga dilakukan untuk memastikan pertukaran data 
+berlangsung tanpa latensi yang berarti. 
+3.1.5 Integrasi Sistem 
+Setelah setiap subsistem telah diuji dan dinyatakan memenuhi spesifikasi 
+yang ditetapkan, dilakukan integrasi sistem secara menyeluruh. Integrasi sistem 
+merupakan tahap penyatuan seluruh subsistem, yaitu computer vision, konveyor, 
+dan Cartesian manipulator, ke dalam satu sistem yang bekerja secara sinergis dan 
+otomatis. 
+Pada tahap integrasi, alur kerja sistem diimplementasikan sesuai dengan 
+flowchart sistem yang telah dirancang. Kapasitor yang diletakkan pada area input 
+konveyor akan dibawa menuju area deteksi. Kamera menangkap citra kapasitor 
+secara real-time, kemudian model YOLO26 melakukan inferensi untuk 
+mengidentifikasi jenis kapasitor (polar/non-polar) dan orientasinya. Hasil deteksi 
+dikirimkan ke PC sebagai pengendali utama. 
+Jika kapasitor terdeteksi memiliki orientasi yang tidak sesuai, PC mengirimkan 
+perintah melalui Modbus TCP/IP ke PLC OMRON CP2E-N untuk menghentikan 
+konveyor dan mengaktifkan Cartesian manipulator. Manipulator kemudian 
+mengangkat kapasitor menggunakan vacuum suction cup, memutar dan 
+memposisikan ulang kapasitor sesuai orientasi yang benar, lalu meletakkannya 
+kembali ke konveyor. Setelah koreksi selesai, konveyor kembali bergerak dan 
+kapasitor diteruskan menuju jig sortasi pada area output. 
+Pengujian sistem terintegrasi dilakukan untuk memvalidasi keseluruhan alur 
+kerja, termasuk sinkronisasi antar subsistem, waktu respons total, dan tingkat 
+keberhasilan proses sortasi serta koreksi orientasi kapasitor. 
+3.1.6 Analisis Data, Pembahasan, dan Kesimpulan 
+Tahap terakhir dalam alur penelitian ini adalah analisis data, 
+pembahasan, dan penarikan kesimpulan. Seluruh data hasil pengujian dari tahap-
+
+=== Halaman 39 ===
+ 
+ 
+ 
+38 
+ 
+tahap sebelumnya dikumpulkan, diolah, dan dianalisis secara sistematis untuk 
+menjawab rumusan masalah yang telah ditetapkan pada Bab 1. 
+Analisis data meliputi evaluasi akurasi deteksi dan klasifikasi kapasitor 
+berdasarkan polaritas dan orientasi, tingkat keberhasilan mekanisme koreksi 
+posisi oleh Cartesian manipulator, kecepatan respons sistem secara keseluruhan, 
+serta konsistensi hasil sortasi pada area output. Data kuantitatif yang diperoleh 
+disajikan dalam bentuk tabel dan grafik untuk memudahkan interpretasi. 
+Pembahasan dilakukan dengan membandingkan hasil yang diperoleh 
+terhadap target spesifikasi yang ditetapkan serta membandingkannya dengan 
+penelitian-penelitian terdahulu yang telah diidentifikasi pada tahap studi literatur. 
+Dari hasil analisis dan pembahasan tersebut, ditarik kesimpulan mengenai 
+pencapaian tujuan penelitian, keterbatasan sistem, serta rekomendasi untuk 
+pengembangan lebih lanjut di masa mendatang. 
+3.2 Perancangan Akuisisi dan Pengelolaan Dataset 
+ 
+ 
+Gambar 3. 4 Flowchart Perancangan Akuisisi Dataset dan Pengelolaan Dataset 
+ 
+ 
+     
+                             
+                                   
+                        
+                                         
+         
+                
+                                   
+               
+                                        
+       
+                     
+                                             
+      
+         
+        
+             
+                  
+                   
+                  
+              
+      
+                 
+                              
+                    
+                     
+                                 
+               
+       
+  
+                            
+     
+                     
+                
+       
+     
+       
+ 
+ 
+  
+     
+ 
+ 
+
+=== Halaman 40 ===
+ 
+ 
+ 
+39 
+ 
+3.2.1 Perencanaan Dataset 
+Perencanaan dataset merupakan tahap awal dalam menentukan karakteristik 
+data yang akan digunakan pada proses training, validation, dan testing. Pada 
+tahap ini ditentukan kelas objek yang akan digunakan, jumlah data yang akan 
+dipakai, variasi kondisi pengambilan, serta pembagian setiap data untuk proses 
+training, validation dan testing. Kelas objek harus dirancang dengan kebutuhan 
+sistem, yaitu kapasitor polar orientasi benar, kapasitor polar orientasi salah, serta 
+backgorund atau bukan kapasitor sebagai kondisi objek asing atau kondisi tanpa 
+objek sebagai data negatif. Selain penentuan kelas, jumlah data pada setiap kelas 
+harus seimbang agar model tidak dominan dalam mengenali salah satu kelas 
+tertentu. Variasi dataset juga akan dirancang berdasarkan sudut orientasi, posisi 
+objek pada belt, ukuran dan jenis kapasitor, kondisi pencahayaan, serta kondisi 
+objek dalam keadaan diam maupun sedang bergerak. 
+3.2.2 Konfigurasi Kamera dan Area Akuisisi Dataset 
+Konfigurasi Kamera dilakukan untuk memastikan seluruh citra pada dataset 
+diperoleh menggunakan kondisi pengambilan yang konsisten dan sesuai dengan 
+kondisi operasional sistem. Kamera dipasang pada bracket secara tetap dengan 
+jarak 78 cm yang diukur dari bagian depan lensa kamera hingga ke permukaan 
+atas belt konveyor. Kamera diatur agar tegak lurus, sehingga bentuk, ukuran, dan 
+posisi objek pada citra tidak mengalami perubahan citra yang berlebihan. Posisi 
+pada bracket dibuat tetap dan tidak mudah bergeser selama proses pengambilan 
+data berlangsung. 
+Selain jarak dan posisi kamera, parameter pengambilan citra seperti resolusi, 
+frame rate, fokus, exposure, dan white balance perlu dibuat tetap atau 
+dikendalikan selama proses pengambilan dataset. Perubahan konfigurasi pada 
+kamera dapat menyebabkan perbedaan tingkat kecerahan, ketajaman, dan 
+ukuran visual objek, sehingga dapat membuat data yang tidak konsisten. Apabila 
+kamera mendukung pengaturan manual, fokus dan exposure dikunci setelah 
+diperoleh kondisi citra yang jelas. Namun apabila menggunakan kamera dengan 
+pengaturan otomatis, kondisi pada pencahayaan harus dijaga agar perubahan 
+pengaturan tidak terlalu besar. 
+Akuisisi ditentukan menggunakan Region of Interest (ROI), yaitu bagian 
+tertentu dari citra yang akan digunakan sebagai area deteksi utama. ROI 
+disesuaikan dengan posisi kapasitor saat berada di atas belt dan masih berada 
+dalam jangkauan manipulator. Penentuan ROI bertujuan mengurangi informasi 
+latar belakang yang tidak diperlukan sehingga dapat memastikan bahwa data 
+yang diambil dapat merepresentasikan area kerja sistem. belt konveyor yang 
+digunakan saat pengambilan dataset harus sama atau memiliki karakteristik visual 
+yang serupa dengan belt yang digunakan ketika alat beroperasi. 
+
+=== Halaman 41 ===
+ 
+ 
+ 
+40 
+ 
+Pencahayaan pada area akuisisi diatur agar objek kapasitor dapat terlihat dengan 
+jelas tanpa menghasilkan bayangan tajam atau pantulan cahaya yang berlebihan 
+sehingga dapat mengganggu proses kerja sistem. Posisi lampu dibuat tetap 
+selama satu sesi pengambilan data. Kondisi pencahayaan normal digunakan 
+sebagai kondisi utama, kemudian ditambahkan kondisi sedikit redup dan sedikit 
+terang untuk memberikan variasi pada dataset. Meskipun demikian, variasi 
+pencahayaan tetap dibatasi pada kondisi yang secara realistis dapat terjadi ketika 
+sistem sedang digunakan. 
+3.2.3 Matriks Variasi dan Distribusi Dataset 
+ 
+ 
+(b) 
+Gambar 3. 5 Contoh Variasi Orientasi Kapasitor pada Akuisisi Dataset. (a) 
+Menunjukkan Contoh Orientasi Kapasitor 90°, (b) Menunjukkan Contoh 
+Kapasitor 0°, dan (c) Menunjukkan Contoh Kapasitor 60°. 
+Matriks variasi dataset berguna untuk memastikan bahwa setiap data yang 
+telah diperoleh tidak hanya banyak secara jumlah, namun memiliki distribusi 
+kondisi yang mewakili situasi operasional sistem. Variasi data meliputi kelas objek, 
+identitas objek fisik, sudut orientasi, posisi objek pada belt, ukuran dan warna 
+kapasitor, kondisi pencahayaan, serta keadaan objek ketika diam atau bergerak. 
+Setiap variasi direncanakan sebelum proses pengambilan data agar tidak terdapat 
+kondisi yang terlalu dominan atau justru tidak terwakili. 
+Variasi sudut orientasi dapat dibuat pada beberapa nilai referensi, seperti 0°, 
+30°, 60°, 90°, 120°, 150°, dan 180°. Perbedaan beberapa sudut bertujuan agar 
+model tidak hanya mengenali kapasitor pada posisi horizontal atau vertikal, tetapi 
+juga pada posisi miring. Posisi pengambilan area objek dapat dibagi menjadi posisi 
+kiri, posisi tengah, dan posisi kanan, atau dibagi berdasarkan beberapa titik pada 
+ROI. Sebagian besar data tetap diambil pada area kerja utama manipulator, 
+(a) 
+(c) 
+
+=== Halaman 42 ===
+ 
+ 
+ 
+41 
+ 
+sedangkan data di dekat batas digunakan sebagai kondisi variasi dan pengujian 
+batas. 
+Objek fisik yang digunakan perlu terdiri dari beberapa unit kapasitor dengan 
+perbedaan ukuran. Setiap objek fisik diberikan kode identitas agar dapat diketahui 
+objek mana yang digunakan pada training, validation, dan testing. Penggunaan 
+beberapa objek fisik bertujuan mengurangi kemungkinan model hanya menghafal 
+ciri visual dari satu kapasitor tertentu. 
+Jumlah data pada setiap kelas direncanakan relatif seimbang. Apabila salah 
+satu kelas memiliki jumlah data yang jauh lebih banyak, model dapat cenderung 
+menghasilkan prediksi pada kelas tersebut. Oleh karena itu, jumlah video, jumlah 
+frame terpilih dan jumlah anotasi pada setiap kelas perlu diperhitungkan dan 
+dicatat. Distribusi dataset selanjutnya dapat disajikan dalam bentuk tabel yang 
+menunjukkan jumlah data berdasarkan kelas, sudut, posisi, pencahayaan, dan 
+kondisi gerak. 
+Dalam pengujian dan pengoprasian sistem, pada konveyor diletakan kapasitor 
+secara acak pada sudut selain 0°, yaitu 30°, 60°, 90°, 120°, 150°, atau 180°. Variasi 
+sudut tersebut sebagai referensi acuan. Sudut 0° Adalah referensi orientasi 
+sekaligus target output sistem. Apabila kapasitor terdeteksi memiliki deviasi sudut 
+terhadap orientasi 0°, manipulator akan mulai mengambil dan memutar kapasitor 
+sesuai sudut yang diperlukan hingga mencapai orientasi 0°, kemudian 
+menempatkan nya pada area output. Sementara itu, kapasitor yang sejak awal 
+sudah memenuhi target 0° akan dinyatakan telah sesuai sehingga tidak 
+memerlukan proses koreksi. 
+Meskipun sudut 0° digunakan sebagai salah satu variasi dataset, data tersebut 
+berfungsi sebagai contoh orientasi yang benar bagi model dan sebagai skenario 
+untuk pengujian tanpa koreksi.  
+ 
+Tabel 3. 1 Variasi Parameter Dataset 
+Parameter 
+Variasi yang direncanakan 
+Kelas Objek 
+Sesuai kelas penelitian 
+Sudut Orientasi 
+0°, 30°, 60°, 90°, 120°, 150°, 180° 
+Posisi Objek 
+Kiri, Tengah, dan Kanan. 
+Pencahayaan 
+Normal, Sedikit Redup, Sedikit 
+Terang 
+Kondisi Objek 
+Diam dan Bergerak 
+Jarak Kamera 
+78 cm 
+Latar Belakang 
+Belt Konveyor 
+
+=== Halaman 43 ===
+ 
+ 
+ 
+42 
+ 
+Sumber Data 
+Video atau Gambar Per Sesi 
+ 
+3.2.4 Prosedur Pengambilan Dataset 
+Selanjutnya adalah tahap pengambilan data. Dataset yang telah dikumpulkan 
+dalam bentuk video maupun gambar pada beberapa sesi yang berbeda. Setiap 
+sesi pengambilan mewakili kondisi tertentu, seperti kelas objek, sudut orientasi, 
+posisi pada belt, intensitas cahaya, dan kondisi objek ketika diam maupun dalam 
+posisi gerak. Akuisisi citra dilakukan dengan menggunakan spesifikasi pengaturan 
+kamera yang sama dengan kondisi alat ketika digunakan nanti agar dataset yang 
+diambil benar-benar menggambarkan keadaan saat sistem dijalankan. Data 
+diambil tidak hanya pada kondisi yang memumpuni, tetapi pada kondisi yang 
+masih mungkin terjadi pada alat, seperti posisi objek mendekati tepi area deteksi, 
+pantulan cahaya ringan, bayangan serta sedikit blur akibat pergerakan konveyor. 
+3.2.5 Ekstraksi Frame dan Pengendalian Duplikasi Data 
+Data yang diperoleh dalam bentuk video melalui proses ekstraksi frame 
+sebelum digunakan sebagai dataset citra. Ekstraksi frame dilakukan menggunakan 
+interval tertentu agar jumlah citra yang dihasilkan dapat mewakili setiap 
+perubahan posisi objek tanpa menghasilkan terlalu banyak gambar yang hampir 
+sama. Apabila video direkam pada 30 frame per detik yang berdekatan umumnya 
+memiliki perbedaan visual yang sangat kecil. 
+Oleh karena itu, pada penelitian ini ekstraksi dapat dilakukan dengan 
+pengambilan sekitar tiga sampai lima frame setiap detik, tergantung pada 
+kecepatan konveyor dan perubahan posisi objek dalam video. Sebagai contoh 
+video berdurasi lima detik yang diekstraksi dengan kecepatan lima frame per 
+detik akan menghasilkan sekitar 25 citra terpilih. Jumlah tersebut dianggap lebih 
+representatif dibandingkan menggunakan seluruh 150 frame dari video yang 
+sama. 
+Tahap selanjutnya adalah tingkat pemeriksaan kemiripan antar frame. Frame 
+yang menunjukkan posisi, sudut, pencahayaan, dan tampilan objek yang hampir 
+identik tidak seluruhnya digunakan. Hanya beberapa frame yang dianggap paling 
+jelas dan mewakili perubahan pada kapasitor. Pengendalian duplikasi dilakukan 
+agar model tidak memperoleh terlalu banyak data yang sama dan agar hasil 
+evaluasi tidak terlihat tinggi hanya karena model diuji menggunakan citra yang 
+sangat mirip dengan data training. 
+Ekstraksi frame dapat dilakukan dengan menentukan interval pengambilan 
+frame berdasarkan kecepatan konveyor dan perubahan pada posisi kapasitor. 
+Frame yang akan diambil harus menunjukkan perubahan posisi, sudut, atau 
+kondisi visual yang cukup berbeda dari frame sebelumnya. Setelah frame 
+
+=== Halaman 44 ===
+ 
+ 
+ 
+43 
+ 
+diekstraksi, dilakukan pemerikasaan duplikasi visual. Frame yang memiliki visual 
+citra yang mirip, seperti posisi pada objek, sudut, pencahayaan, dan background 
+yang serupa, tidak seluruhnya akan digunakan. Dari beberapa frame yan mirip, 
+hanya dipilih frame yang paling jelas dan paling merepresentasikan kondisi objek. 
+Pengendalian duplikasi perlu digunakan untuk mencegah dataset telihat besar 
+secara jumlah, namun rendah secara variasi. Dataset yang berisi terlalu banyak 
+frame hampir identik dapat menyebabkan model terlalu menghafal kondisi 
+pengambilan data, seperti cahaya, posisi, dan background, sehingga hasil pada 
+evaluasi akan menjadi tidak objektif. Oleh karena itu, citra yang terlalu identik 
+akan dipindahkan ke folder data ditolak atau tidak digunakan dalam dataset final. 
+Frame yang berasal dari satu sesi video tetap diberi identitas sesi yang sama. 
+Informasi tersebut dapat digunakan dan dicatat pada metadata agar seluruh 
+frame dapat ditelusuri kembali ke video sumbernya. Dengan demikian, apabila 
+ditemukan masalah pada suatu kelompok data, Seluruh frame dari sesi tersebut 
+dapat diperiksa atau dikeluarkan. 
+3.2.6 Kriteria dan Prosedur Seleksi Kelayakan Data Citra 
+Kriteria Kelayakan Data Citra digunakan untuk menentukan apakah citra hasil 
+ekstraksi dapat dimasukkan ke dalam dataset. Data dikategorikan layak apabila 
+objek kapasitor terlihat dengan jelas, tidak terpotong, berada di dalam area 
+deteksi, memiliki pencahayaan yang masih dapat diterima, serta memiliki 
+informasi kelas dan metadata yang lengkap. Citra juga harus dapat 
+memperhatikan bentuk, arah, dan karakteristik visual kapasitor sehingga proses 
+anotasi dapat dilakukan dengan benar. 
+Data yang dinyatakan tidak layak adalah apabila suatu citra mengalami blur 
+berat, objek terpotong, objek berada di luar jangkauan area deteksi, pencahayaan 
+terlalu gelap maupun terlalu terang, terdapat gangguan yang menutupi objek, 
+posisi kamera berubah, atau citra memiliki tingkat kemiripan yang sangat tinggi 
+dengan citra lainnya. Data juga dianggap tidak layak apabila informasi kelas tidak 
+sesuai, anotasi tidak mengikuti bentuk dan arah objek, atau metadata 
+pengambilan tidak tercatat dengan benar. 
+Prosedur seleksi kelayakan citra baru bisa dilakukan setelah frame hasil 
+ekstraksi sudah terkumpul. Citra yang sudah terkumpul akan diperiksa 
+berdasarkan beberapa parameter, seperti tingkat blur, pencahayaan, posisi objek 
+terhadap Region of Interest (ROI), objek penting terpotong pada citra, gangguan 
+visual, kesesuaian kelas, dan kelengkapan metadata. Pemeriksaan perlu dilakukan 
+agar memastikan bahwa citra yang akan digunakan sebagai dataset benar-benar 
+dapat mempresentasikan karakteristik visual kapasitor dan tidak menghasilkan 
+penurunan kualitas pada proses pelatihan model. 
+Pemeriksaan blur dilakukan dengan cara menilai ketajaman citra terlebih pada 
+objek kapasitor, terutama pada bagian penting seperti bagian bodi, kaki, dan 
+
+=== Halaman 45 ===
+ 
+ 
+ 
+44 
+ 
+tanda polaritas. Citra dengan blur ringan yang masih dapat ditoleransi dengan 
+memperlihatkan bentuk dan arah kapasitor dapat dipertahankan sebagai variasi 
+kondisi operasional. Namun citra dengan blur berat, seperti citra yang 
+menyebabkan batas objek, kaki kapasitor, atau tanda polaritas yang tidak dapat 
+dikenali dengan jelas, itu bisa dinyatakan kategori tidak layak. Citra blur dengan 
+kategori berat tidak dapat diperbaiki dengan menggunakan proses penajaman 
+digital karena akan menghasilkan artefak visual yang tidak dapat diperbaiki 
+sehingga dapat mengubah kondisi asli. Oleh karena itu, citra blur berat akan 
+dihapus dan dilakukan pengambilan ulang pada sesi berikutnya. 
+Pemeriksaan pencahayaan dilakukan agar memastikan objek tidak telalu 
+gelap, terlalu terang atau mengalami pantulan cahaya di sekitar objek. Citra masih 
+dapat digunakan bila bentuk objek, arah kaki, dan tanda polaritas masih dapat 
+dikenali dengan jelas. Namun apabila bagian penting kapasitor tertutup pantulan 
+cahaya atau beberapa titik penting menyebabkan tidak terbaca, maka citra 
+tersebut dapat dikategorikan sebagai kelompok tidak layak dan perlu dilakukan 
+pengambilan ulang dengan pengaturan lampu yang lebih stabil. 
+Pemeriksaan pada posisi objek dilakukan untuk melihat apakah objek 
+kapasitor berada di dalam area deteksi atau Region of Interest (ROI). Citra dapat 
+katakan layak apabila objek berada pada area yang masih dapat dijangkau oleh 
+manipulator dan seluruh bagian penting objek terlihat. Namun apabila objek 
+berada di luar ROI, terlalu dekat dengan tepi citra, atau sebagian badan kapasitor 
+terpotong. Maka citra dapat dikategorikan pada kelompok tidak layak, dan perlu 
+untuk mengambil ulang citra dengan posisi yang lebih baik. 
+Pemeriksaan gangguan visual dapat dilakukan dengan melihat apakah objek 
+lain terlihat menganggu objek utama, pantulan cahaya yang dapat menganggu 
+hasil, bayangan yang tajam sehingga menutupi bagian penting kapasitor. 
+Gangguan ringan yang masih mungkin terjadi pada kondisi operasional dapat 
+dipertahankan sebagai variasi dataset. Namun gangguan yang menutupi bentuk 
+utama kapasitor atau menyebabkan kelas orientasi menjadi sulit ditentukan akan 
+menyebabkan citra ditolak, sehingga citra dengan kategori tersebut akan di hapus 
+dan diganti dengan citra baru. 
+Setelah pemeriksaan dilakukan, Setiap citra akan diberikan status layak, tidak 
+layak, atau perlu perbaikan. Citra layak akan dilanjutkan pada tahap berikutnya ke 
+penamaan file dan anotasi, sedangkan citra tidak layak akan dihapus dan akan 
+diganti dengan citra baru yang lebih baik. Kesalahan metadata atau anotasi dapat 
+diperbaiki sebelum data dimasukkan kembali ke dataset. 
+Data yang tidak memenuhi kriteria akan ditangani berdasarkan jenis 
+kesalahannya. Citra yang mengalami blur berat, objek terpotong, atau 
+pencahayaan yang tidak dapat ditoleransi akan dihapus dan dilakukan 
+pengambilan ulang. Apabila kesalahan hanya terdapat pada anotasi dan 
+
+=== Halaman 46 ===
+ 
+ 
+ 
+45 
+ 
+metadata, data tersebut akan diperbaiki terlebih dahulu sebelum dimasukkan 
+kembali ke dalam dataset. 
+Tabel 3. 2 Karakteristik Layak dan Tidak Layak 
+No 
+Parameter 
+Pemeriksaan 
+Kriteria Layak 
+Kriteria Tidak 
+Layak 
+Tindakan 
+1 
+Blur 
+Bentuk kaki, dan 
+kapasitor terlihat 
+dengan jelas. 
+Batas objek 
+kabur berat, 
+kaki/tanda 
+polaritas tidak 
+terlihat. 
+Hapus dan 
+ambil ulang 
+2 
+Pencahayaan 
+Objek terlihat jelas. 
+Objek tertutup 
+cahaya atau 
+tidak terbaca.  
+Ambil ulang 
+dengan 
+pencahaya
+an stabil. 
+3 
+Posisi 
+terhadap ROI 
+Objek berada di 
+jangkauan 
+manipulator dan 
+diarea deteksi. 
+Objek diluar 
+ROI. 
+Hapus atau 
+ambil 
+ulang. 
+4 
+Objek 
+terpotong 
+Seluruh bagian 
+penting objek terlihat. 
+Bodi/ objek 
+penting pada 
+kapasitor 
+terpotong. 
+Hapus dan 
+ambil 
+ulang. 
+5 
+Gangguan 
+Visual 
+Gangguan ringan tidak 
+menutupi objek. 
+Objek tertutup 
+benda 
+lain/bayangan 
+tajam. 
+Hapus atau 
+ambil 
+ulang. 
+6 
+Duplikasi 
+Frame 
+Frame menunjukkan 
+variasi 
+posisi/sudut/pencahay
+aan. 
+Frame hampir 
+identik dengan 
+citra lain. 
+Simpan 
+satu frame 
+terbaik. 
+7 
+Metadata 
+Informasi 
+kelas,sesi,sudut,posisi, 
+dan pencahayaan 
+lengkap. 
+Metadata 
+salah/kosong. 
+Perbaiki 
+Metadata. 
+8 
+Anotasi 
+Kelas dan OBB sesuai. 
+Kelas tertukar 
+atau OBB tidak 
+mengikuti arah 
+objek. 
+Perbaiki 
+Anotasi. 
+
+=== Halaman 47 ===
+ 
+ 
+ 
+46 
+ 
+3.2.7 Penamaan File dan Metadata Dataset 
+Setiap citra yang telah memenuhi kriteria kelayakan diberi nama file secara 
+sistematis berdasarkan kelas objek, identitas objek fisik, sudut orientasi, posisi 
+objek, kondisi pencahayaan, nomor sesi, dan nomor frame. Contoh format 
+penamaan file adalah Polar-P01-A090-Tengah-Normal-S01-F001.jpg. Penamaan 
+tersebut bertujuan untuk memudahkan proses pengelompokan dan penelusuran 
+terhadap setiap citra. 
+Metadata dataset merupakan informasi tambahan yang digunakan untuk 
+menjelaskan setiap kondisi dan karakteristik dari pengambilan setiap citra. 
+Metadata tidak hanya berupa citra, melainkan informasi tambahan yang berisi 
+keterangan seperti nama file, kelas objek, identitas objek fisik, sudut orientasi, 
+posisi objek, kondisi pencahayaan, jarak kamera, nomor sesi pengambilan citra, 
+nomor frame, kondisi objek ketika diam atau gerak, status kelayakan data, serta 
+kelompok training, validation, atau testing. 
+Pencatatan metadata berfungsi untuk memudahkan proses analisis dan 
+penelusuran dataset. Apabila ditemukan kesalahan pada hasil deteksi, metadata 
+dapat digunakan untuk mengetahui kondisi pengambilan citra yang menyebabkan 
+kegagalan. Misalnya, sudut tertentu, posisi tertentu, atau kondisi pencahayaan 
+tertentu. Dengan demikian, metadata berfungsi sebagai bagian dari pengendalian 
+kualitas dataset dan dapat membantu proses pengecekan, evaluasi, serta 
+perbaikan model secara sistematis. 
+Metadata dapat disimpan dalam bentuk file CSV agar dapat diperiksa dan 
+diolah secara sistematis. Pencatatan ini bertujuan untuk menjaga ketertelusuran 
+setiap citra. Apabila ditemukan kesalahan pada hasil deteksi, metadata dapat 
+digunakan untuk mengetahui kondisi pengambilan data yang mungkin menjadi 
+penyebab, seperti sudut, posisi objek, pencahayaan, atau sesi pengambilan 
+tertentu. 
+3.2.8 Anotasi dan Validasi Anotasi 
+Tahap anotasi atau labeling. Setiap objek pada citra diberi label dengan 
+menggunakan metode anotasi sesuai dengan kelasnya yang telah ditentukan. 
+Apabila menggunakan Oriented Bounding Box, anotasi tidak hanya menunjukkan 
+lokasi objek, tetapi juga mengikuti arah atau sudut orientasi kapasitor. Proses 
+anotasi harus dilakukan secara konsisten agar batas objek tidak terlalu longgar, 
+tidak memotong bagian objek penting, dan sudut bounding box sesuai dengan 
+arah kapasitor. Gambar yang tidak memiliki objek dapat digunakan sebagai 
+Negative Image tanpa anotasi untuk membantu model mengenali suatu kondisi 
+ketika area pada permukaan konveyor kosong. 
+Selanjutnya ketika proses anotasi selesai, dilakukan validasi anotasi. Validasi 
+bertujuan untuk setiap kelas seperti objek, posisi bounding box, dan sudut 
+
+=== Halaman 48 ===
+ 
+ 
+ 
+47 
+ 
+orientasi telah diberikan secara benar. Pemeriksaan dapat dilakukan dengan 
+mengambil sebagian sampel dari setiap kelas, lalu anotasi dibandingkan dengan 
+citra yang asli. Apabila ditemukan kesalahan pada kelas seperti kelas tertukar, 
+bounding box yang tidak sesuai, atau sudut anotasi tidak konsisten, data tersebut 
+dikembalikan untuk diperbaiki. Validasi ini penting karena model bisa 
+mempelajari pola yang salah dan menurunkan akurasi deteksi. 
+Setelah citra dinyatakan layak dan memiliki nama file maka akan dilakukan 
+prosesn anotasi. Setiap citra akan dibuka menggunakan perangkat yang 
+mendukung Oriented Bounding Box (OBB). Objek kapasitor diberi label dengan 
+kelas yang sudah ditentukan, yaitu kapasitor polar orientasi benar, kapasitor polar 
+orientasi salah, dan background atau bukan kapasitor. Untuk citra yang tidak 
+memiliki objek target, citra tersebut dapat digunakan sebagai negative Image 
+tanpa anotasi objek. 
+Pada citra yang berisi kapasitor, kotak OBB akan dibuat dengan mengikuti 
+arah memanjang bodi kapasitor. Titik pusat kotak ditempatkan ditengah objek. 
+Sisi panjang pada kotak akan mengikuti arah sumbu utama kapasitor, dan sisi 
+pendek pada kotak menyesuaikan lebar kapasitor. Batas OBB tidak boleh terlalu 
+longgar karena dapat memasukkan area background yang tidak diperlukan, dan 
+tidak boleh terlalu sempit karena akan mengakibatkan memotong bagian penting 
+dari objek seperti bodi atau kaki kapasitor. 
+Penentu kelas orientasi dilakukan berdasarkan posisi polaritas kapasitor 
+terhadap sudut referensi yang telah ditentukan. Apabila arah kaki atau tanda 
+polaritas sesuai dengan orientasi referensi, citra diberi kelas orientasi benar. 
+Namun apabila arah kaki atau tanda polaritas berlawanan atau tidak sesuai 
+dengan orientasi referensi, citra akan diberikan kelas orientasi salah. Dengan 
+demikian, anotasi tidak hanya menandai lokasi objek, tetapi juga memberikan 
+informasi arah dan status orientasi objek. 
+Setelah anotasi selesai, akan dilakukan step validasi anotasi. Validasi akan 
+dilakukan untuk memeriksa kesesuaian antara citra asli, kelas yang diberikan, 
+posisi OBB, dan sudut OBB. Kesalahan yang diperiksa meliputi kelas tertukar, OBB 
+terlalu longgar, OBB memotong objek, sudut OBB tidak mengikuti arah kapasitor, 
+dan anotasi pada citra negative imagr. Apabila ditemukan kesalahan, citra akan 
+dikembalikan pada tahap perbaikan anotasi sebelum digunakan pada proses 
+pembagian dataset. 
+3.2.9 Pembagian Dataset dan Pencegahan Data Leakage 
+Dataset yang telah melalui proses seleksi dan validasi kemudian dibagi 
+menjadi beberapa bagian seperti data training, validation, dan testing. Pembagian 
+dilakukan dengan rasio 80% untuk training, 10% untuk validation, dan 10% untuk 
+testing. Pembagian tidak dilakukan secara acak pada frame yang berasal dari 
+video yang sama. Seluruh frame dari satu sesi video hanya boleh dimasukkan ke 
+
+=== Halaman 49 ===
+ 
+ 
+ 
+48 
+ 
+dalam satu kelompok dataset. Hal ini dilakukan untuk mencegah data leakage, 
+yaitu kondisi ketika citra yang hampir identik, terdapat pada data training dan 
+testing sehingga hasil evaluasi menjadi tidak objektif. Apabila memungkinkan, 
+objek fisik yang digunakan pada test set juga dibuat berbeda dari objek yang 
+digunakan pada training agar kemampuan objek dapat diuji dengan lebih baik. 
+Data leakage merupakan suatu kondisi ketika informasi dari data testing 
+secara tidak sengaja telah dipelajari oleh model pada tahap training. Kondisi ini 
+dapat terjadi apabila frame dari video yang sama dibagi secara acak ke dalam 
+kelompok training, validation, dan testing. Karena frame yang berdekatan 
+memiliki tampilan yang hampir identik, hasil evaluasi dapat terlihat sangat tinggi 
+meskipun model belum tentu mampu mengenali objek baru. 
+Untuk mencegah data leakage, pembagian dataset dilakukan berdasarkan sesi 
+video, bukan berdasarkan frame secara acak. Seluruh frame yang berasal dari satu 
+sesi video hanya dimasukkan ke dalam satu kelompok dataset. Sebagai contoh, 
+apabila video sesi S01 digunakan untuk training, seluruh frame dari sesi tersebut 
+tidak boleh dimasukan kembali ke dalam validation maupun testing. Apabila 
+memungkinkan, objek fisik tertentu juga dipisahkan secara khusus agar kapasitor 
+yang digunakan pada test set tidak pernah muncul pada training set. 
+Selain data leakage, setiap kelas juga harus dibuat seimbang dan bisa 
+dikendalikan. Jumlah citra kapasitor polar kapasitor non-polar, dan objek asing 
+dibuat relatif seimbang. Distribusi sudut, posisi dan kondisi pencahayaan pada 
+setiap kelas juga diperiksa agar satu kelas tidak hanya berisi kondisi yang lebih 
+mudah dibandingkan kelas lainnya. Ketidakseimbangan kelas dapat menyebabkan 
+model lebih sering mendeteksi kelas dengan jumlah yang lebih banyak sehingga 
+menghasilkan sistem dengan performa yang tidak merata. 
+3.2.10 Pengendalian Versi dan Penyimpanan Dataset 
+Pada pengendalian versi dan Penyimpanan Dataset, data disimpan secara 
+terstruktur agar setiap perubahan dapat diketahui dan ditelusuri. Setiap 
+pembaruan, seperti penambahan citra, perbaikan anotasi, atau penghapusan data 
+yang tidak layak, diberi nomor versi, misalnya Dataset-v1.0, Dataset-v1.1, dan 
+Dataset-v2.0. Penyimpanan dataset dibagi ke dalam folder video mentah, hasil 
+ekstraksi frame, anotasi, training, validation, testing, metadata, dan data yang 
+ditolak. Dataset juga disimpan pada penyimpanan cadangan untuk mengurangi 
+risiko kehilangan data. 
+3.2.11 Ketertelusuran dan Rekapitulasi Data 
+Setiap data disusun agar dapat dirancang agar dapat ditelusuri berdasarkan 
+nama file, ID objek, nomor sesi, kondisi pengambilan, dan versi dataset. 
+Rekapitulasi dilakukan menggunakan tabel atau file spreadsheet yang memuat 
+informasi kelayakan data serta pembagian training, validation, atau testing. 
+
+=== Halaman 50 ===
+ 
+ 
+ 
+49 
+ 
+Pencatatan tersebut membantu proses identifikasi penyebab kesalahan dan 
+mendukung evaluasi dataset secara sistematis. 
+3.2.12 Perancangan Test Case 
+Test case dirancang sebagai acuan dalam pelaksanaan pengujian kualitas 
+dataset, model deteksi, komunikasi antarperangkat, dan sistem secara 
+keseluruhan. Setiap test case memuat ID pengujian, tujuan, kondisi awal, input 
+yang diberikan, langkah pengujian, hasil yang diharapkan, serta kriteria pass atau 
+fail. Skenario pengujian meliputi kondisi normal, variasi sudut dan pencahayaan, 
+objek asing, komunikasi antara PC, PLC, dan STM32, pergerakan manipulator, 
+vacuum gripper, serta skenario gangguan atau kegagalan sistem. Pelaksanaan dan 
+hasil aktual dari setiap test case akan dibahas lebih lanjut pada bagian pengujian 
+sistem. 
+3.2.13 Perancangan Dataset Uji Generalisasi 
+Pengujian Generalisasi direncanakan untuk mengetahui kemampuan model 
+dalam mendeteksi suatu objek yang tidak digunakan pada proses training. 
+Dataset uji generalisasi dirancang menggunakan kapasitor fisik baru dengan 
+variasi ukuran, warna, sudut, posisi, dan pencahayaan yang masih sesuai dengan 
+batasan penelitian. Dataset ini nantinya akan digunakan untuk mengetahui 
+apakah model benar-benar mampu mengenali karakteristik dari kapasitor atau 
+hanya menghafal data training. 
+3.3 Sistem Deteksi menggunakan YOLO26 
+ 
+Gambar 3. 6 Flowchart Sistem Deteksi 
+
+=== Halaman 51 ===
+ 
+ 
+ 
+50 
+ 
+3.3.1 Akuisisi Citra 
+Tahap pertama setelah sistem dijalankan (Mulai) adalah akuisisi citra. Pada 
+tahap ini, sistem mengambil data gambar atau frame video yang akan dijadikan 
+input bagi model deteksi. Citra dapat diperoleh dari beberapa sumber, seperti 
+kamera secara langsung (real-time capture), berkas video, maupun kumpulan 
+citra statis (dataset uji). Citra hasil akuisisi kemudian diteruskan ke tahap 
+berikutnya untuk diproses oleh model YOLO26. 
+3.3.2 YOLO26 Inference 
+Pada tahap ini, citra yang telah diperoleh dimasukkan ke dalam model 
+YOLO26 untuk dilakukan proses inferensi (inference). Model akan menganalisis 
+citra dan menghasilkan prediksi awal berupa sekumpulan kotak pembatas 
+(bounding box), nilai keyakinan (confidence score), serta kelas objek yang 
+terdeteksi. Pada tahap ini, model belum melakukan penyaringan akhir, sehingga 
+jumlah kandidat deteksi yang dihasilkan masih relatif banyak, termasuk 
+kemungkinan deteksi yang tumpang tindih maupun deteksi dengan tingkat 
+keyakinan rendah. 
+3.3.3 Threshold Filter 
+Setelah proses inferensi, hasil deteksi disaring menggunakan nilai ambang 
+batas (threshold) tertentu. Setiap kandidat deteksi yang memiliki nilai confidence 
+score di bawah ambang batas yang telah ditentukan akan dihapus dari daftar hasil 
+deteksi. Tahap ini bertujuan untuk mengurangi jumlah deteksi yang tidak relevan 
+atau memiliki tingkat keyakinan rendah sebelum diproses lebih lanjut. Setelah 
+tahap ini selesai, alur sistem dilanjutkan ke bagian kedua melalui konektor A. 
+3.3.4 Non-Maximum Suppression Free (NMS) 
+Pada bagian kedua alur sistem, hasil deteksi yang telah melewati threshold 
+filter akan langsung diteruskan. Berkat arsitektur NMS-Free pada YOLO26, proses 
+penyaringan bounding box ganda diselesaikan langsung di dalam inferensi model 
+melalui mekanisme dual-head, sehingga mengeliminasi kebutuhan proses Non-
+Maximum Suppression (NMS) sebagai langkah post-processing terpisah. Dual-
+head inference head mempertahankan kotak pembatas dengan nilai confidence 
+score tertinggi dan secara internal menangani tumpang tindih (Intersection over 
+Union/IoU) di atas ambang batas tertentu. Proses ini menghasilkan satu kotak 
+deteksi terbaik untuk setiap objek yang terdeteksi. 
+3.3.5 Post-processing & Visualisasi 
+Setelah hasil deteksi akhir diperoleh, sistem melakukan tahap pasca-
+pemrosesan (post-processing) dan visualisasi. Pada tahap ini, sistem menggambar 
+
+=== Halaman 52 ===
+ 
+ 
+ 
+51 
+ 
+kotak pembatas, label kelas objek, serta nilai confidence score pada citra asli 
+sehingga hasil deteksi dapat ditampilkan secara visual dan mudah dipahami oleh 
+pengguna. 
+3.3.6 Simpan Output 
+Hasil deteksi yang telah divisualisasikan kemudian disimpan sebagai output 
+sistem. Output dapat berupa citra atau video hasil anotasi, maupun data hasil 
+deteksi dalam bentuk berkas log/teks yang berisi informasi koordinat, kelas, dan 
+tingkat keyakinan setiap objek yang terdeteksi. Setelah proses penyimpanan 
+selesai, sistem berakhir (Selesai). 
+ 
+3.4 Pengujian Machine Vision 
+Pengujian sistem dilakukan dengan cara mengevaluasi performa dari model 
+YOLO26 dalam mendeteksi setiap kelasnya secara kuantitatif. Evaluasi dilakukan 
+menggunakan metrik standar dalam machine learning, Confusion Matrix, 
+Precision Recall, F-1 Score, dan Akurasi [6]. 
+3.4.1 Confussion Matrix  
+Confusion matrix digunakan untuk memetakan hasil prediksi model terhadap 
+label aktual pada setiap kelas. Pada penelitian ini, kelas yang digunakan meliputi: 
+• 
+Kapasitor Polar – Orientasi Benar 
+• 
+Kapasitor Polar – Orientasi Salah 
+• 
+Bukan Kapasitor / Background (negative image) 
+Ada empat komponen utama dasar confussion matrix : 
+• 
+True Positive (TP): model memprediksi kelas dengan benar sesuai label 
+aktual. 
+• 
+False Positive (FP): model memprediksi suatu kelas, tetapi label 
+aktualnya berbeda model atau salah mengenali objek. 
+• 
+False Negative (FN): objek aktual ada, tetapi model gagal mendeteksi 
+atau salah mengklasifikasikannya sebagai kelas lain. 
+• 
+True Negative (TN): model dengan benar tidak mendeteksi objek pada 
+kelas tersebut. 
+3.4.2 Perhitungan Metrix Evaluasi 
+Berdasarkan TP,FP,FN dan TN di cunfussion matrix, dihitung metrik evaluasi 
+berikut untuk setiap kelasnya, lalu akan dirata-ratakan untuk mendapatkan 
+peforma keseluruhan model:  
+1. 
+Accuracty ( Akurasi ) 
+
+=== Halaman 53 ===
+ 
+ 
+ 
+52 
+ 
+Accuracy mengukur proporsi seluruh prediksi yang benar terhadap total 
+data yang diuji. Metrik ini merupakan indikator umum performa 
+keseluruhan sistem : 
+ 
+        =
+𝑇𝑃+ 𝑇𝑁
+𝑇𝑃+ 𝑇𝑁+ 𝐹𝑃+ 𝐹𝑁× 100% 
+ 
+ 
+2. 
+Precision ( Presisi ) 
+Presisi mengkur proporsi prediksi positif yang benar-benar positif. Metrik 
+ini menggambarkan keandalan model Ketika menyatakan suatu kelas : 
+ 
+         =
+𝑇𝑃
+𝑇𝑃+ 𝐹𝑃 
+3. 
+Recall (Sensitivitas) 
+Recall mengukur proporsi data positif aktual yang berhasil dikenali oleh 
+model. Recall menggambarkan kemampuan model menangkap seluruh 
+kapasitor yang memiliki polaritas benar :  
+ 
+      =
+𝑇𝑃
+𝑇𝑃+ 𝐹𝑁 
+4. 
+F1-Score 
+F1-Score merupakan rata-rata harmonik antara presisi dan sensitivitas, 
+digunakan untuk mendapatkan satu nilai yang menyeimbangkan kedua 
+metrik tersebut, terutama penting jika distribusi kelas tidak seimbang. 
+𝐹1 −𝑆𝑐𝑜𝑟𝑒= 2 × 𝑃𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛× 𝑅𝑒𝑐𝑎𝑙𝑙
+𝑃𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛+ 𝑅𝑒𝑐𝑎𝑙𝑙 
+5. 
+mAP (mean Average Precision) 
+Dihitung dari luas area di bawah kurva Precision-Recall (AP) untuk setiap 
+kelas, kemudian dirata-ratakan ke seluruh kelas. mAP dihitung dengan 
+mengintegrasikan kurva Precision-Recall pada berbagai nilai threshold 
+IoU (Intersection over Union). 
+ 
+𝑚𝐴𝑃= 1
+𝑁∑𝐴
+𝑁
+𝑖=1
+𝑃𝑖 
+Keterangan :  
+N : Jumlah kelas 
+I : Indeks kelas 
+AP : Rata-rata presisi untuk satu kelas 
+Pada penelitian ini menggunakan dua vairan mAP: 
+• 
+mAP@0.5 : IoU threshold 0.5  standar deteksi umum 
+
+=== Halaman 54 ===
+ 
+ 
+ 
+53 
+ 
+• 
+mAP@0.5:0.95: rata-rata mAP pada IoU 0.5 hingga 0.95 
+ 
+3.4.3 Hasil Pengujian YOLO26 
+Tabel 3. 3 Hasil Pengujian Akurasi Deteksi 
+No 
+Kelas 
+Jumlah 
+Data 
+Uji 
+T
+P 
+F
+P 
+F
+N 
+T
+N 
+Presisi 
+Sensitivitas 
+F1-
+Score 
+1 
+Kapasitor 
+Polar 
+– 
+Orientasi 
+benar 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+2 
+Kapsitor Polar 
+– 
+Orientasi 
+salah 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+3 
+Baground/buk
+an kapasitor 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Total 
+Rata-
+rata 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Tabel 3. 4 Hasil Pengujian mAP dan Akurasi Keseluruhan 
+Parameter 
+Nilai 
+m.AP@0.5 
+ 
+m.AP@0.5:0.95 
+ 
+Presisi rata-rata 
+ 
+Recall rata-rata 
+ 
+f-1 score rata-rata 
+ 
+Akurasi keseluruhan 
+ 
+ 
+Tabel 3. 5 Hasil Pengujian Sistem Real-time pada Konveyor 
+No 
+Kondisi 
+Kapasitor 
+Prediksi 
+Sistem 
+Aksi 
+Hasil 
+Keterangan 
+1 
+Polaritas 
+benar 
+Benar 
+Lanjut 
+Benar 
+ 
+2 
+Polaritas 
+benar 
+Benar 
+Lanjut 
+Benar 
+ 
+3 
+Polaritas 
+Salah 
+Lakukan 
+Benar 
+ 
+
+=== Halaman 55 ===
+ 
+ 
+ 
+54 
+ 
+salah 
+Koreksi 
+N 
+ 
+ 
+ 
+Akurasi 
+ 
+ 
+Tabel 3. 6 Confusion Matrix Hasil Pengujian Model YOLO26 
+ 
+Prediksi 
+Aktual 
+ 
+Kapasitor 
+Polar 
+– 
+Orientasi 
+benar 
+Kapsitor 
+Polar 
+– 
+Orientasi 
+salah 
+Baground/bukan 
+kapasitor 
+Kapasitor Polar – 
+Orientasi benar 
+ 
+ 
+ 
+Kapsitor Polar – 
+Orientasi salah 
+ 
+ 
+ 
+Baground/bukan 
+kapasitor 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== Halaman 56 ===
+ 
+ 
+ 
+55 
+ 
+3.5 Perancangan Elektrikal dan Mekanikal 
+ 
+Gambar 3. 7 Desain Sistem Keseluruhan 
+3.5.1 Perancangan Elektrikal 
+ 
+Gambar 3. 8 Diagram Elektrikal Sistem 
+
+=== Halaman 57 ===
+ 
+ 
+ 
+56 
+ 
+diagram elektrikal sistem menunjukkan keseluruhan interkoneksi antar 
+komponen yang digunakan dalam sistem sortasi kapasitor. Mikrokontroler 
+STM32F446RE berperan sebagai pusat kendali yang menghubungkan seluruh 
+komponen elektrikal melalui berbagai protokol komunikasi seperti SPI, I2C, dan 
+UART. Sistem ini dirancang untuk mengintegrasikan dua motor stepper NEMA 17 
+dengan driver TMC2240 serta dua magnetic encoder AS5600 yang semuanya 
+dikendalikan oleh satu buah mikrokontroler. 
+Driver motor stepper TMC2240 digunakan sebanyak dua unit untuk 
+menggerakkan sumbu X dan Z pada Cartesian manipulator. Kedua driver berbagi 
+bus SPI2 yang sama (PB13 untuk SCK, PB14 untuk MISO, PB15 untuk MOSI) 
+sehingga hanya memerlukan tiga jalur sinyal untuk komunikasi data. Masing-
+masing driver memiliki pin Chip Select (CS), STEP, dan DIR yang independen. 
+Motor 0 (sumbu X) menggunakan PC0 sebagai CS, PC1 sebagai STEP, dan PC2 
+sebagai DIR. Motor 1 (sumbu Z) menggunakan PC3 sebagai CS, PC4 sebagai STEP, 
+dan PC5 sebagai DIR. Seluruh pin kontrol motor berada pada Port C untuk 
+kemudahan routing pada PCB. Pin Enable (EN) diikat ke GND agar driver selalu 
+dalam kondisi aktif. 
+Magnetic encoder AS5600 digunakan sebanyak dua unit untuk membaca 
+posisi sudut masing-masing motor secara real-time. Karena AS5600 memiliki 
+alamat I2C tetap (0x36), kedua encoder dipetakan ke dua peripheral I2C hardware 
+yang berbeda untuk menghindari konflik alamat. Encoder 1 terhubung melalui 
+I2C1 dengan SCL pada PB8 dan SDA pada PB9. Encoder 2 terhubung melalui I2C3 
+dengan SCL pada PA8 dan SDA pada PC9. Kedua encoder menggunakan tegangan 
+kerja 3.3V dari board Nucleo. Pull-up resistor 4.7kΩ pada jalur I2C umumnya 
+sudah tersedia pada modul breakout AS5600, sehingga tidak diperlukan resistor 
+eksternal. 
+Komunikasi antara STM32F446RE dengan PC menggunakan jalur UART dengan 
+DMA agar proses penerimaan data hasil deteksi YOLO26 tidak membebani CPU. 
+PLC OMRON CP2E terhubung ke PC melalui protokol Modbus TCP/IP via Ethernet 
+untuk mengendalikan subsistem konveyor. Sistem daya terdiri dari suplai 3.3V 
+dari board Nucleo untuk logika mikrokontroler dan encoder, serta suplai 24V dari 
+power supply eksternal untuk motor stepper melalui driver TMC2240. Ground 
+seluruh komponen dihubungkan secara bersama (common ground) untuk 
+memastikan referensi tegangan yang konsisten. 
+ 
+Tabel 3. 7 Konfigurasi Pin SPI TMC2240 
+Sinyal 
+Pin STM32 
+Koneksi ke TMC2240 
+SCK 
+PB13 
+MKS Pin 14 (SCK) pada kedua modul 
+MISO 
+PB14 
+MKS Pin 12 (SDO) pada kedua modul 
+
+=== Halaman 58 ===
+ 
+ 
+ 
+57 
+ 
+MOSI 
+PB15 
+MKS Pin 15 (SDI) pada kedua modul 
+Tabel 3. 8 Konfigurasi Pin Motor 0 (Sumbu X) 
+Sinyal 
+Pin STM32 
+Koneksi ke Motor 0 
+CS 01 
+PC0 
+MKS Pin 13 (CS) 
+STEP 01 
+PC1 
+MKS Pin 10 (STEP) 
+DIR 01 
+PC2 
+MKS Pin 9 (DIR) 
+ 
+ 
+ 
+ 
+Tabel 3. 9 Konfigurasi Pin Motor 1 (Sumbu Z) 
+Sinyal 
+Pin STM32 
+Koneksi ke Motor 1 
+CS 02 
+PC3 
+MKS Pin 13 (CS) 
+STEP 02 
+PC4 
+MKS Pin 10 (STEP) 
+DIR 02 
+PC5 
+MKS Pin 9 (DIR) 
+Tabel 3. 10 Koneksi Umum Driver TMC2240 
+Koneksi 
+Keterangan 
+EN 
+Dihubungkan ke GND (MKS Pin 16 ke Pin 7) agar driver 
+selalu aktif 
+VMOT 
+Suplai motor 24V dari power supply eksternal 
+VDD 
+3.3V dari board Nucleo 
+GND 
+Ground sistem (common ground) 
+Tabel 3. 11 Konfigurasi Pin Encoder 1 (I2C1) 
+Sinyal 
+Pin STM32 
+Keterangan 
+SCL 
+PB8 
+Pull-            4   Ω    3 3  
+SDA 
+PB9 
+Pull-            4   Ω    3 3  
+VDD 
+3.3V 
+Dari board Nucleo 
+GND 
+GND 
+Dari board Nucleo 
+DIR 
+GND 
+CW = nilai meningkat 
+
+=== Halaman 59 ===
+ 
+ 
+ 
+58 
+ 
+Tabel 3. 12 Konfigurasi Pin Encoder 2 (I2C3) 
+Sinyal 
+Pin STM32 
+Keterangan 
+SCL 
+PA8 
+Pull-            4   Ω    3 3  
+SDA 
+PC9 
+Pull-            4   Ω    3 3  
+VDD 
+3.3V 
+Dari board Nucleo 
+GND 
+GND 
+Dari board Nucleo 
+DIR 
+GND 
+CW = nilai meningkat 
+ 
+Gambar 3. 9 Render Perancangan Elektrikal Sistem 
+ 
+
+=== Halaman 60 ===
+ 
+ 
+ 
+59 
+ 
+3.5.2 Perancangan Mekanikal 
+ 
+Gambar 3. 10 Render Perancangan Mekanikal Sistem 
+Pada perancangan mekanikal, manipulator XZ tipe-T dirancang dengan 
+mengacu pada standar industri yang relevan. Struktur utama menggunakan profil 
+aluminium ekstrusi, di mana sumbu Z (kolom vertikal) menggunakan profil 4040 
+(40×40 mm) sebagai frame dan penyangga utama, sedangkan sumbu X 
+(cantilever) menggunakan profil 2020 (20×20 mm) yang lebih ringan untuk 
+carriage, [8], [18]. 
+Estimasi beban dan analisis struktur dilakukan pada tahap awal perancangan. 
+Analisis ini berfokus pada estimasi beban (payload) yang diangkat oleh sumbu Z, 
+mencakup massa rel X, motor X, dudukan, dan end effector. Karena sumbu X 
+(profil 2020) ditopang hanya pada satu ujung (cantilever pada tipe T-Style tegak 
+yang ditopang oleh kolom sumbu Z dari profil 4040), ujung bebasnya rentan 
+mengalami defleksi, [8], [15], [18]. 
+
+=== Halaman 61 ===
+ 
+ 
+ 
+60 
+ 
+ 
+Gambar 3. 11 Defleksi Cantilever Profil 2020 
+𝛿 = 𝐹 · 𝐿³
+3 · 𝐸 · 𝐼 
+ 
+Dimana F adalah gaya beban di ujung (Newton), E adalah Modulus Young 
+material (profil aluminium ekstrusi 2020 (20×20 mm, tebal dinding 1.5 mm, 
+sekitar 69 GPa), dan I adalah Momen Inersia Area penampang batang. Nilai 
+defleksi harus diminimalkan untuk menjamin kepresisian sistem. Rancangan ini 
+menggunakan Linear Guide Rail (blok MGN15) untuk memberikan kekakuan 
+absolut terhadap torsi mekanis [8], [15], [18]. 
+Verifikasi Torsi Sumbu Z: Verifikasi kelayakan motor NEMA 17 (torsi 73 N.cm 
+atau 0.73 N.m) pada sumbu Z dilakukan menggunakan persamaan gaya angkat 
+lead screw melawan gravitasi, [8], [15], [18] : 
+ 
+  
+  
+  
+  
+  
+                
+   
+   
+   
+   
+   
+   
+                        
+                                         
+                   
+         
+         
+         
+         
+                             
+            
+
+=== Halaman 62 ===
+ 
+ 
+ 
+61 
+ 
+ 
+Gambar 3. 12 Cadangan Torsi Motor NEMA 17 
+𝑇_𝑍 = 𝐹 · 𝑝
+2𝜋 · 𝜂 
+ 
+Dimana T_Z adalah torsi minimum motor (N.m), F adalah total gaya aksial (m · 
+g) dalam Newton, p adalah lead jarak tempuh per putaran (8 mm atau 0.008 m), 
+    η                                   w                          35          
+                      X          2       ≈ 2  N : 
+ 
+Gambar 3. 13 Torsi Lead Screw terhadap Gaya Aksial 
+𝑇_𝑍 = 20 · 0.008
+2𝜋 · 0.35 ≈ 0.0727 𝑁· 𝑚 = 7.27 𝑁· 𝑐𝑚 
+       
+          
+       
+                 
+ 
+  
+  
+  
+  
+            
+        
+    
+        
+    
+    
+   
+  
+  
+                                     
+                
+              
+ 
+  
+  
+  
+  
+   
+                 
+ 
+  
+  
+  
+  
+   
+                      
+                                                
+        
+       
+        
+       
+                                 
+                          
+
+=== Halaman 63 ===
+ 
+ 
+ 
+62 
+ 
+Hasil teoritis ini membuktikan bahwa torsi motor 73 N.cm sangat mencukupi 
+dengan cadangan torsi sekitar 90% untuk mengatasi gaya inersia saat akselerasi 
+dan gesekan rel. 
+Verifikasi Torsi Sumbu X: Berbeda dengan sumbu Z yang harus mengatasi gaya 
+gravitasi secara terus-menerus melalui mekanisme lead screw, sumbu X bergerak 
+secara horizontal menggunakan transmisi sabuk GT2 dan pulley, sehingga torsi 
+motor tidak perlu mengatasi beban statis akibat gravitasi. Kebutuhan torsi pada 
+sumbu X ditentukan oleh gaya yang diperlukan untuk mengakselerasi carriage 
+sumbu X beserta end effector hingga mencapai kecepatan target dalam waktu 
+siklus yang diinginkan. Verifikasi kelayakan motor NEMA 17 (torsi 52 N.cm atau 
+0.52 N.m) pada sumbu X dilakukan menggunakan persamaan torsi berbasis gaya 
+inersia yang ditransmisikan melalui radius pulley,[8], [15], [18] : 
+ 
+𝑇𝑋= 𝑚⋅𝑎⋅𝑟𝑝𝑢𝑙𝑙𝑒𝑦= 𝑚⋅𝑎⋅𝑝𝑏𝑒𝑙𝑡⋅𝑁𝑡𝑜𝑜𝑡ℎ
+2𝜋
+ 
+ 
+Dimana T_X adalah torsi minimum motor (N.m), m adalah massa total 
+carriage sumbu X beserta end effector (kg), a adalah akselerasi desain yang 
+ditargetkan (m/s²), dan r_pulley adalah radius efektif pulley GT2 yang diperoleh 
+dari keliling pulley C = p_belt × N_tooth. 
+ 
+ Berbeda dengan lead screw trapesium yang memiliki efisiensi mekanis 
+rendah (±35%) akibat gesekan geser pada ulir, transmisi sabuk timing GT2 bersifat 
+positive-engagement dengan efisiensi mendekati ideal (>95%), sehingga faktor 
+efisiensi tidak disertakan secara eksplisit pada persamaan ini, dan gesekan pada 
+Linear Guide Rail (blok MGN15) diperhitungkan sebagai bagian dari margin 
+keamanan. 
+Dengan asumsi beban carriage X maksimum 2 kg (konsisten dengan asumsi 
+pada verifikasi sumbu Z) dan target akselerasi desain a = 10 m/s² untuk memenuhi 
+kebutuhan waktu siklus sistem: 
+ 
+𝑇𝑋= 2 ⋅0.000637 ≈0.1274𝑁⋅𝑚= 12.7𝑁⋅𝑐𝑚 
+ 
+Hasil teoritis ini membuktikan bahwa torsi motor 52 N.cm sangat mencukupi 
+dengan cadangan torsi sekitar 309% terhadap torsi yang dibutuhkan, memberikan 
+margin keamanan yang memadai untuk mengatasi gesekan linear guide rail serta 
+variasi akselerasi selama proses akuisisi dan penempatan kapasitor. 
+ 
+Formulasi Closed-Loop dengan AS5600: Untuk meningkatkan reliabilitas dan 
+menanggulangi kehilangan langkah (step loss), sistem open-loop motor stepper 
+dimodifikasi menjadi closed-loop parsial menggunakan sensor magnetic rotary 
+encoder absolut AS5600 [23]. Sensor ini beresolusi 12-bit (4096 cacahan per 
+
+=== Halaman 64 ===
+ 
+ 
+ 
+63 
+ 
+putaran penuh). Motor NEMA 17 memiliki resolusi mekanis 1.8 derajat (200 full-
+step per putaran). Dengan pengali microstepping M pada driver TMC2240 (misal 
+M = 16), ekspektasi pembacaan encoder saat STM32 telah mengirimkan jumlah 
+pulsa step S_c adalah: 
+ 
+Gambar 3. 14 Ekspektasi Encoder vs Jumlah Pulsa Step 
+𝐸_𝑐 = 
+𝑆_𝑐
+200 × 𝑀 × 4096 
+ 
+Besaran kesalahan posisi sesaat (error) dihitung melalui selisih ekspektasi 
+perintah terhadap pembacaan aktual AS5600: 
+ 
+ 
+𝑒(𝑡) = 𝐸_𝑐(𝑡) − 𝐸_𝑟𝑎𝑤(𝑡) 
+ 
+Nilai error dinamis ini kemudian diumpankan ke kontroler PID pada STM32 
+untuk mensintesis perintah kompensasi kecepatan: 
+ 
+𝑢(𝑡) = 𝐾_𝑝 · 𝑒(𝑡) + 𝐾_𝑖 · ∫ 𝑒(𝜏) 𝑑𝜏 + 𝐾_𝑑 ·  
+ 
+Untuk pemetaan linear posisi aktual: pada sumbu Z (lead screw), jika lead 
+pitch bernilai p, posisi vertikal aktual d_z = (E_raw / 4096) × p. Pada sumbu X 
+(sabuk GT2), dengan belt pitch p_belt = 2 mm dan pulley GT2 yang memiliki 
+N_tooth gigi, keliling efektif pulley adalah C = p_belt × N_tooth. Misalnya, untuk 
+pulley 20 gigi: C = 2 × 20 = 40 mm per putaran. Posisi horizontal aktual d_x = 
+(E_raw / 4096) × C. Penggunaan geared idler memastikan tidak ada slip antara 
+sabuk dan pulley, sehingga perhitungan posisi berdasarkan pembacaan encoder 
+menjadi lebih akurat. 
+ 
+   
+    
+    
+    
+    
+    
+                       
+ 
+     
+     
+     
+     
+     
+     
+                                    
+                                   
+                          
+                 
+     
+     
+     
+     
+      
+      
+
+=== Halaman 65 ===
+ 
+ 
+ 
+64 
+ 
+ 
+Gambar 3. 15 Pemetaan Posisi Sumbu Z dan X 
+Mekanisme Rotasi End Effector dengan Micro-servo dan Gear Train: Untuk 
+memungkinkan koreksi orientasi kapasitor secara otomatis, end effector pada 
+manipulator XZ dilengkapi dengan mekanisme rotasi yang diaktuator oleh micro-
+servo. Mekanisme ini dirancang untuk memutar kapasitor sebesar 180° apabila 
+sistem deteksi mengidentifikasi bahwa orientasi polaritas kapasitor tidak sesuai. 
+Dengan demikian, kapasitor yang sebelumnya dalam posisi terbalik dapat 
+dikoreksi tanpa memerlukan intervensi manual. 
+Konstruksi mekanisme rotasi terdiri dari beberapa komponen utama, yaitu: 
+(1) micro-servo sebagai aktuator putar, (2) sepasang gear (roda gigi) yang 
+berfungsi sebagai transmisi daya putar, (3) dudukan vacuum suction cup yang 
+terhubung pada poros gear driven (gear keluaran), serta (4) bracket mounting 
+yang mengikat keseluruhan mekanisme pada carriage sumbu X manipulator [6]. 
+Micro-servo yang digunakan merupakan jenis servo digital dengan rentang 
+putaran 0°–180° dan torsi yang cukup untuk memutar kapasitor beserta suction 
+cup. Servo ini dipasang secara tetap pada bracket end effector dan poros 
+outputnya terhubung langsung dengan gear driver (gear penggerak). Gear driver 
+kemudian bermeshing dengan gear driven yang terhubung pada poros dudukan 
+vacuum suction cup [6]. Perbandingan gear ratio dirancang 1:1 untuk menjaga 
+responsivitas dan kesederhanaan mekanisme, mengingat beban putar yang 
+dihadapi relatif ringan (hanya massa kapasitor dan suction cup). 
+Prinsip kerja mekanisme rotasi adalah sebagai berikut: ketika model YOLO26 
+mendeteksi kapasitor dengan orientasi yang salah (misalnya polaritas terbalik), 
+sistem PC mengirimkan perintah koreksi ke STM32F446RE melalui komunikasi 
+UART. STM32 kemudian mengaktifkan micro-servo untuk berputar 180°, sehingga 
+gear driven dan dudukan vacuum suction cup berputar bersama-sama, memutar 
+kapasitor yang telah terangkat ke orientasi yang benar [6]. Setelah rotasi selesai, 
+manipulator menurunkan kapasitor kembali ke permukaan konveyor pada posisi 
+yang telah terkoreksi. 
+ 
+   
+    
+    
+    
+    
+    
+    
+    
+                          
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+             
+                      
+                       
+                      
+ 
+   
+    
+    
+    
+    
+    
+    
+    
+                          
+ 
+ 
+  
+  
+  
+  
+  
+  
+  
+             
+                      
+                       
+                                 
+
+=== Halaman 66 ===
+ 
+ 
+ 
+65 
+ 
+Pemilihan micro-servo sebagai aktuator rotasi didasarkan pada beberapa 
+pertimbangan, yaitu: (1) ukuran fisik yang kompak sehingga tidak menambah 
+beban signifikan pada end effector, (2) kontrol posisi yang sederhana 
+menggunakan sinyal PWM dari mikrokontroler, (3) waktu respons yang cepat 
+(umumnya kurang dari 0.5 detik untuk perpindahan 180°), dan (4) konsumsi daya 
+yang rendah sehingga tidak membebani sistem catu daya. Selain itu, penggunaan 
+gear train memungkinkan transmisi torsi yang halus dan presisi tanpa selip yang 
+berarti, sehingga posisi sudut kapasitor setelah rotasi dapat dikontrol secara 
+akurat. 
+Secara keseluruhan, integrasi mekanisme rotasi micro-servo dengan gear train 
+dan vacuum suction cup pada end effector memungkinkan sistem untuk tidak 
+hanya mendeteksi kesalahan orientasi kapasitor, tetapi juga melakukan koreksi 
+secara otomatis dan real-time [6]. Mekanisme ini melengkapi fungsi manipulator 
+XZ yang sebelumnya hanya bertugas mengangkat dan memindahkan kapasitor, 
+sehingga sistem menjadi solusi quality control yang lebih komprehensif. 
+ 
+ 
+Gambar 3. 16 Pemetaan Deviasi ke Rotasi Servo 
+ 
+  
+   
+   
+                              
+ 
+  
+  
+  
+   
+   
+   
+   
+                                   
+   
+    
+                               
+                 
+                      
+ 
+  
+   
+   
+                 
+   
+   
+    
+    
+    
+    
+    
+    
+    
+                    
+          
+            
+             
+                             
+                       
+
+=== Halaman 67 ===
+ 
+ 
+ 
+66 
+ 
+3.6 Perancangan Sistem Pergerakan Manipulator XZ 
+Sistem pergerakan manipulator XZ dirancang untuk melaksanakan proses 
+sortasi kapasitor secara otomatis, mulai dari tahap deteksi objek hingga koreksi 
+orientasi. Sistem ini mengintegrasikan computer vision (YOLOv26), mikrokontroler 
+(STM32F446RE), dan aktuator (motor stepper serta micro-servo) dalam satu alur 
+kerja yang terkoordinasi [6], [18]. 
+3.6.1 Akuisisi Citra dan Deteksi Objek 
+Tahap pertama dalam sistem pergerakan manipulator adalah akuisisi citra 
+menggunakan kamera yang dipasang di atas konveyor. Kamera menangkap 
+gambar secara real-time dan mengirimkan frame ke PC untuk diproses oleh model 
+YOLOv26 [6]. Model ini melakukan inferensi pada citra untuk mendeteksi 
+keberadaan kapasitor, menentukan posisinya pada konveyor, menghitung deviasi 
+orientasi dalam derajat, serta mengklasifikasikan jenis kapasitor (polar atau non-
+polar). 
+Output dari tahap ini meliputi: (1) koordinat posisi kapasitor dalam frame (x, 
+y), (2) sudut deviasi orientasi terhadap posisi referensi, (3) nilai confidence score 
+yang menunjukkan tingkat kepastian deteksi, dan (4) kelas objek yang terdeteksi 
+[7]. Data ini dikemas dalam format yang siap dikirim ke mikrokontroler melalui 
+komunikasi UART. 
+ 
+ 
+Gambar 3. 17 Akuisisi Citra dan Deteksi Objek 
+      
+ 
+         
+         
+    
+             
+             
+                  
+            
+               
+                  
+         
+
+=== Halaman 68 ===
+ 
+ 
+ 
+67 
+ 
+3.6.2 Pemrosesan Data dan Perencanaan Jalur 
+Setelah data deteksi diterima oleh STM32F446RE melalui komunikasi UART, 
+mikrokontroler melakukan pemrosesan data untuk menentukan jalur pergerakan 
+manipulator [19]. Proses ini mencakup konversi koordinat piksel ke koordinat fisik 
+(dalam milimeter), kalkulasi posisi target pada sumbu X dan Z, serta penentuan 
+sudut rotasi yang diperlukan untuk mengoreksi orientasi kapasitor. 
+Sebelum menghitung jalur pergerakan, STM32 terlebih dahulu membaca 
+posisi aktual kedua motor stepper dari encoder magnet AS5600 [20] [16]. Encoder 
+pada sumbu Z terhubung melalui I2C1 (SCL: PB8, SDA: PB9), sedangkan encoder 
+pada sumbu X terhubung melalui I2C3 (SCL: PA8, SDA: PC9). Pembacaan posisi 
+aktual ini digunakan sebagai titik awal perhitungan jalur, sehingga sistem 
+mengetahui posisi carriage saat ini sebelum mengirimkan perintah pergerakan ke 
+motor. 
+STM32 menghitung posisi target berdasarkan data lokasi kapasitor dari PC. 
+Posisi target sumbu X ditentukan oleh jarak horizontal kapasitor dari titik referensi 
+pada konveyor, sedangkan posisi target sumbu Z ditentukan oleh tinggi yang 
+diperlukan untuk mengangkat kapasitor menggunakan vacuum suction cup [17]. 
+Selain itu, mikrokontroler juga menentukan kecepatan dan akselerasi motor yang 
+optimal untuk mencapai target dalam waktu sesingkat mungkin tanpa 
+menyebabkan step loss. 
+Perencanaan jalur menggunakan algoritma kinematik (Trapezoidal atau S-
+Curve Profiling) untuk memastikan pergerakan yang halus dan presisi. Parameter 
+kinematik seperti kecepatan maksimum, akselerasi, dan deselerasi dikonfigurasi 
+berdasarkan hasil pengujian getaran transien yang telah dilakukan sebelumnya. 
+ 
+Gambar 3. 18 Pemrosesan Data dan Perencanaan Jalur 
+  
+           
+       
+   
+   
+   
+   
+  
+                  
+                  
+                    
+                          
+                   
+              
+    
+       
+       
+   
+              
+              
+           
+   
+      
+      
+   
+      
+         
+                     
+                     
+              
+       
+       
+                
+       
+       
+               
+                       
+                       
+
+=== Halaman 69 ===
+ 
+ 
+ 
+68 
+ 
+3.6.3 Pergerakan Manipulator ke Posisi Target 
+Setelah jalur perencanaan ditentukan, STM32 mengirimkan perintah 
+pergerakan ke driver motor stepper TMC2240 melalui antarmuka SPI [21]. Motor 
+stepper pada sumbu X (NEMA 17, 52 N.cm) menggerakkan carriage sepanjang rel 
+2020 extrusion menggunakan sabuk GT2, sedangkan motor stepper pada sumbu Z 
+(NEMA 17, 73 N.cm) menggerakkan carriage secara vertikal menggunakan lead 
+screw T8×8. 
+Kedua motor bergerak secara simultan menuju posisi target yang telah 
+ditentukan. Encoder AS5600 pada masing-masing motor membaca posisi aktual 
+secara real-time dan mengirimkan feedback ke STM32 untuk kontroler PID [20] 
+[16]. Apabila terjadi selisih antara posisi target dan posisi aktual (error), kontroler 
+PID mengkompensasi kecepatan motor untuk meminimalkan error tersebut. 
+Proses pergerakan dianggap selesai ketika kedua sumbu telah mencapai posisi 
+                                               ≤                          vacuum 
+suction cup pada end effector berada tepat di atas kapasitor yang akan diambil 
+[17]. 
+ 
+Gambar 3. 19 Pergerakan Manipulator ke Posisi Target 
+ 
+ 
+
+=== Halaman 70 ===
+ 
+ 
+ 
+69 
+ 
+3.6.4 Pengambilan dan Reorientasi Kapasitor 
+Setelah manipulator mencapai posisi target, proses pengambilan dan 
+reorientasi kapasitor dimulai. Tahap ini terdiri dari beberapa langkah berurutan: 
+Langkah 1 - Pengambilan: Vacuum suction cup diaktifkan untuk mengangkat 
+kapasitor dari permukaan konveyor. Sistem vakum menciptakan tekanan negatif 
+yang cukup untuk menahan kapasitor selama proses pemindahan dan rotasi. 
+Langkah 2 - Reorientasi: Apabila deteksi YOLO26 menunjukkan bahwa 
+                                          ≠  °   micro-servo pada end effector 
+diaktifkan untuk memutar kapasitor. STM32 menghitung sudut rotasi yang 
+diperlukan berdasarkan data deviasi dari PC dan mengirimkan sinyal PWM ke 
+micro-servo. Micro-servo memutar kapasitor melalui mekanisme gear train hingga 
+orientasi yang benar tercapai. 
+Langkah 3 - Penempatan: Setelah orientasi terkoreksi, manipulator 
+memindahkan kapasitor ke jig atau area output yang telah ditentukan. Vacuum 
+suction cup dilepaskan untuk menempatkan kapasitor pada posisi yang benar. 
+Langkah 4 - Kembali ke Home: Setelah kapasitor ditempatkan, manipulator 
+kembali ke posisi home untuk menunggu kapasitor berikutnya. Proses ini berulang 
+secara kontinyu selama konveyor beroperasi. 
+ 
+Gambar 3. 20 Proses Reorientasi Kapasitor 
+3.7 Pengujian Elektrikal dan Mekanikal 
+Setelah fase perakitan selesai, manipulator dievaluasi secara empiris 
+berdasarkan standar yang telah ditetapkan untuk memvalidasi presisi, keamanan, 
+dan keandalan sistem. Pengujian terdiri dari empat aspek utama yang masing-
+masing mengacu pada standar industri yang relevan. 
+3.7.1 Pengujian Akurasi dan Repeatability (ISO 9283) 
+Pengujian akurasi dan repeatability dilakukan untuk memvalidasi presisi 
+pergerakan Cartesian manipulator XZ sesuai standar ISO 9283. Pengujian ini 
+mengukur seberapa dekat posisi aktual carriage dengan posisi target yang 
+diperintahkan, serta seberapa konsisten sistem mencapai posisi yang sama pada 
+pengulangan yang berbeda. 
+
+=== Halaman 71 ===
+ 
+ 
+ 
+70 
+ 
+Prosedur pengujian: Carriage sumbu X dan Z diperintahkan bergerak ke satu 
+koordinat target (misal: X=15 cm, Z=10 cm) minimal 30 kali iterasi dari arah yang 
+berbeda. Setiap pergerakan dimulai dari posisi home dan diarahkan ke titik target 
+menggunakan kontroler PID dengan AS5600 encoder feedback. 
+Pengukuran dilakukan menggunakan Dial Indicator atau Laser Displacement 
+Sensor dengan resolusi mikrometer. Penyimpangan statis diukur sebagai selisih 
+antara posisi aktual dan posisi target. Hasil pengujian dievaluasi berdasarkan dua 
+metrik utama: (1) Akurasi — rata-rata penyimpangan dari posisi target, dan (2) 
+Repeatability — standar deviasi dari pengulangan pengukuran pada posisi yang 
+sama. 
+                     :         ≤   [  ]                        ≤    5    
+untuk memenuhi presisi yang dibutuhkan dalam proses sortasi kapasitor. 
+3.7.2 Pengujian Kegagalan Daya (ISO 10218) 
+Pengujian kegagalan daya dilakukan untuk memvalidasi fitur self-locking pada 
+lead screw trapesium T8 sesuai standar keselamatan ISO 10218 [2]. Pengujian ini 
+memastikan bahwa sumbu Z tidak jatuh secara bebas (free-fall) saat catu daya 
+diputus secara mendadak, sehingga melindungi operator dan peralatan dari 
+kecelakaan kerja. 
+Prosedur pengujian: Beban uji maksimum (sekitar 2 kg) dipasang pada sumbu 
+X, kemudian catu daya motor stepper diputus secara mendadak saat carriage 
+berada pada posisi tertentu. Posisi ketinggian Z diamati dan diukur selama 30 
+detik setelah pemutusan daya. 
+Lead screw trapesium T8 dengan bronze nut memiliki efisiensi mekanis sekitar 
+30-40%, yang memberikan efek self-locking alami. Ketika daya diputus, gesekan 
+antara lead screw dan nut cukup besar untuk menahan beban tanpa memerlukan 
+torsi motor. 
+Kriteria keberhasilan: Posisi ketinggian Z harus tetap tertahan dan tidak boleh 
+jatuh meluncur bebas (free-fall). Penyimpangan posisi maksimum yang diizinkan 
+       ≤   5          3                                
+3.7.3 Pengujian Sensorless Homing (TMC2240) 
+Pengujian sensorless homing dilakukan untuk memvalidasi kemampuan driver 
+motor stepper TMC2240 dalam mendeteksi batas mekanis tanpa menggunakan 
+sensor limit switch eksternal. Fitur ini menggunakan teknologi StallGuard yang 
+memonitor torsi motor secara real-time melalui komunikasi SPI. 
+Prosedur pengujian: Parameter StallGuard Threshold (SG_THRS) di-tuning 
+melalui SPI untuk menentukan sensitivitas deteksi. Mesin digerakkan perlahan 
+mendekati ujung lintasan fisik (batas mekanis). Ketika motor menyentuh dinding 
+struktur, torsi motor meningkat secara dramatis dan StallGuard mendeteksi 
+peningkatan ini sebagai batas posisi. 
+
+=== Halaman 72 ===
+ 
+ 
+ 
+71 
+ 
+Sistem dinyatakan valid apabila motor langsung melakukan pengereman 
+otomatis saat menyentuh dinding struktur, tanpa memerlukan intervensi manual 
+atau sensor eksternal. Keuntungan dari pendekatan ini adalah pengurangan 
+komponen hardware (tidak perlu limit switch) dan penyederhanaan wiring sistem. 
+                     :                            ≤ 2               
+                                                                        ≤     
+mm pada pengulangan homing yang berbeda. 
+3.7.4 Pengujian Getaran Transien 
+Pengujian getaran transien dilakukan untuk menentukan batas akselerasi 
+maksimum sebelum terjadi kehilangan langkah (step loss) pada motor stepper 
+[18]. Pengujian ini penting untuk memvalidasi algoritma pergerakan kinematik 
+(Trapezoidal atau S-Curve Profiling) yang digunakan dalam sistem kontrol. 
+Prosedur pengujian: Carriage sumbu X digerakkan secara sweep sepanjang 
+bentang kerjanya (0-30 cm) dengan akselerasi progresif. Akselerasi dimulai dari 
+nilai rendah dan ditingkatkan secara bertahap hingga step loss terdeteksi oleh 
+encoder AS5600. 
+Ketika step loss terjadi, sistem mencatat nilai akselerasi kritis sebagai batas 
+aman operasi. Data ini digunakan untuk menentukan parameter akselerasi dan 
+deselerasi yang aman dalam algoritma pergerakan, sehingga sistem dapat 
+beroperasi dengan kecepatan tinggi tanpa kehilangan presisi. 
+                     :                               ≥ 5       ²       
+memenuhi kebutuhan cycle time sistem. Parameter kinematik (akselerasi, 
+deselerasi, kecepatan maksimum) harus dikonfigurasi di bawah batas ini dengan 
+margin keamanan minimal 20%. 
+3.8 Pengujian Akusisi dataset dan Sistem Terintergrasi 
+3.8.1 Metode dan Skenario Pengujian 
+Pengujian dilakukan berdasarkan test case yang telah dirancang pada sub bab 
+3.2.12. Pengujian akan mencagkup hasil pemeriksaan akuisisi dataset, 
+kelengkapan metadata, pembagian dataset, komunikasi data antarperangkat, dan 
+alur kerja sistem terintegrasi. Setiap skenario utama dilakukan sebanyak 10 kali 
+untuk mengetahui konsistensi kerja sistem. Hasil setiap percobaan dicatat sebagai 
+pass  apabila hasil aktual sesuai dengan hasil yang diharapkan dan  fail untuk 
+kondisi hasil yang tidak sesuai dengan rancangan. 
+Jumlah pengujian akan diuji berdasarkan karakteristik setiap aspek. Pengujian 
+kelayakan citra dan kelengkapan metadata akan diterapkan terhadap seluruh citra 
+yang telah diperoleh, sedangkan memeriksa pembagian dataset akan dilakukan 
+satu kali setelah proses pembagian selesai. Pengujian komunikasi data, alur sistem 
+terintegrasi, koreksi orientasi, dan waktu siklus dilakukan sebanyak 10 kali. Setiap 
+
+=== Halaman 73 ===
+ 
+ 
+ 
+72 
+ 
+percobaan akan dinyatakan pass ketika seluruh kriteria keberhasilan pada test 
+case terpenuhi dan dinyatakan fail ketika terdapat sedikitnya satu kriteria tidak 
+terpenuhi.   
+Tabel 3. 13 Aspek Pengujian Sistem 
+ID 
+Aspek Pengujian 
+Parameter yang 
+diperiksa 
+Jumlah 
+Pengujian 
+AQ-01 
+Kelayakan Citra 
+Layak atau tidak 
+layak 
+Seluruh citra 
+AQ-02 
+Metadata 
+Lengkap atau 
+tidak lengkap 
+Seluruh citra 
+AQ-03 
+Pembagian 
+dataset 
+Rasio dan 
+pemisahan sesi 
+Satu kali 
+pemeriksaan 
+INT-01 
+Komunikasi data 
+Data diterima 
+sesuai kiriman 
+10 kali 
+INT-02 
+Sistem 
+Terintegrasi 
+Keberhasilan 
+satu siklus 
+10 kali per 
+skenario 
+INT-03 
+Waktu siklus 
+Waktu 
+penyelesaian 
+proses 
+10 kali per 
+skenario 
+ 
+3.8.2 Pengujian Kelayakan Hasil Akuisisi Dataset 
+Pengujian kelayakan hasil akuisisi dataset pada citra hasil ekstraksi dapat 
+dilakukan dengan memeriksa berdasarkan kriteria yang telah ditentukan. Citra 
+dapat dinyatakan layak apabila objek terlihat jelas, tidak dipotong, berada di 
+dalam area deteksi, memiliki pencahayaan yang dapat diterima, dan tidak 
+mengalami blur berat. Citra yang tidak memenuhi kriteria tersebut dimasukkan ke 
+dalam kelompok data tidak layak, dengan menggunakan: 
+ 
+𝐾citra =
+𝑁layak
+𝑁total
+× 100% 
+𝐾citra =  𝑃𝑟𝑒𝑠𝑒𝑛𝑡𝑎𝑠𝑖 𝐾𝑒𝑙𝑎𝑦𝑎𝑘𝑎𝑛 𝐶𝑖𝑡𝑟𝑎 
+𝑁layak =  𝐽𝑢𝑚𝑙𝑎ℎ 𝑐𝑖𝑡𝑟𝑎 𝑦𝑎𝑛𝑔 𝑑𝑖𝑛𝑦𝑎𝑡𝑎𝑘𝑎𝑛 𝑙𝑎𝑦𝑎𝑘. 
+𝑁total = 𝐽𝑢𝑚𝑙𝑎ℎ𝑠𝑒𝑙𝑢𝑟𝑢ℎ𝑐𝑖𝑡𝑟𝑎𝑦𝑎𝑛𝑔𝑑𝑖𝑝𝑒𝑟𝑖𝑘𝑠𝑎. 
+ 
+ 
+ 
+ 
+
+=== Halaman 74 ===
+ 
+ 
+ 
+73 
+ 
+Pemeriksaan dilakukan menggunakan sistem penilaian biner, yaitu nilai 1 apabila 
+kriteria sudah sesuai dan dinyatakan nilai 0 ketika kriteria belum sesuai atau tidak 
+terpenuhi. Satu citra sudah dinyatakan layak apabila, objek terlihat jelas, tidak 
+terpotong, berada dalam area deteksi, memiliki pencahayaan yang optimal, dan 
+tidak mengalami blur berat. Apabila salah satu kriteria tidak tepenuhi, citra 
+dinyatakan tidak layak dan alasan penolakannya akan dicatat. 
+Tabel 3. 14 Data Akuisisi Dataset 
+No 
+Sesi 
+Pengambilan 
+Total 
+Citra 
+Citra 
+layak 
+Citra 
+tidak 
+layak 
+Penyebab 
+dominan 
+ 
+Kelayakan 
+1 
+S01 
+- 
+- 
+- 
+- 
+...% 
+2 
+S02 
+- 
+- 
+- 
+- 
+...% 
+3 
+S03 
+- 
+- 
+- 
+- 
+...% 
+ 
+Total 
+- 
+- 
+- 
+- 
+...% 
+ 
+3.8.3 Pengujian Kelengkapan Metadata dan Penamaan File 
+Pengujian kelengkapan metadata dilakukan untuk memastikan bahwa setiap 
+citra memiliki nama file dan informasi pendukung yang sesuai dengan aturan yang 
+telah ditentukan. Informasi yang diperiksa mencakup kelas objek, ID objek fisik, 
+sudut referensi, posisi objek, kondisi pencahayaan, nomor frame, status 
+kelayakan, dan kelompok dataset. Metadata dinyatakan lengkap apabila seluruh 
+informasi wajib tercatat dan sesuai dengan kondisi citra. 
+ 
+𝐾metadata =
+𝑁citra dengan seluruh metadata benar dan lengkap
+𝑁citra yang diperiksa
+× 100% 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== Halaman 75 ===
+ 
+ 
+ 
+74 
+ 
+Tabel 3. 15 Kelengkapan Metadata 
+No 
+Informasi yang 
+diperiksa 
+Jumlah 
+data 
+Lengkap 
+Tidak 
+lengkap 
+Persentase 
+1 
+Format nama file 
+- 
+- 
+- 
+...% 
+2 
+ID objek 
+- 
+- 
+- 
+...% 
+3 
+Sudut referensi 
+- 
+- 
+- 
+...% 
+4 
+Kondisi 
+pencahayaan 
+- 
+- 
+- 
+...% 
+5 
+Nomor sesi dan 
+frame 
+- 
+- 
+- 
+...% 
+6 
+Kelompok dataset 
+- 
+- 
+- 
+...% 
+7 
+Kelas objek 
+- 
+- 
+- 
+…  
+8 
+Status kelayakan 
+- 
+- 
+- 
+…  
+ 
+3.8.4 Pengujian Pembagian Dataset dan Pencegahan Data Leakage 
+Pengujian pembagian dataset dilakukan untuk memastikan bahwa data telah 
+dibagi ke dalam kelompok training, validation, dan data testing sesuai dengan 
+rasio yang telah direncanakan. Pemeriksaan akan dilakukan pada kode sesi video 
+untuk memastikan bahwa seluruh frame dari satu sesi hanya berada pada satu 
+kelompok dataset. Apabila satu sesi ditemukan pada lebih dari satu kelompok, 
+kondisi tersebut dinyatakan sebagai data leakage dan pembagian dataset harus 
+diperbaiki. 
+ 
+Presentase setiap kelompok dihitung menggunakan: 
+𝑃(𝑘𝑒𝑙𝑜𝑚𝑝𝑜𝑘) = 𝑁(𝑘𝑒𝑙𝑜𝑚𝑝𝑜𝑘)/𝑁(𝑡𝑜𝑡𝑎𝑙) × 100% 
+Presentase Data leakage dihitung menggunakan: 
+𝐾Leakage =
+𝑁𝑠𝑒𝑠𝑖 𝑡𝑒𝑟𝑐𝑎𝑚𝑝𝑢𝑟
+𝑁total percobaan X 100% 
+Tabel 3. 16 Pengujian Pembagian Dataset 
+Kelompok 
+Kode sesi 
+Jumlah 
+citra 
+Presentase 
+aktual 
+Target 
+Sesi 
+tercampur 
+Status 
+Training 
+S01,S02,... 
+- 
+...% 
+80% 
+Tidak 
+- 
+Validation 
+S..., S... 
+- 
+...% 
+10% 
+Tidak 
+- 
+Testing 
+S..., S... 
+- 
+...% 
+10% 
+Tidak 
+- 
+
+=== Halaman 76 ===
+ 
+ 
+ 
+75 
+ 
+Total 
+ 
+- 
+100% 
+100% 
+ 
+ 
+ 
+Pembagian dinyatakan benar apabila presentasenya mendekati rasio yang 
+direncanakan dan tidak terdapat sesi video yang digunakan pada lebih dari satu 
+kelompok. 
+3.8.5 Pengujian Komunikasi Data Antarperangkat 
+Pada bagian ini hanya menguji apakah data berhasil berpindah antar 
+subsistem.  
+Pengujian komunikasi data dilakukan untuk memastikan bahwa perintah dan 
+informasi hasil deteksi dapat dikirimkan antarperangkat dengan benar. Pengujian 
+meliputi komunikasi antara PC dan PLC Omron CP2E melalui Modbus TCP/IP serta 
+komunikasi antar PC dan STM32F446RE melalui UART. Komunikasi dinyatakan 
+berhasil apabila data yang diterima sesuai dengan data yang dikirim dan 
+perangkat memberikan respons yang sesuai. 
+Data dinyatakan diterima dengan benar apabila sudah meliputi Jenis perintah, 
+nilai kelas, koordinat, dan sudut orientasi yang diterima sama dengan data yang 
+dikirim serta diterima. Suatu nilai dinyatakan tidak diterima apabila jenis perintah 
+tidak sesuai, nilai kelas tidak sesuai, koordinat, dan sudut orientasi tidak sama, 
+maka setiap kondisi dapat dicatat apakah jumlah data diterima benar atau gagal. 
+ 
+𝐾(𝑘𝑜𝑚𝑢𝑛𝑖𝑘𝑎𝑠𝑖) = 𝑁(𝑑𝑎𝑡𝑎𝑑𝑖𝑡𝑒𝑟𝑖𝑚𝑎𝑏𝑒𝑛𝑎𝑟)/𝑁(𝑑𝑎𝑡𝑎𝑑𝑖𝑘𝑖𝑟𝑖𝑚) × 100 
+Tabel 3. 17 Pengujian Komunikasi Data 
+No 
+Jalur 
+komunikasi 
+Data 
+atau 
+perintah 
+Jumlah 
+kirim 
+Diterima 
+benar 
+Gagal 
+Keberhasila
+n 
+1 
+PC-PLC 
+Perintah 
+berhenti 
+10 
+- 
+- 
+- 
+2 
+PC-PLC 
+Perintah 
+Berjalan 
+10 
+- 
+- 
+- 
+3 
+PC-STM32 
+Kelas 
+dan 
+koordina
+t 
+10 
+- 
+- 
+- 
+4 
+PC-STM32 
+Sudut 
+Orientasi 
+10 
+- 
+- 
+- 
+ 
+
+=== Halaman 77 ===
+ 
+ 
+ 
+76 
+ 
+3.8.6 Pengujian Alur Sistem Terintegrasi 
+Pengujian sistem terintegrasi dilakukan untuk mengetahui keberhasilan 
+seluruh tahapan sistem setelah subsistem Machine Vision, konveyor, komunikasi, 
+dan manipulator dihubungkan. Satu siklus dinyatakan berhasil apabila data hasi; 
+deteksi dapat diterima, konveyor berhenti pada waktu yang sesuai, manipulator 
+mengambil dan menempatkan objek, serta konveyor kembali berjalan tanpa 
+memerlukan intervensi manual: 
+ 
+𝐾(𝑠𝑖𝑠𝑡𝑒𝑚) = 𝑁(𝑠𝑖𝑘𝑙𝑢𝑠𝑏𝑒𝑟ℎ𝑎𝑠𝑖𝑙)/𝑁(𝑡𝑜𝑡𝑎𝑙𝑠𝑖𝑘𝑙𝑢𝑠) × 100 
+Tabel 3. 18 Pengujian Alur Sistem Terintegrasi 
+NO 
+Skenario 
+Data 
+deteksi 
+diterima 
+Konveyor 
+berhenti 
+Manipulator 
+bekerja 
+Objek 
+ditempatkan 
+Konveyor 
+berjalan 
+kembali 
+Status 
+Siklus 
+1 
+- 
+- 
+- 
+- 
+- 
+- 
+- 
+2 
+- 
+- 
+- 
+- 
+- 
+- 
+- 
+3 
+- 
+- 
+- 
+- 
+- 
+- 
+- 
+4 
+- 
+- 
+- 
+- 
+- 
+- 
+- 
+5 
+- 
+- 
+- 
+- 
+- 
+- 
+- 
+ 
+Pada tabel ini status siklus dapat ditulis gagal/berhasil tergantung ketika 
+penerapan dari dataset uji generalisasi yang sudah dirancang, berhasil atau gagal. 
+ 
+3.8.7 Pengujian Waktu Siklus Sistem 
+Pengujian waktu siklus dapat dilakukan untuk mengetahui dibutuhkan waktu 
+berapa lama untuk sistem menyelesaikan satu proses, mulai dari objek terdeteksi 
+hingga konveyor berjalan. Pengukuran dilakukan pada setiap skenario pengujian 
+dan diulang sebanyak 10 kali. Nilai waktu rata-rata dihitung untuk mengetahui 
+konsistensi waktu kerja sistem: 
+ 
+(𝑡)̅̅̅̅ = (∑(𝑖= 1)𝑛𝑡𝑖)/𝑛   
+(𝑡)̅̅̅̅ = waktu siklus rata −rata 
+𝑡𝑖= waktu pada percobaan ke −𝑖 
+𝑛= 𝑗𝑢𝑚𝑙𝑎ℎ 𝑝𝑒𝑟𝑐𝑜𝑏𝑎𝑎𝑛 
+
+=== Halaman 78 ===
+ 
+ 
+ 
+77 
+ 
+Tabel 3. 19 Pengujian Waktu Siklus Sistem 
+No 
+Skenario 
+Jumlah 
+Percobaan 
+Total waktu 
+Waktu 
+rata-
+rata 
+1 
+Alur tanpa koreksi 
+10 
+...detik 
+...detik 
+2 
+Koreksi orientasi 
+10 
+...detik 
+...detik 
+3 
+Penanganan 
+objek 
+asing 
+10 
+...detik 
+...detik 
+ 
+3.8.8 Analisis kegagalan dan pengujian Ulang 
+Apabila Pengujian belum mencapai target, maka akan dilakukan analisis 
+kegagalan dan perbaikan. Penyebab kegagalan dapat berasal dari kualitas dataset, 
+kesalahan anotasi, kondisi pencahayaan, confidence threshold, kalibrasi 
+koordinat, komunikasi antarperangkat, kesalahan gerakan manipulator, atau 
+kegagalan vacuum. Berdasarkan penyebab yang ditemukan, perbaikan dapat 
+dilakukan dengan menambah hard sample pada dataset, memperbaiki anotasi, 
+mengatur ulang posisi kamera, mengubah parameter model, lalu melakukan 
+kalibrasi ulang koordinat, atau memperbaiki bagian mekanikal dan elektrikal. 
+Setelah semua perbaikan dilakukan, pengujian diulang menggunakan test case 
+yang sama agar melihat perubahan performa dan dapat dibandingkan secara 
+objektif 
+Tabel 3. 20 Analisis Kegagalan 
+No 
+Tahapan 
+gagal 
+Gejala 
+kegagalan 
+Dugaan 
+penyebab 
+Tindakan 
+perbaikan 
+Hasil 
+pengujian 
+ulang 
+1 
+Akuisisi citra 
+Citra 
+terlalu 
+gelap 
+Pencahayaan 
+kurang 
+Mengatur 
+posisi lampu 
+- 
+2 
+Komunikasi 
+Data tidak 
+diterima 
+Koneksi 
+terputus 
+Memeriksa 
+koneksi 
+- 
+3 
+Manipulator 
+Posisi tidak 
+tepat 
+Kalibrasi 
+koordinat 
+Kalibrasi 
+ulang 
+- 
+4 
+Vacuum 
+Objek 
+terlepas 
+Daya 
+hisap 
+kurang 
+Memeriksa 
+sistem 
+vacuum 
+- 
+ 
+ 
+
+=== Halaman 79 ===
+ 
+ 
+ 
+78 
+ 
+Bab 4. Jadwal Pelaksanaan 
+ 
+ 
+ 
+1
+2
+3
+4
+1
+2
+3
+4
+1
+2
+3
+4
+1
+2
+3
+4
+1
+2
+3
+4
+1
+2
+3
+4
+A
+Seminar Proposal
+B
+PENGADAAN & PERAKITAN PERANGKAT KERAS
+B.1
+Pengadaan komponen elektrikal & mekanikal
+B.2
+Perakitan rangka konveyor & Cartesian manipulator XZ
+B.3
+Perakitan elektrikal (driver TMC2240, encoder AS5600, STM32, PLC)
+B.4
+Pemrograman firmware STM32 (motor stepper, PID, UART DMA)
+C
+PERANCANGAN AKUISISI & PENGELOLAAN DATASET
+C.1
+Perencanaan dataset (kelas, jumlah data, variasi)
+C.2
+Konfigurasi kamera & area akuisisi (ROI, pencahayaan)
+C.3
+Penyusunan matriks variasi & rancangan test case
+D
+PENGUMPULAN & PENGELOLAAN DATASET
+D.1
+Pengambilan data (video/gambar kapasitor polar & non-polar)
+D.2
+Ekstraksi frame & pengendalian duplikasi data
+D.3
+Anotasi (OBB) & validasi anotasi
+D.4
+Pembagian dataset (train 80%/val 10%/test 10%) & cek data leakage
+E
+PELATIHAN MODEL YOLO26
+E.1
+Konfigurasi parameter pelatihan (epoch, lr, batch, augmentasi)
+E.2
+Training model & pemantauan metrik (mAP, precision, recall)
+E.3
+Iterasi tuning hingga model konvergen
+F
+PENGUJIAN & EVALUASI
+F.1
+Pengujian performa model deteksi (test set, confusion matrix)
+F.2
+Pengujian elektrikal & mekanikal (akurasi ISO 9283, kegagalan daya ISO 
+10218)
+F.3
+Pengujian sensorless homing & getaran transien (step loss)
+G
+INTEGRASI SISTEM
+G.1
+Integrasi computer vision - PLC - konveyor (Modbus TCP/IP)
+G.2
+Integrasi STM32 - Cartesian manipulator - vacuum suction (UART)
+H
+PENGUJIAN SISTEM TERINTEGRASI
+H.1
+Pengujian kelayakan akuisisi dataset & metadata
+H.2
+Pengujian komunikasi data antarperangkat (PC-PLC-STM32)
+H.3
+Pengujian alur sistem terintegrasi & waktu siklus
+H.4
+Analisis kegagalan & perbaikan sistem
+H.5
+Pengujian ulang & optimasi
+I
+ANALISIS DATA, PEMBAHASAN & KESIMPULAN
+I.1
+Analisis akurasi deteksi, keberhasilan koreksi & sortasi
+I.2
+Pembahasan hasil vs target spesifikasi & studi literatur
+I.3
+Penarikan kesimpulan & rekomendasi pengembangan
+WBS
+Kegiatan
+GANTT CHART TA - Integrasi Computer Vision dan Sistem Sortasi Konveyor untuk Pengendalian Kualitas (Quality Control) Komponen Kapasitor Berdasarkan Polaritas 
+Juli
+Agustus
+September
+Oktober
+November
+Desember
+Tabel 4. 1 Jadwal Pelaksanaan 
+
+=== Halaman 80 ===
+ 
+ 
+ 
+79 
+ 
+Daftar Pustaka 
+[1] M. Raisul Islam et al.  “                                        q        
+Enhanced Quality                                    ” IEEE Access, vol. 12, 
+pp. 121449–121479, 2024, doi: 10.1109/ACCESS.2024.3453664. 
+[2]                       q                                                  “   -Eye-
+citor: A Machine Vision Inference Approach of Capacitor Detection for PCB 
+                             ”    2020 IEEE 7th International Conference on 
+Engineering Technologies and Applied Sciences (ICETAS), Kuala Lumpur, 
+Malaysia: 
+IEEE, 
+Dec. 
+2020, 
+pp. 
+1–5. 
+doi: 
+10.1109/ICETAS51660.2020.9484182. 
+[3] Z                N              W   “                                     
+                        ” Int. J. Precis. Eng. Manuf.-Green Technol., vol. 9, 
+no. 2, pp. 661–691, Mar. 2022, doi: 10.1007/s40684-021-00343-6. 
+[4] N. Hütten, M. Alves Gomes, F. Hölken, K. Andricevic, R. Meyes, and T. 
+        “                                                               
+and Maintenance: A Survey of Open-               ” Appl. Syst. Innov., vol. 
+7, no. 1, p. 11, Jan. 2024, doi: 10.3390/asi7010011. 
+[5]      zz            x      É                                 “              
+                                                           ” Int. J. Adv. 
+Eng. Res. Sci., vol. 7, no. 3, pp. 473–494, 2020, doi: 10.22161/ijaers.74.56. 
+[6]               Q                                                      “U           
+YOLO26: Unified Real-Time End-to-                  ”       2  2 26  arXiv: 
+arXiv:2606.03748. doi: 10.48550/arXiv.2606.03748. 
+[7]             “    -v1 to YOLO-v8, the Rise of YOLO and Its Complementary 
+N        w                                                          ” 
+Machines, vol. 11, no. 7, p. 677, Jun. 2023, doi: 10.3390/machines11070677. 
+[8] H. N. Dera, E. Kapuya, P. Mlambo, K. Chihota, E. Chiweshe, and I. Chipuri, 
+“                                                            :              
+                     ”    Proceedings of the EAI International Conference 
+for Research, Innovation and Development for Africa, Victoria Falls, 
+Zimbabwe: EAI, 2018. doi: 10.4108/eai.20-6-2017.2270836. 
+[9]                     “   ®      x®-M4 32-bit MCU+FPU, 225 DMIPS, up to 
+512 KB flash/128+4 KB RAM, USB OTG HS/FS, seventeen TIMs, three ADCs 
+    
+ w     
+              
+           ” 
+[      ]  
+         : 
+https://www.st.com/resource/en/datasheet/stm32f446re.pdf 
+[10]     N  “                          2  ”     N  [      ]           : 
+https://files.omron.eu/downloads/latest/datasheet/en/p145_cp2e_datashe
+et_en.pdf 
+
+=== Halaman 81 ===
+ 
+ 
+ 
+80 
+ 
+[11] “                                   :                                
+    w            ” Appl. Math. Inf. Sci., vol. 17, no. 6, pp. 1073–1088, Nov. 
+2023, doi: 10.18576/amis/170615. 
+[12]               N          “    -Time Object Classification on an Enamel Paint 
+Coating Conveyor Line Using Mask R- NN ” Automation, vol. 5, no. 3, pp. 
+213–229, Jun. 2024, doi: 10.3390/automation5030013. 
+[13]                          z              N        “                      
+pada Fast Shot & Slow Shot Valve Die Casting Machine Menggunakan PLC 
+      ” J. INTEGRASI, vol. 15, no. 2, pp. 163–170, Oct. 2023, doi: 
+10.30871/ji.v15i2.6506. 
+[14]     
+      
+       
+“  56   
+ 2-Bit 
+Programmable 
+Contactless 
+              ”                  [      ]           :      :          -
+osram.com/m/7059eac7531a86fd/original/AS5600-DS000365.pdf 
+[15] Z                  “                            -Loop Control Mode of a 
+Three-                           ” Energies, vol. 15, no. 3, p. 804, Jan. 
+2022, doi: 10.3390/en15030804. 
+[16]  N              “   224  36  2    +                                 
+w    
+    
+    
+    ” 
+ N     
+         
+[      ]  
+         : 
+https://www.analog.com/media/en/technical-documentation/data-
+sheets/tmc2240_datasheet.pdf 
+[17]                               w       “         -preview filtered B-spline 
+approach to tracking control – With application to vibration-induced error 
+                  3          ” Mechatronics, vol. 56, pp. 287–296, Dec. 
+2018, doi: 10.1016/j.mechatronics.2017.09.002. 
+[18]                            x                  “                           
+                                                                ”    2018 
+IEEE XXV International Conference on Electronics, Electrical Engineering and 
+Computing 
+(INTERCON), 
+Lima: 
+IEEE, 
+Aug. 
+2018, 
+pp. 
+1–4. 
+doi: 
+10.1109/INTERCON.2018.8526399. 
+[19]                                                        “                      
+                                                                    ” J. 
+Manuf. Sci. Eng., vol. 141, no. 2, p. 021011, Feb. 2019, doi: 
+10.1115/1.4042006. 
+[20]                                                           ö     “            
+vacuum grippers for the design of energy efficient vacuum-based handling 
+          ” Prod. Eng., vol. 14, no. 5–6, pp. 545–554, Dec. 2020, doi: 
+10.1007/s11740-020-00990-9. 
+[21]                                              “        -Object Grasping Using a 
+Multiple-Suction-                                       ” Robotics, vol. 
+13, no. 6, p. 85, May 2024, doi: 10.3390/robotics13060085. 
+
+=== Halaman 82 ===
+ 
+ 
+ 
+81 
+ 
+[22]             N                N                      “                 -Mode 
+Hybrid Micro-                                                        ” 
+Micromachines, vol. 14, no. 7, p. 1464, Jul. 2023, doi: 10.3390/mi14071464. 
+[23]    Z        Z       “                                                 32 
+                ”    2022 International Conference on Computation, Big-
+Data and Engineering (ICCBE), Yunlin, Taiwan: IEEE, May 2022, pp. 274–276. 
+doi: 10.1109/ICCBE56101.2022.9888225. 
+ 
+ 
+ 
+
+=== Halaman 83 ===
+ 
+ 
+ 
+82 
+ 
+Lampiran 
+ 

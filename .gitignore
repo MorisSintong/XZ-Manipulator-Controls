@@ -1,0 +1,55 @@
+# ============================================
+# .gitignore - XZ Manipulator Controls
+# File besar di-ignore agar tidak melebihi
+# batas GitHub (100MB per file, ~1GB total)
+# ============================================
+
+# ---- Model Weights (YOLO, PyTorch) ----
+*.pt
+*.pth
+*.onnx
+*.engine
+*.tflite
+
+# ---- Dataset Gambar ----
+02_Dataset/
+
+# ---- Video Files ----
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# ---- Dokumen Besar (PDF) ----
+*.pdf
+
+# ---- Annotated Result Images (besar) ----
+05_Hasil_Pengujian/sample_images_results/annotated_images/
+05_Hasil_Pengujian/offline_batch_results/annotated_images/
+
+# ---- Python Cache ----
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ---- Virtual Environment ----
+venv/
+.venv/
+env/
+
+# ---- IDE / Editor ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---- OS Files ----
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ---- Misc ----
+*.log
+*.tmp

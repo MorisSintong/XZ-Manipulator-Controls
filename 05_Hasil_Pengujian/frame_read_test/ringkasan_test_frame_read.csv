@@ -1,0 +1,4 @@
+No,File_Video,Resolusi,FPS,Durasi_Video,Total_Frame,Frame_Dibaca,Frame_Sukses,Frame_Gagal,Frame_Recovered,Success_Rate_%,Status,Durasi_Test_detik
+1,0910.mp4,2400x1080,30.0,00:01.400,42,42,42,0,0,100.0,PASSED (100%),4.728
+2,ELCOBENAR-P01-A000-Normal-Gerak-S003-VID001.avi,2000x900,21.285306,00:02.443,52,52,52,0,0,100.0,PASSED (100%),3.882
+3,ELCOSALAH-P01-Normal-Gerak-S003-VID001.avi,2000x900,21.093,00:04.172,88,88,88,0,0,100.0,PASSED (100%),6.782

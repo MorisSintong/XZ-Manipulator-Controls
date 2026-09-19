@@ -1,0 +1,58 @@
+==============================================================================
+  LAPORAN PENGUJIAN PEMBACAAN FRAME VIDEO (MISREAD TEST)
+  Tugas Akhir: Quality Control Kapasitor — Husein Alhamid
+  Tanggal: 2026-09-14 21:51:45
+==============================================================================
+
+─── Video #1: 0910.mp4 ───
+  Path             : D:\KUMPULAN TUGAS MEKATRONIKA HUSEIN\JOBDESK TA\0910.mp4
+  Resolusi         : 2400x1080
+  FPS              : 30.0
+  Durasi Video     : 00:01.400
+  Total Frame      : 42
+  Frame Dibaca     : 42
+  Frame Sukses     : 42
+  Frame Gagal      : 0
+  Frame Recovered  : 0
+  Success Rate     : 100.00%
+  Status           : PASSED (100%)
+  Durasi Test      : 4.728 detik
+
+─── Video #2: ELCOBENAR-P01-A000-Normal-Gerak-S003-VID001.avi ───
+  Path             : D:\KUMPULAN TUGAS MEKATRONIKA HUSEIN\JOBDESK TA\ELCOBENAR-P01-A000-Normal-Gerak-S003-VID001.avi
+  Resolusi         : 2000x900
+  FPS              : 21.285306
+  Durasi Video     : 00:02.443
+  Total Frame      : 52
+  Frame Dibaca     : 52
+  Frame Sukses     : 52
+  Frame Gagal      : 0
+  Frame Recovered  : 0
+  Success Rate     : 100.00%
+  Status           : PASSED (100%)
+  Durasi Test      : 3.882 detik
+
+─── Video #3: ELCOSALAH-P01-Normal-Gerak-S003-VID001.avi ───
+  Path             : D:\KUMPULAN TUGAS MEKATRONIKA HUSEIN\JOBDESK TA\ELCOSALAH-P01-Normal-Gerak-S003-VID001.avi
+  Resolusi         : 2000x900
+  FPS              : 21.093
+  Durasi Video     : 00:04.172
+  Total Frame      : 88
+  Frame Dibaca     : 88
+  Frame Sukses     : 88
+  Frame Gagal      : 0
+  Frame Recovered  : 0
+  Success Rate     : 100.00%
+  Status           : PASSED (100%)
+  Durasi Test      : 6.782 detik
+
+==============================================================================
+  RINGKASAN TOTAL
+==============================================================================
+  Total Video Diuji     : 3
+  Total Frame Keseluruhan: 182
+  Total Sukses          : 182
+  Total Gagal           : 0
+  Success Rate Global   : 100.00%
+  Kesimpulan            : SEMUA VIDEO PASSED ✓
+==============================================================================
