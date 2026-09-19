@@ -1,0 +1,12 @@
+# Cursor Rules for XZ-Manipulator-Controls
+
+Before performing any tasks in this repository, read and follow:
+VisionSystem/REMEDIATION_PLAN_AI.md
+
+Key mandates:
+1. Fix angle calculation quantization in VisionSystem/04_Source_Code/utils/angle_calculator.py (must support continuous 0-360 deg).
+2. Upgrade UART protocol to include (X, Y) physical coordinates in mm, object ID, and CRC16 checksum for STM32 Cartesian Manipulator.
+3. Debounce detections using spatial tracking to prevent frame-rate UART flooding.
+4. Remove destructive NVS Flash writes and blocking delays from firmware_esp32.ino.
+5. Fix all hardcoded user paths in .bat launchers.
+6. Verify all changes with automated tests before completing.
