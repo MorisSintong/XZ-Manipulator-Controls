@@ -1,0 +1,742 @@
+{
+  "status": "BUILD-ONLY / HARDWARE-UNVERIFIED; not unconditional release qualification",
+  "target": "STM32F446RE",
+  "configuration": "Release",
+  "motionEnabled": false,
+  "hardwareExecuted": false,
+  "cubeIdeManagedBuildInvoked": false,
+  "buildFinishedUtc": "2026-09-19T18:45:15.5577923Z",
+  "compiler": "arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623",
+  "compilerSha256": "6121D01FF6254766BE6CB9CA493BC7B8CE9B7DEE250F27D30E5596FA3FF873E4",
+  "architectureFlags": [
+    "-mcpu=cortex-m4",
+    "-mthumb",
+    "-mfpu=fpv4-sp-d16",
+    "-mfloat-abi=hard"
+  ],
+  "buildEntry": "validation\\build_arm.ps1",
+  "buildTarget": "tmc2240_cube",
+  "dependencyLockSha256": "35549D181F9D02BB604F5165A857F0C50DFCB102F4631AA73CDB987E3FC395CF",
+  "sourceInputs": [
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Config\\tmc2209_conf_template.h",
+      "sha256": "C6AAE3956259A02918AB66EBD2BC3BCF80613EF97F7806E2896EBF52DB8F3406"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Examples\\baremetal_f446re\\app_tmc2209_example.c",
+      "sha256": "B5F2BB4BF061D272887A973E8E3152C7601753961B7D27F081427BB05672878C"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Examples\\baremetal_f446re\\app_tmc2209_example.h",
+      "sha256": "DA4708A81ADC225783ABFC0605FAE23676079FE803498FE3AEF35B9C7278E5AD"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Examples\\freertos_f446re\\app_tmc2209_rtos_example.c",
+      "sha256": "E721F3DC6C5933133F6D5DBFB468CA124FE24C8ECF287D1B2C9F2D78EFD55083"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Examples\\freertos_f446re\\app_tmc2209_rtos_example.h",
+      "sha256": "25713F0065AEC67DAEA5B9394330CFDE0FD178FBF837A1CBD6B433672975032A"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Inc\\tmc2209_ll.h",
+      "sha256": "2F050BCD44E6A6B2D4B912B39E7D1B482D2BDE81AD333D4B64C902A0F0F12364"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Inc\\tmc2209_os.h",
+      "sha256": "A77549ABC028FBC9E94424D975E8FC6CED2AFD6477414E3125A018FD3E4E62C9"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Inc\\tmc2209_port.h",
+      "sha256": "4C7DD42D133244ADA22D2019815A861B1ADCCE59D9B42211DC36B93D6894743D"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Inc\\tmc2209_reg.h",
+      "sha256": "620061B80792734DC909F245274FA569A15D8E8A97B399877EDC2E3B3D19BCFD"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Inc\\tmc2209_types.h",
+      "sha256": "3DEE87DC5A5A03DB71D2363D4E06F764B551112DC1692C580CC0FA83B47C4A96"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Inc\\tmc2209_unit.h",
+      "sha256": "DD895C98EC2A0075BB8F8F3D76221119B6F406B949E58E712EDFEF96DE9B11F2"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Inc\\tmc2209.h",
+      "sha256": "5CC4B6D3B299FA5A3D29BB0AE0A8C2D1339EA9FA362055034DCFEA48C269F5DA"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Src\\tmc2209_internal.h",
+      "sha256": "5CC53DAE1BC644E2C4B287E655AC49DD2D51E516E128E98BF7BB4B5610A061A2"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Src\\tmc2209_ll.c",
+      "sha256": "F279EEC2FEA5328936BF9F4B63F2B7C009854694F0F5E08F9F04396CAADFF4FA"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Src\\tmc2209_os_freertos.c",
+      "sha256": "B737F98E3ED1B871CBA4BC7D6459F082AE56F3DCB9599AE83111B87D78F55D12"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Src\\tmc2209_os_none.c",
+      "sha256": "C4B56E1D92B0409187CB8523A5F9E1E60595AF60D1AE67802A645BC9F17B0052"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Src\\tmc2209_port_hal.c",
+      "sha256": "DBCABA40FD70920C128E3482FCFCADC29F6965796CA526F419C3AC45D07C993E"
+    },
+    {
+      "path": "tmc2209_stm32_driver_v1.0.0\\Src\\tmc2209.c",
+      "sha256": "C42C147367693D8DBC16F247039ED67A7FD67E302B723F1EFF3644331F96B1E9"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\API_Header.h",
+      "sha256": "3F4D449C774007ADB3EC4CB5B4244876FEF744501202EF62A69345DECC668E60"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\Bits.h",
+      "sha256": "3E520FA8BA9EE6D0F9C358C4747FC40D5FED9AA3869D740FA3AAED336CB12B69"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\Config.h",
+      "sha256": "1DA045CFE240A85C1D5362A0E2B8D1291FAEDD9301B1A3E6D75937EA512C33B5"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\Constants.h",
+      "sha256": "0DB1C9E360F7A8F89E4E6A72A63D18C95649D9E17F51120889FF08D4AD9014C4"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\CRC.h",
+      "sha256": "89A45AC980250ED51E4C83582FE231FEDD49DF5EA2B2B05B1915B2F1CCA4B334"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\Functions.h",
+      "sha256": "53A1DAF8A05BB83C27CD3EB1295AFFE3AC89F7AD3E0BD1B06FED7611DC50D0CF"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\helpers\\API_Header.h",
+      "sha256": "7E59CC52E12114BB8717B700AB8C15663C0AB325CD02A3F79B1EDA9A44BFE441"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\helpers\\Bits.h",
+      "sha256": "C27446D65EE0C933C66002F34F074F051E3600AB05EA3BC088B650D5B70E58D3"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\helpers\\Config.h",
+      "sha256": "480CEC2FCD873A76AF765EA76A65C9B82B014285D0D3DAFCA99A1D0507B37308"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\helpers\\Constants.h",
+      "sha256": "ECD1A58AF7E0037B446E61FDDC9BBAFD0FDB33A57603D0C1BBF2269C5A1D89D3"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\helpers\\CRC.h",
+      "sha256": "265D54F34CDCBC652AA4A2838255DA0B83AEB3ECB9B332C75F9C297A9CDBFB0C"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\helpers\\Functions.h",
+      "sha256": "185A446C6DB03060AC1098D7EABDF0CD1FA83C90E4764CABCD0C05B5C0096455"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\helpers\\Macros.h",
+      "sha256": "5C8BF03B887D64530A386D9A93704797E3309A57221333A252905327E693A071"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\helpers\\RegisterAccess.h",
+      "sha256": "65DA5D63BD7C6B002B87905937F506D0D971297E9EE3FC4A1F6EC3473C75F226"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\helpers\\Types.h",
+      "sha256": "5302973A78A14ACDFC07B64DB622A7853ED4C279821EF9054BA3D839010D9869"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\Macros.h",
+      "sha256": "1BEBF1543C49976D73C06C0E6482F81A686F49F59B96608D72C41625BAC2C8E7"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\RegisterAccess.h",
+      "sha256": "DBFB16A61B143C2821344124F469240A0CEA7A3E4E51A7D3D6D91BCB7C3C0E6F"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\tmc2240_core.h",
+      "sha256": "FB72A6B4D0ED8B5C1B845B906E573103675F13FB5FA1FBBE7761B284609D461F"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\tmc2240_hal.h",
+      "sha256": "B96C87B70FD96E0B21226CD5779A1E3FC392FCA918E1D4A5946C2C6651119C15"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\TMC2240_HW_Abstraction.h",
+      "sha256": "0A9B67AC45ED833BF49E749478FCC4A7FDAB4572582718EEA47845A0D2E40316"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\tmc2240_status.h",
+      "sha256": "B72449073B3367BB27A9C3A24D52B58977DA098147BDADDEC3EC8C3B78204662"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\tmc2240.h",
+      "sha256": "019B7277C9D441A657333ECD005C433B3F5A7FC299302A7C006D62E49877C6DD"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\inc\\Types.h",
+      "sha256": "8EE1BA102161E293538A6356C895CD0BDB300ECBE341E1DA05DA79ADC42A9C90"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\src\\CRC.c",
+      "sha256": "E31072B6204A7D235A6D1BB043F5E5E2E0BF1546DB0C1E1E8D6CAF7672C17619"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\src\\Functions.c",
+      "sha256": "60E2D5054344F6CE8624CFFA966EB8E9FDD7094CE6EBE55C69148222B406BBBA"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\src\\tmc2240_hal.c",
+      "sha256": "E6B866A40F4CAB433AF82F942D8BEEEEA4F4269BE9E42D0074C36C9CE04B1B6A"
+    },
+    {
+      "path": "TMC2240-Driver\\driver\\src\\TMC2240.c",
+      "sha256": "64FB5529049699EDE6BBDD4F17BDFA2BC4686D84C4A3C0BB7BC9579C952760D0"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\.cproject",
+      "sha256": "318D7570CC9A5B72BB83DD3BC6CB4E273DA7E51A4183C81C13A262BD35B46EE5"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\main.h",
+      "sha256": "A6C45908102BA776C8DACB46A953A50F534D00BE1B48D0D33EA4D2D8E2AADD30"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\stm32f4xx_hal_conf.h",
+      "sha256": "2FAEC07879D27504D06FAF8359789EAAFC83BEB5BFA61E75CDE1EFB1F965E97A"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\stm32f4xx_it.h",
+      "sha256": "A96C6C7347C880644AEAB9F9FE3CA9BE2D61F123389FE8C2CE7DC4321501993A"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\helpers\\API_Header.h",
+      "sha256": "3F4D449C774007ADB3EC4CB5B4244876FEF744501202EF62A69345DECC668E60"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\helpers\\Bits.h",
+      "sha256": "3E520FA8BA9EE6D0F9C358C4747FC40D5FED9AA3869D740FA3AAED336CB12B69"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\helpers\\Config.h",
+      "sha256": "1DA045CFE240A85C1D5362A0E2B8D1291FAEDD9301B1A3E6D75937EA512C33B5"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\helpers\\Constants.h",
+      "sha256": "0DB1C9E360F7A8F89E4E6A72A63D18C95649D9E17F51120889FF08D4AD9014C4"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\helpers\\CRC.c",
+      "sha256": "E31072B6204A7D235A6D1BB043F5E5E2E0BF1546DB0C1E1E8D6CAF7672C17619"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\helpers\\CRC.h",
+      "sha256": "89A45AC980250ED51E4C83582FE231FEDD49DF5EA2B2B05B1915B2F1CCA4B334"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\helpers\\Functions.c",
+      "sha256": "60E2D5054344F6CE8624CFFA966EB8E9FDD7094CE6EBE55C69148222B406BBBA"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\helpers\\Functions.h",
+      "sha256": "53A1DAF8A05BB83C27CD3EB1295AFFE3AC89F7AD3E0BD1B06FED7611DC50D0CF"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\helpers\\Macros.h",
+      "sha256": "1BEBF1543C49976D73C06C0E6482F81A686F49F59B96608D72C41625BAC2C8E7"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\helpers\\RegisterAccess.h",
+      "sha256": "DBFB16A61B143C2821344124F469240A0CEA7A3E4E51A7D3D6D91BCB7C3C0E6F"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\helpers\\Types.h",
+      "sha256": "8EE1BA102161E293538A6356C895CD0BDB300ECBE341E1DA05DA79ADC42A9C90"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\ic\\TMC2240\\tmc2240_core.h",
+      "sha256": "FB72A6B4D0ED8B5C1B845B906E573103675F13FB5FA1FBBE7761B284609D461F"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\ic\\TMC2240\\TMC2240_HW_Abstraction.h",
+      "sha256": "0A9B67AC45ED833BF49E749478FCC4A7FDAB4572582718EEA47845A0D2E40316"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\ic\\TMC2240\\tmc2240_status.h",
+      "sha256": "B72449073B3367BB27A9C3A24D52B58977DA098147BDADDEC3EC8C3B78204662"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\ic\\TMC2240\\TMC2240.c",
+      "sha256": "64FB5529049699EDE6BBDD4F17BDFA2BC4686D84C4A3C0BB7BC9579C952760D0"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\ic\\TMC2240\\tmc2240.h",
+      "sha256": "019B7277C9D441A657333ECD005C433B3F5A7FC299302A7C006D62E49877C6DD"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\platform\\STM32\\tmc2240_hal.c",
+      "sha256": "E6B866A40F4CAB433AF82F942D8BEEEEA4F4269BE9E42D0074C36C9CE04B1B6A"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc\\platform\\STM32\\tmc2240_hal.h",
+      "sha256": "B96C87B70FD96E0B21226CD5779A1E3FC392FCA918E1D4A5946C2C6651119C15"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc2240_demo_guard.h",
+      "sha256": "B48E4D22D19EF78559F9A82BDC12CCFBF1688DAD572F18BFEC462C776D7474D9"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Inc\\tmc2240_demo_startup.h",
+      "sha256": "889A5B70181981C89298ABE8A17873EEE387FAB00871BD78BAAC9AE1EE27A337"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Src\\main.c",
+      "sha256": "31E4521FB32C3BF2B703DE7C0240075ADAB5483CFF1ED0B69C2E49178D2E20CB"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Src\\stm32f4xx_hal_msp.c",
+      "sha256": "0CBF53A3688B15969313BF7946F35C3E25D2F86294708266115FF98620378404"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Src\\stm32f4xx_it.c",
+      "sha256": "6CDFBA6E76754E5838AE60C659793A49F4F635F7AA5D7451C0BBD0BBC502E1C7"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Src\\syscalls.c",
+      "sha256": "B993EBB4F882E8BE21CEC8D95983655A0CAF4F0EB11348F20F6371F5A5031717"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Src\\sysmem.c",
+      "sha256": "C41145817CC20ABD8881C38851745D6E509E5F8C44A5179B125D108E51D1D432"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Src\\system_stm32f4xx.c",
+      "sha256": "A31929EAB936AC98DB060C18917118ACF79DC96E1F03ED4B57D614535DD06D70"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Src\\tmc2240_demo_startup.c",
+      "sha256": "AC46DD846FAFFA31AE61560F5C32794C78ABBF4EEF58D074D91D932FF5996938"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Core\\Startup\\startup_stm32f446retx.s",
+      "sha256": "448435EB5D2FFE063490BCAC42B9C861461CE05528141D87E62F8425C00131F8"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Device\\ST\\STM32F4xx\\Include\\stm32f446xx.h",
+      "sha256": "801BAE2A07FB7D61CE78512CEE4D0C761E7B6CC7A3C7C74437A59A05AF70E58A"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Device\\ST\\STM32F4xx\\Include\\stm32f4xx.h",
+      "sha256": "A19EDEA6B2F4DF2AB3C567782C4D313A52319C4303BD56AD7DD1D0E077014657"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Device\\ST\\STM32F4xx\\Include\\system_stm32f4xx.h",
+      "sha256": "02C067D5A135F540C03215DC834B1E60A97BBD4E55BFD3994B0C82A15EA3012A"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\cachel1_armv7.h",
+      "sha256": "2E336A64F60A9C0EAF5A08E2C4845D94DA86C3FD84D219D0D0C9F530E63BC9C3"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\cmsis_armcc.h",
+      "sha256": "5BC0D7ED8E36E9BCB868C4042FFF350C702ECA305DF4162FB00384789E35EE1C"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\cmsis_armclang_ltm.h",
+      "sha256": "3E8FFB284F4F155DE3EA93841CCA853B41D5E812B53E52C64C3D4A67B7F1EC7C"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\cmsis_armclang.h",
+      "sha256": "D5DA2B48204F0D0CF1FF38FFCCB527E5706CD0A091FF0A331EB41D6596C33FE5"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\cmsis_compiler.h",
+      "sha256": "B51963D271C1571CA3463654C76AA7EA50C4EAC5D0A2710DF10414AC64D9E0F8"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\cmsis_gcc.h",
+      "sha256": "43BFD1FE69FBBC2CA70AAF7D43CC3E20F16E0C7F66E1BDEF9B51AF6DC14B2617"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\cmsis_iccarm.h",
+      "sha256": "2D255C8429E507E52CB603F2970BED4CC4A6CDCC3EB7FC7997385ABAD7364837"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\cmsis_version.h",
+      "sha256": "184C19FD3EE73632EDF35A0B4D49CD48BE75FBF49E6CCB19D9DB05FA83BEA4B3"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_armv81mml.h",
+      "sha256": "A40954BCCBF202BD65EE721EA688122561E005C9F9F9D18E082280C5B897D0E4"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_armv8mbl.h",
+      "sha256": "458B1E6788079DED52ADC7D06383701C865CA97B67C5E7A0A44884194F91A842"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_armv8mml.h",
+      "sha256": "5A68204FA31CDA7D04D41C9CEAF3F4B1217908F59366F757EE778181C7CC8CB9"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_cm0.h",
+      "sha256": "AC13CB645F108666A0E57C93467872660D6BC860A839F840DC870B7A5863B4BF"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_cm0plus.h",
+      "sha256": "A09FA9C6B8B21D1920BCE15B98AA56182B027E9278CCA0B154812BAC2AEA3CFA"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_cm1.h",
+      "sha256": "944BF0C4F940EEF30A632CD99D5DCFE8270E8A8431EB98C0F081BCF4F61F728E"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_cm23.h",
+      "sha256": "77822E9738885394EC52FCA6F617452B823A0B55E2664EE225E65576CF0E8F2D"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_cm3.h",
+      "sha256": "C9937781259A8897ADF514445441C68570087D6A72A558D8A4AFE75CDB62DBD2"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_cm33.h",
+      "sha256": "225C47C36230EDAA314F1E7A45B38279F6AB4D58FAEB132226DB35F7007D58AA"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_cm35p.h",
+      "sha256": "206B427589981B78169C1D9B73E898E4E8DE4EFBD76FD0C2DF7DF81D645B9FA2"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_cm4.h",
+      "sha256": "F5B63D52DD1557B15CA414CB59C264F595A7B5669DB2A5878DFFE22F4CAEDC8C"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_cm55.h",
+      "sha256": "5707F716CF03F7E80151108AE94601FCFDF362DD2D830876040213318F6DEE3A"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_cm7.h",
+      "sha256": "E974D0A91752487D0154457CD422C37667328E9DDB7BA4FA2FED479A63577F63"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_cm85.h",
+      "sha256": "75BC123889F0F5CA33C4D16B6CBDD580A3572663C899FADB2C8E28F6A5E6FEAD"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_sc000.h",
+      "sha256": "C81377A69A4EA8ECAEAD42194F2CE8AB59BD4EE7BD638E423F5B1F5EC283D154"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_sc300.h",
+      "sha256": "73DD461C12C7D3A693840DF3084FD8F85122095C6F21FA3D779B0F3ECEAEBAD5"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\core_starmc1.h",
+      "sha256": "92D8661F2947D00DA91653D04794CDE0593FDAAFB3438842A0477775716AAFC5"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\mpu_armv7.h",
+      "sha256": "29206B52EE02290ED6F5A5415EBD4187DE802CF176D9B3CB844390D8E5571372"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\mpu_armv8.h",
+      "sha256": "2C7D22A344CEDCC1E35380D1F76F0E6C55DA5E3101E6A41FD85497D1841FE8C9"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\pac_armv81.h",
+      "sha256": "D76F5CC0C59A59E035115F700B8E8D95B7B98ECB99A2924E885F82A94903D984"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\pmu_armv8.h",
+      "sha256": "CEA8C105C5F41BA831FE4D9E8E39758068CD4C414383348DC2835D6BE447CCA0"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\CMSIS\\Include\\tz_context.h",
+      "sha256": "45565C8CB04C653AABAF3CCEDDFC848B6A0DE28C20D4F7E3D475A992C7EEE788"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\Legacy\\stm32_hal_legacy.h",
+      "sha256": "8C2D2FEB90E8ED88FE5756F3F1616A2B67AA1CD0858DA8B130ED69607688C8C0"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_cortex.h",
+      "sha256": "D96DBA22903ABDA49D66CAD29AC0C49357E6A27CF9CB03DFD8C6DB71B61A7FCA"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_def.h",
+      "sha256": "C8EB3F7B393F8C5A0C32E16CCFA101C83DDB59E96BD42239B8A5C5D4DA83E97F"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_dma_ex.h",
+      "sha256": "3EE15423D73AC394DE39E7B65821775966389B13749FF0849894548AB6968676"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_dma.h",
+      "sha256": "71C38DFD65C5415B388375147E5317C7AC018B39893D6FD0AC1C897F4313329C"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_exti.h",
+      "sha256": "61E8F76BDB45DEDF38FEF592504E10418CA410952C7A209CD271B45AC835833A"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_flash_ex.h",
+      "sha256": "7C206F5DBED3C147A6F090AB808933132A1B06B8339623AD7174FD0A222E981C"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_flash_ramfunc.h",
+      "sha256": "F18A6EABC99F56483566F9231CA33C780AFA98BC93929E60BB419B5E544EEE2A"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_flash.h",
+      "sha256": "10BE06C6E06FCF4EB11E236641948AED861898FEA235C606AE221FA72BC46638"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_gpio_ex.h",
+      "sha256": "4091BEEFC5BF8B250F376D400F43CA028EF7378E1C7BA5C9EB5DE64EC74231C0"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_gpio.h",
+      "sha256": "0B40FC83363B64D3C7396A202BE7A914CEAA7735AB0FA81D566ED320102B23FB"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_pwr_ex.h",
+      "sha256": "1794B88C5E080858C0205A2E94340C0250AC9171B3A3F01CAD6D050005A1B09D"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_pwr.h",
+      "sha256": "D6F6ABC4AF3D5A1CA59D886F5A9154E44F257A43AF77C7F18173F160825ED6B5"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_rcc_ex.h",
+      "sha256": "49F0C8068524E1DE248738530CFF3BBE630DC4784B6E8B5568FBC7E1A154F772"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_rcc.h",
+      "sha256": "EB6911D964B1CF8A83993B19C8FEB9845E8793D7C0E5D643390B53207C8B078E"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_spi.h",
+      "sha256": "330803C32D1D5EC40DF5A827A74CB1D850EC60B207EDA5BF6299C57D575795A6"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal_uart.h",
+      "sha256": "42528BC9CAA6E2FE96B7E6D7B3FCDF35D8D85AE38D33195A233E18A072F157A1"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_hal.h",
+      "sha256": "6942F40453FEE331E026179CFAC4C0F24FFE6313FEDCB68AF9C3382F702DBAF5"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_ll_bus.h",
+      "sha256": "95A518139F74D14A4477519B5172675347990E9FA637BD3948C69BD475BD7C88"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_ll_cortex.h",
+      "sha256": "D8B268CA207E51864D1A71CE14FFF316C57D09E62A04D0C28310B4A1008E6F17"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_ll_dma.h",
+      "sha256": "39E89050700E16304E04643E29C162B6AAA9F3BFE53880CD78C255CE46104E82"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_ll_exti.h",
+      "sha256": "6DA580D41EBDCFD7349E29666A2E561C8E2C2E01F6E7EF29DFEC6EBF6AE237DF"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_ll_gpio.h",
+      "sha256": "E46857F5F9A5F5A2D13CA2D6925DC9E66DFA7FC56A2CC72E54B891BDB88E2F16"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_ll_pwr.h",
+      "sha256": "229AF558BFEEF8BB88D2224277B083C3B927C5C2612991FDEBA00DAD56255ABC"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_ll_rcc.h",
+      "sha256": "605960F2E8E57A702B912475F9C154BB58711B58C8F2FF27DD4E75B5D767DC4E"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_ll_spi.h",
+      "sha256": "3B053ED6C58BC9AE4DE03FCAE86F64A14FB86AD4A36EF27A3BDF1524E93E9B54"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_ll_system.h",
+      "sha256": "D634A419A55E99B4A641FECC055E1F602D8A418BD7D822CF2F812A0965AC9A3E"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_ll_usart.h",
+      "sha256": "982C4448C49DDC7C6C71BD788E5354F05E96ACA5E98EDD0626F8FFCAEFC65E79"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Inc\\stm32f4xx_ll_utils.h",
+      "sha256": "535CB625CFCD461D6054549BF04D25EF939EC5754F77731A5F9FD92728280DED"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_cortex.c",
+      "sha256": "9AAA0F19137D700616BEC01A5A806786C24E3F3386120365C5D2ADDAA4055505"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_dma_ex.c",
+      "sha256": "90CAFB5A5B17A46B478770EF4ABDC9A641CB395419ABBB80F288138A63D44582"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_dma.c",
+      "sha256": "A345A1B1FE0221C827D5AD21D5A0F5387296BC2C075E06E5B8539C23DA5678E4"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_exti.c",
+      "sha256": "F56651F86E5D89E8BBA3BCB331353E00F291DB15C902927A205D81BBE8951E6D"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_flash_ex.c",
+      "sha256": "51A70DEB9B19DD43F6F202430FAE052F2DEB26C39232C09C79230C8D8A61F773"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_flash_ramfunc.c",
+      "sha256": "D3B426E8CB9D617F9064D2B0CEA2A1D02B7BB6A74CBA3F094779D6E922E477E3"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_flash.c",
+      "sha256": "8BF12EEB6E6CFC12A17587ED6D761724E0835A4A3DC0F6B14A8D1CA068BCB55B"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_gpio.c",
+      "sha256": "408908B15477B6CE2B0B9703CAABCB053293D98F2F109D6E6940E076A6A3902B"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_pwr_ex.c",
+      "sha256": "4409DDDC0D2019F918D0DDEBECF659F06D4DE3F9AA28566621A16EA47203331F"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_pwr.c",
+      "sha256": "D779468A95DF34421BF6C8417136A79AA910753381A644AFA9ED10B185AE18B5"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_rcc_ex.c",
+      "sha256": "526324811FA113C3EADFA84CD24EA5E607AD8E8BF003A2085456C04B734CA25E"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_rcc.c",
+      "sha256": "F3AC468E2F415ADB74281107C0DEC1448008950B64A7BB11C14CBE3EE1A936DE"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_spi.c",
+      "sha256": "641AD467E834C17A83C445CF8EEA7C8317A71976D7E0C77DA740BE999251EFE4"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_uart.c",
+      "sha256": "A74ED3A9A13A4FCBAADA9E6F88F7D4FCABE2A75852A6CE4C09F8D4314A2E851A"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal.c",
+      "sha256": "97E715CDA2A34BD564B59CE4BA9B16BD29651F8F229161105AAEC666D76EA91A"
+    },
+    {
+      "path": "TMC2240-Driver\\examples\\STM32CubeIDE_Project\\STM32F446RETX_FLASH.ld",
+      "sha256": "12F8B127A236C277A5B92D44A9325A2CA5D589929CBC5960BAB47C21DA39B4A0"
+    },
+    {
+      "path": "validation\\build_arm.ps1",
+      "sha256": "929F06930A5F8C346A612C42F20F6CC9DC00418BE9B86AEF718E68425B6A5B81"
+    },
+    {
+      "path": "validation\\config\\demo-optin.json",
+      "sha256": "1D70D540B73FE9BD81DA11DD1C890125E3A6DBBE6312F9EAED0E2D571F1360C7"
+    },
+    {
+      "path": "validation\\config\\FreeRTOSConfig.h",
+      "sha256": "BCC925767735E70B67D91343C6637BEC4638B0E41F3E892620168AD73CDBA71C"
+    },
+    {
+      "path": "validation\\config\\RTE_Components.h",
+      "sha256": "4273ADFB02C86F7FEF8CBB9D167573476C42672F6DB9747C2B1102C92197AF7B"
+    },
+    {
+      "path": "validation\\demo-config.schema.json",
+      "sha256": "F0206FCE1AD0AC20DE63264256988AFF40B853C92BD5B2081B7DB423216FCEC1"
+    },
+    {
+      "path": "validation\\dependencies.lock.json",
+      "sha256": "35549D181F9D02BB604F5165A857F0C50DFCB102F4631AA73CDB987E3FC395CF"
+    },
+    {
+      "path": "validation\\download_arm_archive.ps1",
+      "sha256": "5F4D9E944E68C0ADEEDE997C6E918EF8CEFB0EAEB2EEF17BA23B2936158D02BE"
+    },
+    {
+      "path": "validation\\fixtures\\arm_layout.c",
+      "sha256": "C6D8C747D6FF1D4BB5D414D5ADC4162E380BE9659F19F3690406D86E65AEC581"
+    },
+    {
+      "path": "validation\\fixtures\\consumer.c",
+      "sha256": "5CDAEBFC2F2ECC4EF13F0671678F662EC20D57B20B4946E4B9645BCB9D6E06D2"
+    },
+    {
+      "path": "validation\\fixtures\\header_tmc2209.cpp",
+      "sha256": "21B09A85CD760EEAA1E833FBE194B5940703AC32C9AA55CCE012388D7B3F7A98"
+    },
+    {
+      "path": "validation\\fixtures\\header_tmc2240_core.cpp",
+      "sha256": "D61D584350A9FC1ADEF001A5081D46566778F345DFF389BAD14828858481C69D"
+    },
+    {
+      "path": "validation\\fixtures\\header_tmc2240_crc.cpp",
+      "sha256": "408230E04D633E52FEDB4636B5B6415C06CAD8ED4F26A2B23E67DC15404C282E"
+    },
+    {
+      "path": "validation\\fixtures\\header_tmc2240_functions.cpp",
+      "sha256": "00108065AD9B0FDA86E8B187DE934BE916F21D18C6EE64C3774808F20CA189A7"
+    },
+    {
+      "path": "validation\\fixtures\\header_tmc2240_hal.cpp",
+      "sha256": "088A9B81EAB5953CC2E197E19D84D0EF7F467A12859DEADA29DEF4352A1212E1"
+    },
+    {
+      "path": "validation\\fixtures\\header_tmc2240_hw.cpp",
+      "sha256": "A1FBE63232613F460E18BC393FEC8C1A6C6FAFA9FDCAA2977B3F2C17331B8984"
+    },
+    {
+      "path": "validation\\fixtures\\header_tmc2240_status.cpp",
+      "sha256": "3F79F0CF32E508CC428884322478A3DD64DAD422478506B17305C082F2324E26"
+    },
+    {
+      "path": "validation\\fixtures\\header_tmc2240_umbrella.cpp",
+      "sha256": "E025050F53E836494844A49B2D5B7EF1948674678B8F47C4AA31703DB9B203AD"
+    },
+    {
+      "path": "validation\\fixtures\\native_tick.c",
+      "sha256": "34A4AEBE544BD0AA002A152BBC804438BDFEE702702676D8AC04457C8788D4DC"
+    },
+    {
+      "path": "validation\\fixtures\\rtos_hooks.c",
+      "sha256": "541B427A9011354B39140090C84394E299A3ABB72F7DE3A2E08A0E675D31E240"
+    },
+    {
+      "path": "validation\\layout.expected.json",
+      "sha256": "5818DF507A4905D68293A465B9A28839BC3C81A66FDDC2759A11A2A4687899F9"
+    },
+    {
+      "path": "validation\\provision_arm.ps1",
+      "sha256": "4342AFD021DE6FCC3FCEAF903FD9AB8DDA746FA836B218970336DBD6622FB2D2"
+    }
+  ],
+  "artifacts": [
+    {
+      "file": "Test-TMC2240.bin",
+      "sha256": "342C9FF72FBD3F15B5B04A715B19C2F3CC2D0785328FBA6596DDD8A82B55D59E"
+    },
+    {
+      "file": "Test-TMC2240.hex",
+      "sha256": "9C29E38BFC6FDC3F2C241A5B5187EBF8F247F0585ABEDD659C109FA86057067E"
+    },
+    {
+      "file": "Test-TMC2240.elf",
+      "sha256": "95139234546EA382D3C913DC88E7E991DF0120D99CC06866810652B220DDEC13"
+    }
+  ],
+  "evidenceRun": "final-arm-runs\\run-20260919T184409835Z",
+  "evidenceReportSha256": "3D4BB4955EBA665E77DC8590D7F049465443D47AB6A52E91346EA81FE1BFB3B5"
+}

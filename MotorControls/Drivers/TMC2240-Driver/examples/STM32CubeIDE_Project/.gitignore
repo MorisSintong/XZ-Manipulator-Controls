@@ -1,0 +1,26 @@
+# ===== Build Output =====
+Debug/
+Release/
+build/
+*.elf
+*.hex
+*.bin
+*.map
+*.list
+*.o
+*.d
+*.su
+
+# ===== IDE =====
+.settings/
+*.launch
+
+# ===== OS junk =====
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# ===== Misc =====
+*.bak
+*.tmp
+*~

@@ -1,0 +1,2 @@
+build*/
+!validated-run.log

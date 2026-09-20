@@ -1,0 +1,89 @@
+[
+  {
+    "label": "Build (Debug)",
+    "command": "cmake",
+    "args": ["--build", "--preset", "Debug"],
+    "tags": ["build"]
+  },
+  {
+    "label": "Build (Release)",
+    "command": "cmake",
+    "args": ["--build", "--preset", "Release"],
+    "tags": ["build"]
+  },
+  {
+    "label": "Rebuild (Debug)",
+    "command": "cmake",
+    "args": ["--build", "--preset", "Debug", "--clean-first"],
+    "tags": ["build"]
+  },
+  {
+    "label": "CMake: Configure (Debug)",
+    "command": "cmake",
+    "args": ["--preset", "Debug"],
+    "tags": ["cmake"]
+  },
+  {
+    "label": "CMake: Configure (Release)",
+    "command": "cmake",
+    "args": ["--preset", "Release"],
+    "tags": ["cmake"]
+  },
+  {
+    "label": "Clean",
+    "command": "cmake",
+    "args": ["--build", "--preset", "Debug", "--target", "clean"],
+    "tags": ["clean"]
+  },
+  {
+    "label": "Flash (J-Link)",
+    "command": "C:/tools/jlink/JLink.exe",
+    "args": [
+      "-device",
+      "STM32F446RE",
+      "-if",
+      "SWD",
+      "-speed",
+      "4000",
+      "-autoconnect",
+      "1",
+      "-CommanderScript",
+      "flash.jlink"
+    ],
+    "tags": ["flash"]
+  },
+  {
+    "label": "Reset MCU (J-Link)",
+    "command": "C:/tools/jlink/JLink.exe",
+    "args": [
+      "-device",
+      "STM32F446RE",
+      "-if",
+      "SWD",
+      "-speed",
+      "4000",
+      "-autoconnect",
+      "1",
+      "-CommanderScript",
+      "reset.jlink"
+    ],
+    "tags": ["reset"]
+  },
+  {
+    "label": "Start J-Link GDB Server",
+    "command": "C:/tools/jlink/JLinkGDBServerCL.exe",
+    "args": [
+      "-select",
+      "USB",
+      "-device",
+      "STM32F446RE",
+      "-endian",
+      "little",
+      "-if",
+      "SWD",
+      "-speed",
+      "4000"
+    ],
+    "tags": ["debug"]
+  }
+]

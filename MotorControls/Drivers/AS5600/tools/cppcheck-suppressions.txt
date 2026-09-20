@@ -1,0 +1,9 @@
+# See docs\standards.md. These are scoped library/adapter dispositions.
+misra-c2012-11.5:*as5600_stm32_hal.c
+misra-c2012-11.5:*as5600_cmsis_rtos2.c
+constParameterCallback:*as5600_stm32_hal.c
+constParameterCallback:*as5600_cmsis_rtos2.c
+misra-c2012-8.7:*as5600.c
+misra-c2012-8.7:*as5600_stm32_hal.c
+misra-c2012-8.7:*as5600_cmsis_rtos2.c
+misra-c2012-2.5:*as5600.h

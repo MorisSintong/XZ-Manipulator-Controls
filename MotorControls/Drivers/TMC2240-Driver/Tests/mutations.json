@@ -1,0 +1,42 @@
+[
+  {
+    "Name": "tmc2240-crc",
+    "File": "TMC2240-Driver\\driver\\src\\TMC2240.c",
+    "Find": "crc = tmcCRCTable_Poly7Reflected[crc ^ data[i]];",
+    "Replace": "crc = tmcCRCTable_Poly7Reflected[(crc ^ data[i]) ^ 1U];",
+    "TestRegex": "^tmc2240_core_cache4$",
+    "ExpectedFailure": "FAIL data[writeLength - 1U] == model_crc(data, writeLength - 1U)"
+  },
+  {
+    "Name": "tmc2240-byte-order",
+    "File": "TMC2240-Driver\\driver\\src\\TMC2240.c",
+    "Find": "data[0] = (uint8_t)(value >> 24U);",
+    "Replace": "data[0] = (uint8_t)(value >> 16U);",
+    "TestRegex": "^tmc2240_core_cache4$",
+    "ExpectedFailure": "FAIL core_frame_count == 1U && memcmp(core_frames[0].bytes, spi_write, 5U) == 0"
+  },
+  {
+    "Name": "tmc2240-field-mask",
+    "File": "TMC2240-Driver\\driver\\inc\\TMC2240_HW_Abstraction.h",
+    "Find": "#define TMC2240_CUR_A_MASK                   0x01FF0000UL",
+    "Replace": "#define TMC2240_CUR_A_MASK                   0x000001FFUL",
+    "TestRegex": "^tmc2240_core_cache4$",
+    "ExpectedFailure": "FAIL c->field.mask == c->mask && c->field.shift == c->shift"
+  },
+  {
+    "Name": "tmc2240-first-error",
+    "File": "TMC2240-Driver\\driver\\src\\TMC2240.c",
+    "Find": "        data[0] = address;\n        status = spiFrame(icID, data);\n        if (status != TMC2240_OK) {\n            return status;\n        }\n        memset(data, 0, sizeof(data));",
+    "Replace": "        data[0] = address;\n        status = spiFrame(icID, data);\n        if (status != TMC2240_OK) {\n            (void)status;\n        }\n        memset(data, 0, sizeof(data));",
+    "TestRegex": "^tmc2240_core_cache4$",
+    "ExpectedFailure": "FAIL (tmc2240_readRegister(0U, 0x39U, &value)) == (TMC2240_ERROR_TIMEOUT)"
+  },
+  {
+    "Name": "tmc2240-activation-guard",
+    "File": "TMC2240-Driver\\driver\\src\\tmc2240_hal.c",
+    "Find": "static TMC2240Status activationCheck(uint16_t icID)\n{",
+    "Replace": "static TMC2240Status activationCheck(uint16_t icID)\n{\n    return TMC2240_OK;",
+    "TestRegex": "^tmc2240_hal_cache4$",
+    "ExpectedFailure": "FAIL model_devices[0].activations == 0U"
+  }
+]

@@ -1,0 +1,12 @@
+set(CMAKE_SYSTEM_NAME Generic)
+set(CMAKE_SYSTEM_PROCESSOR cortex-m4)
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
+set(CMAKE_C_COMPILER clang)
+set(CMAKE_ASM_COMPILER clang)
+set(CMAKE_C_COMPILER_TARGET arm-none-eabi)
+set(CMAKE_ASM_COMPILER_TARGET arm-none-eabi)
+set(_arm_flags "--no-default-config --target=arm-none-eabi -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=softfp")
+set(CMAKE_C_FLAGS_INIT "${_arm_flags} -ffreestanding -fno-builtin -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables")
+set(CMAKE_ASM_FLAGS_INIT "${_arm_flags}")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-nostdlib -fuse-ld=lld")

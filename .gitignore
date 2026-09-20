@@ -1,55 +1,187 @@
-# ============================================
+# ==============================================================================
 # .gitignore - XZ Manipulator Controls
-# File besar di-ignore agar tidak melebihi
-# batas GitHub (100MB per file, ~1GB total)
-# ============================================
+# Multi-subsystem repository:
+#   - Embedded C/C++ & STM32 Firmware (CMake, STM32CubeIDE, J-Link)
+#   - Vision System (Python, YOLO / Ultralytics, OpenCV, ESP32)
+#   - PLC Ladder Logic (Omron CX-Programmer)
+# ==============================================================================
 
-# ---- Model Weights (YOLO, PyTorch) ----
+# ------------------------------------------------------------------------------
+# 1. Embedded C/C++ & STM32 Build Outputs
+# ------------------------------------------------------------------------------
+# Build directories
+build/
+build*/
+cmake-build-*/
+.build/
+__cmake_systeminformation/
+_deps/
+
+# CMake cache and temporary files (in-source builds)
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CMakeScripts/
+Testing/
+Makefile
+*.ninja
+*.ninja_log
+*.ninja_deps
+CPackConfig.cmake
+CPackSourceConfig.cmake
+
+# Compiler intermediate & object files
+*.o
+*.obj
+*.d
+*.su
+
+# Static & dynamic libraries
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
+
+# Linker map & listing files
+*.map
+*.list
+*.lst
+
+# Binary images (firmware builds)
+*.elf
+*.hex
+*.bin
+*.axf
+*.srec
+
+# Preserve audited diagnostic release binaries
+!MotorControls/Drivers/TMC2240-Driver/firmware/*.bin
+!MotorControls/Drivers/TMC2240-Driver/firmware/*.hex
+!MotorControls/Drivers/TMC2240-Driver/firmware/*.elf
+
+# Test coverage & profiling
+*.gcda
+*.gcno
+*.gcov
+*.profraw
+*.profdata
+
+# Static analysis & diagnostics
+*.dump
+*.ctu-info
+cppcheck-build-dir/
+cppcheck-result.xml
+
+# Clang / Language Server caches
+.cache/
+
+# J-Link & Debugger logs
+JLink.log
+JLinkExe.log
+JLinkGDBServer*.log
+openocd.log
+gdb.txt
+
+# ------------------------------------------------------------------------------
+# 2. STM32CubeIDE & Eclipse
+# ------------------------------------------------------------------------------
+.metadata/
+Debug/
+Release/
+*.launch
+.settings/
+
+# ------------------------------------------------------------------------------
+# 3. Vision System (Python & Machine Learning)
+# ------------------------------------------------------------------------------
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Packaging & distribution
+dist/
+*.egg-info/
+.eggs/
+
+# Testing & linting caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Datasets & Model Artifacts
+02_Dataset/
+03_Models/
+runs/
 *.pt
 *.pth
 *.onnx
 *.engine
 *.tflite
+*.weights
 
-# ---- Dataset Gambar ----
-02_Dataset/
-
-# ---- Video Files ----
+# Large test videos and annotated output images
 *.mp4
 *.avi
 *.mov
 *.mkv
-
-# ---- Dokumen Besar (PDF) ----
-*.pdf
-
-# ---- Annotated Result Images (besar) ----
+05_Hasil_Pengujian/**/annotated_images/
+05_Hasil_Pengujian/video_test_results/
 05_Hasil_Pengujian/sample_images_results/annotated_images/
 05_Hasil_Pengujian/offline_batch_results/annotated_images/
 
-# ---- Python Cache ----
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+# Large documentation files
+*.pdf
 
-# ---- Virtual Environment ----
-venv/
-.venv/
-env/
+# ------------------------------------------------------------------------------
+# 4. PLC / Omron CX-Programmer
+# ------------------------------------------------------------------------------
+*.bak
+*.bkp
 
-# ---- IDE / Editor ----
+# ------------------------------------------------------------------------------
+# 5. IDEs & Editors
+# ------------------------------------------------------------------------------
 .vscode/
 .idea/
+.zed/
 *.swp
 *.swo
 *~
+.*.sw[a-p]
 
-# ---- OS Files ----
+# ------------------------------------------------------------------------------
+# 6. Operating System Files
+# ------------------------------------------------------------------------------
 Thumbs.db
+ehthumbs.db
 Desktop.ini
 .DS_Store
+._*
+$RECYCLE.BIN/
 
-# ---- Misc ----
+# ------------------------------------------------------------------------------
+# 7. General Logs & Temporaries
+# ------------------------------------------------------------------------------
 *.log
+!**/validated-run.log
 *.tmp
+*.temp
+*.crash
+*.stackdump

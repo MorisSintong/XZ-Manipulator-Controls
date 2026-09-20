@@ -1,0 +1,18 @@
+Validated on Windows with Clang/LLD 23.1.0, CMake 4.4.3, Ninja 1.13.2.
+Emulator: xPack QEMU emulator version 9.2.4 (package 9.2.4-1).
+Command: ctest --test-dir tests\rtos\build --output-on-failure --verbose
+Firmware output (Release):
+Actual CMSIS-RTOS2 / FreeRTOS V11.2.0; Cortex-M4 MPS2-AN386; simulated AS5600 bus
+Static RTOS allocation only; real SysTick/SVC/PendSV scheduling
+PASS: low owner inherits high priority, excludes ready medium, disinherits
+PASS: finite acquire timeout 5 ticks, unchanged output, no I/O/unlock after failed acquire, recovery
+PASS: NACK/IO/timeout at all 6 sample transfers; 3 config error stages; recovery
+PASS: 3 concurrent tasks, 48 samples + 48 config updates, whole-operation ownership
+Counts: samples=70 config=51 expected_failures=22 transfers=642 locks=142 releases=142
+Scheduler switches=316 ticks=135
+RESULT: PASS
+CTest: 100% tests passed, 0 tests failed out of 1.
+Repeatability: ctest --test-dir tests\rtos\build --repeat until-fail:10 --output-on-failure
+Repeatability result: all 10 consecutive runs passed (14.99 seconds total).
+Debug validation: separately configured CMAKE_BUILD_TYPE=Debug, same verified upstream sources.
+Debug result: all assertions passed; Scheduler switches=316 ticks=138; RESULT: PASS (1.59 seconds).
