@@ -122,6 +122,20 @@ class KoneksiUART:
                 self._connect()
         return False
 
+    def kirim_paket(self, packet: bytes) -> bool:
+        """
+        Mengirim binary packet (framed UART protocol) ke STM32.
+        Tidak menggunakan cooldown karena tracker sudah men-debounce.
+        """
+        if self.is_connected:
+            try:
+                self.ser.write(packet)
+                return True
+            except Exception as e:
+                print(f"[UART ERROR] Gagal mengirim paket biner ke STM32: {e}")
+                self._connect()
+        return False
+
     def baca_respon(self) -> str:
         """Membaca balasan/ACK dari ESP32 jika ada."""
         if self.is_connected and self.ser.in_waiting > 0:

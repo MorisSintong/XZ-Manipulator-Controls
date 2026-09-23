@@ -64,7 +64,7 @@ def train(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Training YOLO26 Anti-Overfitting")
-    parser.add_argument('--model', type=str, default='yolo26m.pt', help='Pretrained model base')
+    parser.add_argument('--model', type=str, default='yolo11n.pt', help='Pretrained model base')
     parser.add_argument('--epochs', type=int, default=100, help='Jumlah epoch')
     parser.add_argument('--batch', type=int, default=16 if torch.cuda.is_available() else 4, help='Batch size')
     parser.add_argument('--imgsz', type=int, default=640 if torch.cuda.is_available() else 320, help='Image resolution')
