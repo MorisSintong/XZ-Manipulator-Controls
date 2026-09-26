@@ -66,72 +66,138 @@ def hitung_sudut_kontur(roi_bgr: np.ndarray) -> float:
         270° = Kaki di kiri
 
     Strategi:
-    1. Hitung sumbu geometris bodi kapasitor via minAreaRect (0°–180°)
-    2. Deteksi posisi kaki (area terang/pin) untuk menentukan kuadran → 0°–360°
+    1. Segment the capacitor body using adaptive thresholding (tries both
+       BINARY and BINARY_INV to handle varying backgrounds).
+    2. Compute principal axis orientation via minAreaRect → continuous [0°, 180°).
+    3. Determine polarity (lead pin vs body base) via brightness centroid
+       shift along the major axis → extend to [0°, 360°).
     """
     if roi_bgr.size == 0 or roi_bgr.shape[0] < 5 or roi_bgr.shape[1] < 5:
         return 0.0
 
+    h_roi, w_roi = roi_bgr.shape[:2]
+    roi_area = h_roi * w_roi
+
     gray = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
 
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # Try both threshold polarities and pick the one with better contour
+    best_cnt = None
+    best_rect = None
+    best_aspect = 0.0
 
-    h_roi, w_roi = roi_bgr.shape[:2]
+    for thresh_type in [cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU,
+                        cv2.THRESH_BINARY + cv2.THRESH_OTSU]:
+        _, thresh = cv2.threshold(blurred, 0, 255, thresh_type)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
 
-    if not contours:
-        # Fallback: estimasi dari aspect ratio
-        return 0.0 if h_roi > w_roi else 90.0
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL,
+                                       cv2.CHAIN_APPROX_SIMPLE)
+        if not contours:
+            continue
 
-    cnt = max(contours, key=cv2.contourArea)
-    rect = cv2.minAreaRect(cnt)  # ((cx, cy), (w, h), angle)
-    (rcx, rcy), (rw, rh), angle_rect = rect
+        cnt = max(contours, key=cv2.contourArea)
+        area = cv2.contourArea(cnt)
+
+        # Reject contours that fill >90% of ROI (likely background detection)
+        if area > 0.9 * roi_area:
+            continue
+        # Reject tiny contours (<5% of ROI)
+        if area < 0.05 * roi_area:
+            continue
+
+        rect = cv2.minAreaRect(cnt)
+        (_, _), (rw, rh), _ = rect
+        if min(rw, rh) < 1:
+            continue
+
+        aspect = max(rw, rh) / (min(rw, rh) + 1e-6)
+        # Prefer the contour with higher aspect ratio (more elongated = better
+        # capacitor body detection)
+        if aspect > best_aspect:
+            best_aspect = aspect
+            best_cnt = cnt
+            best_rect = rect
+
+    if best_rect is None:
+        # Fallback: use PCA directly on the grayscale image moments
+        # Compute image moments and use the orientation
+        moments = cv2.moments(gray)
+        if moments['mu20'] + moments['mu02'] > 0:
+            angle_pca = 0.5 * math.atan2(2 * moments['mu11'],
+                                          moments['mu20'] - moments['mu02'])
+            angle_deg = math.degrees(angle_pca) % 180.0
+            # Convert from math convention to system convention
+            sudut_360 = (90.0 - angle_deg + 360.0) % 360.0
+            return round(sudut_360, 2)
+        return 0.0
+
+    (cx, cy), (rw, rh), angle_rect = best_rect
 
     # ─── Langkah 1: Sumbu geometris 0°–180° ───
+    # minAreaRect returns the angle of the WIDTH side relative to horizontal.
+    # We want the angle of the LONG axis.
     if rw < rh:
+        # Width is shorter → the long side is 'h', perpendicular to the angle
         angle_geom = (angle_rect + 90.0) % 180.0
+        length = rh
     else:
         angle_geom = angle_rect % 180.0
+        length = rw
+
+    # Handle negative angles from minAreaRect
+    if angle_geom < 0:
+        angle_geom += 180.0
 
     # ─── Langkah 2: Deteksi posisi kaki → perluas ke 0°–360° ───
-    # Kaki kapasitor = pin metalik tipis yang memiliki banyak tepi (edges).
-    # Gunakan Canny edge detection untuk mendeteksi sisi mana yang memiliki
-    # kepadatan edge tertinggi = sisi kaki.
-    # (Brightness analysis tidak reliable karena marking putih di bodi
-    #  bisa lebih terang daripada kaki tipis)
+    # Sample brightness at two points INSIDE the body (not at the tips,
+    # which bleed into background). Use 60% of half-length from center.
+    rad = math.radians(angle_geom)
+    sample_dist = (length / 2.0) * 0.6  # Stay well inside the body
+    dx = math.cos(rad) * sample_dist
+    dy = math.sin(rad) * sample_dist  # positive = downward in screen coords
 
-    edges = cv2.Canny(blurred, 50, 150)
+    # Point 1: in the direction of angle_geom (60% from center)
+    pt1_x = int(np.clip(cx + dx, 0, w_roi - 1))
+    pt1_y = int(np.clip(cy + dy, 0, h_roi - 1))
 
-    mid_y = h_roi // 2
-    mid_x = w_roi // 2
-    # Ambil strip ~25% dari tepi untuk menghindari bodi di tengah
-    strip_y = max(1, h_roi // 4)
-    strip_x = max(1, w_roi // 4)
+    # Point 2: opposite direction (60% from center)
+    pt2_x = int(np.clip(cx - dx, 0, w_roi - 1))
+    pt2_y = int(np.clip(cy - dy, 0, h_roi - 1))
 
-    # Hitung kepadatan edge di tiap zona tepi
-    zona_bawah = np.sum(edges[h_roi - strip_y:h_roi, :])   # kaki di bawah → 0°
-    zona_atas  = np.sum(edges[0:strip_y, :])                # kaki di atas  → 180°
-    zona_kanan = np.sum(edges[:, w_roi - strip_x:w_roi])    # kaki di kanan → 90°
-    zona_kiri  = np.sum(edges[:, 0:strip_x])                # kaki di kiri  → 270°
+    # Use a tight patch to avoid background bleed
+    patch_sz = max(2, int(length * 0.08))
 
-    # Tentukan apakah orientasi vertikal atau horizontal berdasarkan geometri
-    is_vertikal = (45.0 <= angle_geom <= 135.0)
+    def get_brightness(x, y, img, ps):
+        x1 = max(0, x - ps)
+        x2 = min(w_roi, x + ps + 1)
+        y1 = max(0, y - ps)
+        y2 = min(h_roi, y + ps + 1)
+        patch = img[y1:y2, x1:x2]
+        return float(np.mean(patch)) if patch.size > 0 else 0.0
 
-    if is_vertikal:
-        # Sumbu utama vertikal → kaki bisa di atas (180°) atau bawah (0°)
-        if zona_bawah >= zona_atas:
-            sudut_360 = 0.0    # kaki di bawah = BENAR
-        else:
-            sudut_360 = 180.0  # kaki di atas = TERBALIK
+    b1 = get_brightness(pt1_x, pt1_y, gray, patch_sz)
+    b2 = get_brightness(pt2_x, pt2_y, gray, patch_sz)
+
+    # The lead pin side is BRIGHTER (metallic reflective pins).
+    # angle_geom points toward pt1. If pt1 is the pin side, use angle_geom.
+    # If pt2 is brighter, add 180° (pin is on the opposite side).
+    if b2 > b1:
+        math_angle = (angle_geom + 180.0) % 360.0
     else:
-        # Sumbu utama horizontal → kaki bisa di kanan (90°) atau kiri (270°)
-        if zona_kanan >= zona_kiri:
-            sudut_360 = 90.0   # kaki di kanan
-        else:
-            sudut_360 = 270.0  # kaki di kiri
+        math_angle = angle_geom
+
+    # ─── Konversi ke konvensi sistem ───
+    # OpenCV math angle: 0° = Right (horizontal), increases CW in screen coords
+    # System convention: 0° = Down, 90° = Right, 180° = Up, 270° = Left
+    # Mapping: system_angle = (90 - math_angle) mod 360
+    # BUT screen Y is inverted, so the sign convention means:
+    #   math 0° (right) → system 90°  ✓
+    #   math 90° (down in screen) → system 0° ✓
+    #   math 180° (left) → system 270° ✓
+    #   math 270° (up in screen) → system 180° ✓
+    sudut_360 = (90.0 - math_angle + 360.0) % 360.0
 
     return round(sudut_360, 2)
 
@@ -140,55 +206,13 @@ def evaluasi_qc_dan_servo(class_id: int, class_name: str, roi_bgr: np.ndarray = 
     """
     Menentukan status QC, deviasi sudut, koreksi putaran micro-servo (CW),
     serta format framing UART ke ESP32.
-
-    Logika:
-    - Elco_Benar & Elco_Salah: Analisis sudut fisik dari ROI (atau sudut_manual)
-      lalu hitung koreksi CW ke referensi 0° (kaki di bawah).
-    - Bukan_Elco: Reject tanpa koreksi.
-
-    Koreksi servo selalu searah jarum jam (CW, nilai positif).
     """
     nama_lower = class_name.lower()
     sudut_ref = 0.0
 
-    if sudut_manual is not None:
-        # ─── Mode manual: sudut diberikan langsung ───
-        sudut_act, dev, kor_servo, arah_servo = hitung_koreksi_terpendek(sudut_manual, sudut_ref)
+    is_elco = ("benar" in nama_lower) or ("salah" in nama_lower)
 
-        if "benar" in nama_lower and abs(dev) < 15.0:
-            status_qc = "BENAR (SESUAI REFERENSI)"
-            aksi = "LANJUT KE JIG (PASS)"
-        elif "salah" in nama_lower or abs(dev) >= 15.0:
-            status_qc = "SALAH (PERLU REORIENTASI)"
-            aksi = f"PUTAR SERVO CW {kor_servo:.1f}°"
-        else:
-            status_qc = "BUKAN ELCO (REJECT)"
-            aksi = "ABAIKAN / REJECT"
-            sudut_act, dev, kor_servo = 0.0, 0.0, 0.0
-            arah_servo = "DIAM"
-
-        uart_msg = f"K{class_id},S{sudut_act:.1f},R{kor_servo:.1f}\n"
-
-    elif "benar" in nama_lower or "salah" in nama_lower:
-        # ─── Mode otomatis: deteksi sudut dari ROI citra ───
-        if roi_bgr is not None and roi_bgr.size > 0:
-            sudut_deteksi = hitung_sudut_kontur(roi_bgr)
-        else:
-            # Fallback: jika ROI tidak tersedia, estimasi dari nama kelas
-            sudut_deteksi = 0.0 if "benar" in nama_lower else 180.0
-
-        sudut_act, dev, kor_servo, arah_servo = hitung_koreksi_terpendek(sudut_deteksi, sudut_ref)
-
-        if abs(dev) < 15.0:
-            status_qc = "BENAR (SESUAI REFERENSI)"
-            aksi = "LANJUT KE JIG (PASS)"
-        else:
-            status_qc = "SALAH (PERLU REORIENTASI)"
-            aksi = f"PUTAR SERVO CW {kor_servo:.1f}°"
-
-        uart_msg = f"K{class_id},S{sudut_act:.1f},R{kor_servo:.1f}\n"
-
-    else:
+    if not is_elco:
         # ─── Bukan Elco → Reject ───
         sudut_act = 0.0
         dev = 0.0
@@ -197,6 +221,26 @@ def evaluasi_qc_dan_servo(class_id: int, class_name: str, roi_bgr: np.ndarray = 
         status_qc = "BUKAN ELCO (REJECT)"
         aksi = "ABAIKAN / REJECT"
         uart_msg = f"K{class_id},S0.0,R0.0\n"
+        return sudut_act, sudut_ref, dev, kor_servo, arah_servo, status_qc, aksi, uart_msg
+
+    if sudut_manual is not None:
+        sudut_deteksi = sudut_manual
+    else:
+        if roi_bgr is not None and roi_bgr.size > 0:
+            sudut_deteksi = hitung_sudut_kontur(roi_bgr)
+        else:
+            sudut_deteksi = 0.0
+
+    sudut_act, dev, kor_servo, arah_servo = hitung_koreksi_terpendek(sudut_deteksi, sudut_ref)
+
+    if abs(dev) < 15.0:
+        status_qc = "BENAR (SESUAI REFERENSI)"
+        aksi = "LANJUT KE JIG (PASS)"
+    else:
+        status_qc = "SALAH (PERLU REORIENTASI)"
+        aksi = f"PUTAR SERVO CW {kor_servo:.1f}°"
+
+    uart_msg = f"K{class_id},S{sudut_act:.1f},R{kor_servo:.1f}\n"
 
     return sudut_act, sudut_ref, dev, kor_servo, arah_servo, status_qc, aksi, uart_msg
 
@@ -243,7 +287,6 @@ def gambar_anotasi(
     panjang_vektor = int(max(24, min(w_box, h_box) * 0.55))
 
     # 1. Panah Referensi Target (0.0° = Mengarah ke Bawah)
-    # Tampilkan panah referensi pembanding (Cyan) terutama jika ada deviasi/salah
     if "salah" in nama_lower or abs(deviasi) >= 15.0:
         rad_ref = math.radians(normalisasi_sudut_360(sudut_ref))
         dx_ref = math.sin(rad_ref)
