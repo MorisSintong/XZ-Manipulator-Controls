@@ -251,6 +251,19 @@ static void test_limits_and_halt(void)
     CHECK(!c.running);
     CHECK(c.pos == 400);
     CHECK(!step_core_expire(&c, &(bool){ false }, &v, &(bool){ false }));
+
+    /* Outside the limits (e.g. frame re-referenced): moving further out is
+     * refused, moving back into range is allowed. */
+    c.lim_lo = 1000;
+    c.lim_hi = 2000;
+    c.limit_hit = false;
+    CHECK(step_core_cmd_move(&c, 300, 4000.0f, 40000.0f, &v));
+    s = run_core(&c, v, 10U, NULL);
+    CHECK(s.steps == 0U && c.limit_hit && c.pos == 400);
+    c.limit_hit = false;
+    CHECK(step_core_cmd_move(&c, 1500, 4000.0f, 40000.0f, &v));
+    s = run_core(&c, v, 100000U, NULL);
+    CHECK(c.pos == 1500 && !c.limit_hit && s.steps == 1100U);
 }
 
 static void test_randomised_moves(void)

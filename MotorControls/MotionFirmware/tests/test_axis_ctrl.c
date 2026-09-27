@@ -350,6 +350,71 @@ static void test_driver_lost_while_cycling(void)
     CHECK(home_axis(X, 60000U));
 }
 
+static bool pred_bounce_near_min(void)
+{
+    const axis_status_t *st = axis_ctrl_status(g_pred_ax);
+    const int32_t near = (int32_t)(0.3f * spm(g_pred_ax));
+
+    return (st->state == AX_ST_BOUNCE_SEEK) && (st->speed_steps_s < 0.0f) &&
+           (st->pos_steps <= near);
+}
+
+static bool pred_bounce_settle(void)
+{
+    return axis_ctrl_status(g_pred_ax)->state == AX_ST_BOUNCE_SETTLE;
+}
+
+/* Stopping bounce mode right before / at a hard stop must leave a usable,
+ * re-referenced axis (with and without encoder). */
+static void test_bounce_stop_near_stop(void)
+{
+    unsigned variant;
+
+    for (variant = 0U; variant < 4U; variant++) {
+        const uint8_t ax = ((variant & 1U) != 0U) ? Z : X;
+        const bool with_enc = (variant & 2U) == 0U;
+        sim_axis_cfg_t sc = sim_cfg(ax, (ax == Z) ? Z_TRAVEL_MM : X_TRAVEL_MM, 60.0f);
+        const axis_status_t *st;
+
+        sc.enc_present = with_enc;
+        sim_reset(20U + variant);
+        setup_axis(ax, &sc, NULL);
+        CHECK(home_axis(ax, 120000U));
+        CHECK(axis_ctrl_cycle(ax, AX_CYCLE_BOUNCE));
+        g_pred_ax = ax;
+        CHECK(sim_run_until(pred_bounce_near_min, 120000U));
+        axis_ctrl_stop(ax);
+        CHECK(sim_run_until(pred_idle, 10000U));
+        st = axis_ctrl_status(ax);
+        CHECK_MSG(st->state == AX_ST_READY, "variant %u state %s fault %s", variant,
+                  axis_ctrl_state_name(st->state), axis_ctrl_fault_name(st->fault));
+        CHECK(st->pos_steps >= 0 && st->pos_steps <= st->travel_steps);
+        CHECK_NEAR((float)st->pos_steps / spm(ax), sim_rotor(ax) / spm(ax), with_enc ? 0.05 : 1.0);
+        sim_run_ms(500U); /* following-error check while holding */
+        CHECK(axis_ctrl_status(ax)->fault == AX_FAULT_NONE);
+        CHECK(axis_ctrl_cycle(ax, AX_CYCLE_SOFT));
+        sim_run_ms(5000U);
+        CHECK_MSG(axis_ctrl_status(ax)->fault == AX_FAULT_NONE, "variant %u after soft cycle: %s",
+                  variant, axis_ctrl_fault_name(axis_ctrl_status(ax)->fault));
+
+        /* Stop while settled against a stop (before re-referencing). */
+        axis_ctrl_stop(ax);
+        CHECK(sim_run_until(pred_idle, 10000U));
+        CHECK(axis_ctrl_cycle(ax, AX_CYCLE_BOUNCE));
+        CHECK(sim_run_until(pred_bounce_settle, 120000U));
+        axis_ctrl_stop(ax);
+        sim_run_ms(2U);
+        st = axis_ctrl_status(ax);
+        CHECK(st->state == AX_ST_READY);
+        CHECK(st->pos_steps >= 0 && st->pos_steps <= st->travel_steps);
+        CHECK(axis_ctrl_move_mm(ax, 20.0f));
+        CHECK(sim_run_until(pred_idle, 20000U));
+        CHECK_MSG(axis_ctrl_status(ax)->fault == AX_FAULT_NONE, "variant %u after move: %s", variant,
+                  axis_ctrl_fault_name(axis_ctrl_status(ax)->fault));
+        CHECK_NEAR(sim_rotor(ax) / spm(ax), 20.0, with_enc ? 0.05 : 1.0);
+    }
+}
+
 int main(void)
 {
     sim_set_verbose(getenv("SIM_VERBOSE") != NULL);
@@ -367,5 +432,6 @@ int main(void)
     RUN_TEST(test_spi_failure);
     RUN_TEST(test_short_travel_fault);
     RUN_TEST(test_driver_lost_while_cycling);
+    RUN_TEST(test_bounce_stop_near_stop);
     return TEST_SUMMARY();
 }

@@ -237,7 +237,10 @@ bool step_core_expire(step_core_t *c, bool *more, float *v, bool *dir_changed)
         return false;
     }
     next = (int64_t)c->pos + (int64_t)c->step_dir;
-    if ((next < (int64_t)c->lim_lo) || (next > (int64_t)c->lim_hi)) {
+    /* Directional check: a step further out of [lim_lo, lim_hi] is refused,
+     * a step back towards the range is always allowed. */
+    if (((c->step_dir > 0) && (next > (int64_t)c->lim_hi)) ||
+        ((c->step_dir < 0) && (next < (int64_t)c->lim_lo))) {
         c->running = false;
         c->limit_hit = true;
         c->mp.mode = MP_MODE_IDLE;

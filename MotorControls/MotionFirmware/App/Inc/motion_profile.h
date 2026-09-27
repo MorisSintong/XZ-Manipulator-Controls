@@ -86,8 +86,9 @@ bool step_core_start(step_core_t *c, float *v);
 /** Call when the current interval expires. Returns true if a step edge must
  *  be emitted now. '*more' is true if another interval follows, in which case
  *  '*v' is its speed and '*dir_changed' tells whether DIR must be updated
- *  after this edge. A step that would leave [lim_lo, lim_hi] is refused, the
- *  motion stops and limit_hit latches. */
+ *  after this edge. A step that would move further outside [lim_lo, lim_hi]
+ *  is refused, the motion stops and limit_hit latches; steps back towards
+ *  the range are always allowed. */
 bool step_core_expire(step_core_t *c, bool *more, float *v, bool *dir_changed);
 
 /* Commands. While running they re-plan on the fly (retarget, reverse, brake).

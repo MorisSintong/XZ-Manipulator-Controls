@@ -50,6 +50,7 @@ typedef struct {
     bool              profile_homing;
     uint32_t          t_state;
     axis_state_t      stop_to;
+    bool              stop_resync;   /* re-reference position when the stop completes */
     /* seek / stall detection */
     int8_t            seek_dir;
     bool              cruising;
@@ -165,6 +166,8 @@ static void go_fault(uint8_t ax, axis_fault_t f)
     a->st.cycling = false;
     a->enc_cal = false;
     a->st.enc_ok = false;
+    a->profile_valid = false; /* re-write the driver profile before next use */
+    a->stop_resync = false;
     a->st.fault = f;
     a->st.fault_count++;
     enter(a, AX_ST_FAULT);
@@ -173,17 +176,23 @@ static void go_fault(uint8_t ax, axis_fault_t f)
                 (double)to_mm(a, axis_hw_position(ax)));
 }
 
+static axis_fault_t hw_fault(axis_hw_status_t hs)
+{
+    return (hs == AXIS_HW_ERR_DRIVER) ? AX_FAULT_DRIVER : AX_FAULT_SPI;
+}
+
 static bool ensure_profile(uint8_t ax, bool homing)
 {
     axis_t *a = &g_axes[ax];
+    axis_hw_status_t hs;
 
     if (a->profile_valid && (a->profile_homing == homing)) {
         return true;
     }
-    if (axis_hw_apply_profile(ax, homing ? AXIS_PROFILE_HOMING : AXIS_PROFILE_RUN,
-                              &a->cfg) != AXIS_HW_OK) {
+    hs = axis_hw_apply_profile(ax, homing ? AXIS_PROFILE_HOMING : AXIS_PROFILE_RUN, &a->cfg);
+    if (hs != AXIS_HW_OK) {
         a->profile_valid = false;
-        go_fault(ax, AX_FAULT_SPI);
+        go_fault(ax, hw_fault(hs));
         return false;
     }
     a->profile_valid = true;
@@ -230,6 +239,28 @@ static int32_t enc_position(const axis_t *a)
     return round_i32((float)(a->enc.counts - a->enc_zero) / a->enc_ratio);
 }
 
+/* After an interrupted bounce stroke the commanded position may include
+ * microsteps issued while the rotor was blocked by a stop. Take the true
+ * position from the encoder, or at least clamp it into the measured travel,
+ * so the axis can be used (READY/cycle/move) without a false fault. */
+static void resync_position(uint8_t ax)
+{
+    axis_t *a = &g_axes[ax];
+    int32_t pos = axis_hw_position(ax);
+
+    if (a->enc_cal && a->enc_valid) {
+        pos = enc_position(a);
+    }
+    if (pos < 0) {
+        pos = 0;
+    }
+    if (pos > a->st.travel_steps) {
+        pos = a->st.travel_steps;
+    }
+    (void)axis_hw_set_position(ax, pos);
+    a->follow_hits = 0U;
+}
+
 /* ------------------------------------------------------------------------ */
 /* Seek (constant speed run until StallGuard4 detects the end stop)         */
 /* ------------------------------------------------------------------------ */
@@ -256,12 +287,14 @@ static void seek_arm(uint8_t ax, int8_t dir)
 static bool restore_static_threshold(uint8_t ax)
 {
     axis_t *a = &g_axes[ax];
+    axis_hw_status_t hs;
 
     if (!a->thr_raised) {
         return true;
     }
-    if (axis_hw_set_sg_threshold(ax, a->cfg.tmc.sg4_thrs_home) != AXIS_HW_OK) {
-        go_fault(ax, AX_FAULT_SPI);
+    hs = axis_hw_set_sg_threshold(ax, a->cfg.tmc.sg4_thrs_home);
+    if (hs != AXIS_HW_OK) {
+        go_fault(ax, hw_fault(hs));
         return false;
     }
     a->thr_raised = false;
@@ -975,6 +1008,10 @@ void axis_ctrl_step(uint8_t ax)
     case AX_ST_STOPPING:
         if (!axis_hw_busy(ax)) {
             (void)axis_hw_take_limit_hit(ax);
+            if (a->stop_resync) {
+                a->stop_resync = false;
+                resync_position(ax);
+            }
             enter(a, a->stop_to);
         }
         break;
@@ -1134,20 +1171,33 @@ void axis_ctrl_stop(uint8_t ax)
         axis_hw_stop(ax);
         a->st.homed = false;
         a->stop_to = AX_ST_IDLE;
+        a->stop_resync = false;
         enter(a, AX_ST_STOPPING);
         break;
     case AX_ST_MOVE:
     case AX_ST_CYCLE_MOVE:
-    case AX_ST_BOUNCE_SEEK:
-    case AX_ST_BOUNCE_RETRACT:
         axis_hw_stop(ax);
         a->st.cycling = false;
         a->stop_to = AX_ST_READY;
+        a->stop_resync = false;
+        enter(a, AX_ST_STOPPING);
+        break;
+    case AX_ST_BOUNCE_SEEK:
+    case AX_ST_BOUNCE_RETRACT:
+        /* Braking may run into the stop that was being approached. */
+        axis_hw_stop(ax);
+        a->st.cycling = false;
+        a->stop_to = AX_ST_READY;
+        a->stop_resync = true;
         enter(a, AX_ST_STOPPING);
         break;
     case AX_ST_CYCLE_DWELL:
+        a->st.cycling = false;
+        enter(a, AX_ST_READY);
+        break;
     case AX_ST_BOUNCE_SETTLE:
         a->st.cycling = false;
+        resync_position(ax);
         enter(a, AX_ST_READY);
         break;
     default:

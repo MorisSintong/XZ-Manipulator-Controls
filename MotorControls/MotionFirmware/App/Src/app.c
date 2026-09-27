@@ -184,6 +184,9 @@ static void start_cycles(void)
     }
     /* The sequencer starts every homed axis as soon as it is READY (an axis
      * may still be decelerating from a previous stop). */
+    if (!any) {
+        LOG("[SYS] no homed axis ready (driver still initialising?)");
+    }
     set_sys(any ? SYS_RUNNING : SYS_IDLE);
 }
 
@@ -656,7 +659,9 @@ static void probe_drivers(void)
         const tmc_axis_info_t *ti = tmc_axis_info(ax);
         TMC2240Status r;
 
-        if ((ti == NULL) || ti->configured || (axis_ctrl_status(ax)->state == AX_ST_FAULT)) {
+        /* Only (re)configure a chip whose axis is parked in DISABLED: never
+         * rewrite registers under an active axis (faults wait for 'clear'). */
+        if ((ti == NULL) || ti->configured || (axis_ctrl_status(ax)->state != AX_ST_DISABLED)) {
             continue;
         }
         r = tmc_axis_configure(ax, axis_ctrl_cfg(ax));
@@ -677,6 +682,22 @@ static void probe_drivers(void)
                     axis_name(ax), (unsigned)ax, tmc_status_name(r));
             }
             g_probe_fail[ax]++;
+        }
+    }
+}
+
+/* A chip found unconfigured by any path (health poll, SG4 read, profile
+ * write) takes its axis out of service at once: an active axis faults, an
+ * idle one is parked in DISABLED, a faulted one stays FAULT until 'clear'
+ * and then waits in DISABLED for probe_drivers() to re-initialise it. */
+static void sync_driver_state(void)
+{
+    uint8_t ax;
+
+    for (ax = 0U; ax < APP_AXIS_COUNT; ax++) {
+        const tmc_axis_info_t *ti = tmc_axis_info(ax);
+        if ((ti != NULL) && !ti->configured && (axis_ctrl_status(ax)->state != AX_ST_DISABLED)) {
+            axis_ctrl_set_driver_ready(ax, false);
         }
     }
 }
@@ -1009,6 +1030,7 @@ void app_run(void)
     for (ax = 0U; ax < APP_AXIS_COUNT; ax++) {
         axis_ctrl_step(ax);
     }
+    sync_driver_state();
     if ((now - g_t_enc_diag) >= 250U) {
         g_t_enc_diag = now;
         encoder_poll_diag();
