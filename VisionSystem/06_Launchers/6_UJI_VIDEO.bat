@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul 2>&1
-title Pengujian Video QC Kapasitor + ESP32 UART — Husein Alhamid TA
+title Pengujian Video QC Kapasitor + ESP32 UART - Husein Alhamid TA
 
 echo ============================================================
 echo   PENGUJIAN VIDEO QC KAPASITOR + ESP32 UART
@@ -27,19 +27,29 @@ set /p MODE="  Pilihan (1/2/3): "
 
 cd /d "%~dp0\.."
 
+:: Auto-detect Python
+where python >nul 2>&1
+if %errorlevel% equ 0 (
+    set PYTHON_CMD=python
+) else (
+    echo [ERROR] Python tidak ditemukan. Pastikan Python 3.10+ terinstall dan ada di PATH.
+    pause
+    exit /b 1
+)
+
 if "%MODE%"=="1" (
     echo.
     echo   [INFO] Menjalankan dengan UART AUTO...
-    python "04_Source_Code\6_test_video.py" --video "%VIDEO_PATH%" --uart-port AUTO --save-video
+    %PYTHON_CMD% "04_Source_Code\6_test_video.py" --video "%VIDEO_PATH%" --uart-port AUTO --save-video
 ) else if "%MODE%"=="2" (
     set /p COM_PORT="  Masukkan port COM ESP32 (contoh: COM3): "
     echo.
     echo   [INFO] Menjalankan dengan UART port %COM_PORT%...
-    python "04_Source_Code\6_test_video.py" --video "%VIDEO_PATH%" --uart-port %COM_PORT% --save-video
+    %PYTHON_CMD% "04_Source_Code\6_test_video.py" --video "%VIDEO_PATH%" --uart-port %COM_PORT% --save-video
 ) else (
     echo.
     echo   [INFO] Menjalankan mode OFFLINE (tanpa ESP32)...
-    python "04_Source_Code\6_test_video.py" --video "%VIDEO_PATH%" --no-uart --save-video
+    %PYTHON_CMD% "04_Source_Code\6_test_video.py" --video "%VIDEO_PATH%" --no-uart --save-video
 )
 
 echo.

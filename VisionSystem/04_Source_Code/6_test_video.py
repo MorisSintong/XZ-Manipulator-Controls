@@ -42,6 +42,12 @@ sys.path.append(str(ROOT_DIR / "04_Source_Code"))
 
 from utils.angle_calculator import evaluasi_qc_dan_servo, gambar_anotasi
 from utils.uart_handler import KoneksiUART
+from utils.uart_protocol import (
+    encode_detection_packet,
+    format_ascii_debug,
+    PixelToConveyorMapper
+)
+from utils.conveyor_tracker import ConveyorTracker
 
 DEFAULT_MODEL = ROOT_DIR / "03_Models" / "best.pt"
 DEFAULT_OUTPUT_DIR = ROOT_DIR / "05_Hasil_Pengujian" / "video_test_results"
@@ -127,6 +133,17 @@ def run_video_test(args):
         )
         print(f"  Output Video     : {out_video_path}")
 
+    # ─── Inisialisasi Tracker & Coordinate Mapper ───
+    coord_mapper = PixelToConveyorMapper(
+        pixels_per_mm_x=args.px_per_mm_x,
+        pixels_per_mm_y=args.px_per_mm_y
+    )
+    tracker = ConveyorTracker(
+        max_disappeared=args.max_disappeared,
+        max_distance=args.max_distance,
+        inspection_line_y=args.inspection_line
+    ) if not args.no_tracker else None
+
     # ─── Inisialisasi UART ke ESP32 ───
     uart = None
     if not args.no_uart:
@@ -193,12 +210,10 @@ def run_video_test(args):
             t_inf_ms = (time.perf_counter() - t0) * 1000.0
 
             annotated_frame = frame.copy()
-            frame_has_detection = False
+            frame_detections = []
 
             for r in results:
                 for idx_b, box in enumerate(r.boxes):
-                    frame_has_detection = True
-                    total_deteksi += 1
                     cls_id = int(box.cls[0].item())
                     cls_name = class_names.get(cls_id, str(cls_id))
                     conf_val = float(box.conf[0].item())
@@ -209,41 +224,107 @@ def run_video_test(args):
                         cls_id, cls_name, roi
                     )
 
-                    # ─── Kirim data ke ESP32 via UART ───
-                    esp32_ack = ""
-                    if uart:
-                        berhasil = uart.kirim(uart_msg)
-                        if berhasil:
-                            print(f"    [UART -> ESP32] Frame {frame_count:>5}: {uart_msg.strip()}")
+                    frame_detections.append({
+                        'bbox': tuple(xyxy),
+                        'class_id': cls_id,
+                        'class_name': cls_name,
+                        'conf': conf_val,
+                        'roi': roi,
+                        'angle': sudut_act,
+                        'correction': kor_servo,
+                        'sudut_ref': s_ref,
+                        'deviasi': dev,
+                        'arah': arah,
+                        'status_qc': st_qc,
+                        'aksi': aksi,
+                        'uart_msg': uart_msg
+                    })
 
-                        # Baca balasan ACK dari ESP32
-                        time.sleep(0.05)  # Jeda kecil agar ESP32 sempat merespon
-                        ack = uart.baca_respon()
-                        if ack:
-                            esp32_ack = ack
-                            print(f"    [ESP32 -> PC  ] Balasan: {ack}")
-
-                    # ─── Rekap CSV ───
-                    hasil_rekap.append([
-                        total_deteksi, frame_count,
-                        format_waktu(timestamp_video),
-                        f"{t_inf_ms:.1f}", idx_b + 1,
-                        cls_name, f"{conf_val:.3f}",
-                        f"[{xyxy[0]},{xyxy[1]},{xyxy[2]},{xyxy[3]}]",
-                        f"{sudut_act:.1f}", f"{s_ref:.1f}", f"{dev:+.1f}",
-                        f"{kor_servo:+.1f}", arah, st_qc, aksi,
-                        uart_msg.strip(), esp32_ack
-                    ])
-
-                    # ─── Gambar anotasi ───
+                    # Gambar anotasi pada frame
                     annotated_frame = gambar_anotasi(
                         annotated_frame, xyxy, cls_name, conf_val,
                         sudut_act, dev, kor_servo, st_qc, aksi, sudut_ref=s_ref
                     )
 
-                    # ─── Print ke terminal ───
+            if tracker:
+                # Spatial tracking & single-event debouncing at inspection line
+                triggered = tracker.update(frame_detections, video_height)
+                for obj in triggered:
+                    total_deteksi += 1
+                    cx, cy = obj['centroid']
+                    x_mm, y_mm = coord_mapper.pixel_to_mm(cx, cy)
+                    esp32_ack = ""
+
+                    if uart:
+                        if args.legacy_uart:
+                            msg_to_send = obj['uart_msg']
+                            berhasil = uart.kirim(msg_to_send, force=True)
+                        else:
+                            pkt = encode_detection_packet(
+                                obj_id=obj['track_id'],
+                                class_id=obj['class_id'],
+                                x_mm=x_mm,
+                                y_mm=y_mm,
+                                angle_deg=obj['angle'],
+                                servo_correction_deg=obj['correction']
+                            )
+                            berhasil = uart.kirim(pkt.decode('latin-1') if isinstance(pkt, bytes) else pkt, force=True)
+
+                        if berhasil:
+                            dbg = format_ascii_debug(obj['track_id'], obj['class_id'], x_mm, y_mm, obj['angle'], obj['correction'])
+                            print(f"    [UART -> STM32] Frame {frame_count:>5} Track #{obj['track_id']}: {dbg.strip()}")
+
+                        ack = uart.baca_respon()
+                        if ack:
+                            esp32_ack = ack
+                            print(f"    [STM32 -> PC  ] Balasan: {ack}")
+
+                    hasil_rekap.append([
+                        total_deteksi, frame_count,
+                        format_waktu(timestamp_video),
+                        f"{t_inf_ms:.1f}", obj['track_id'],
+                        obj['class_name'], f"{obj['conf']:.3f}",
+                        f"[{obj['bbox'][0]},{obj['bbox'][1]},{obj['bbox'][2]},{obj['bbox'][3]}]",
+                        f"{obj['angle']:.1f}", f"{obj['sudut_ref']:.1f}", f"{obj['deviasi']:+.1f}",
+                        f"{obj['correction']:+.1f}", obj['arah'], obj['status_qc'], obj['aksi'],
+                        obj['uart_msg'].strip(), esp32_ack
+                    ])
+
                     print(f"    {frame_count:<8} | {format_waktu(timestamp_video):<12} | "
-                          f"{cls_name:<22} | {conf_val*100:>5.1f}% | {st_qc:<25} | {uart_msg.strip():<20}")
+                          f"{obj['class_name']:<22} | {obj['conf']*100:>5.1f}% | {obj['status_qc']:<25} | Track #{obj['track_id']}")
+
+                # Draw inspection line on frame
+                insp_y = int(args.inspection_line * video_height)
+                cv2.line(annotated_frame, (0, insp_y), (video_width, insp_y), (0, 255, 255), 1, cv2.LINE_AA)
+                cv2.putText(annotated_frame, "INSPECTION LINE", (10, insp_y - 8),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1, cv2.LINE_AA)
+            else:
+                # Mode tanpa tracker (legacy: proses setiap deteksi per-frame)
+                for det in frame_detections:
+                    total_deteksi += 1
+                    esp32_ack = ""
+                    if uart:
+                        berhasil = uart.kirim(det['uart_msg'])
+                        if berhasil:
+                            print(f"    [UART -> ESP32] Frame {frame_count:>5}: {det['uart_msg'].strip()}")
+                        ack = uart.baca_respon()
+                        if ack:
+                            esp32_ack = ack
+                            print(f"    [ESP32 -> PC  ] Balasan: {ack}")
+
+                    hasil_rekap.append([
+                        total_deteksi, frame_count,
+                        format_waktu(timestamp_video),
+                        f"{t_inf_ms:.1f}", 1,
+                        det['class_name'], f"{det['conf']:.3f}",
+                        f"[{det['bbox'][0]},{det['bbox'][1]},{det['bbox'][2]},{det['bbox'][3]}]",
+                        f"{det['angle']:.1f}", f"{det['sudut_ref']:.1f}", f"{det['deviasi']:+.1f}",
+                        f"{det['correction']:+.1f}", det['arah'], det['status_qc'], det['aksi'],
+                        det['uart_msg'].strip(), esp32_ack
+                    ])
+
+                    print(f"    {frame_count:<8} | {format_waktu(timestamp_video):<12} | "
+                          f"{det['class_name']:<22} | {det['conf']*100:>5.1f}% | {det['status_qc']:<25} | {det['uart_msg'].strip():<20}")
 
             # ─── Status Header Bar pada frame ───
             h, w = frame.shape[:2]
@@ -354,6 +435,22 @@ if __name__ == "__main__":
                         help='Simpan video output beranotasi (.mp4)')
     parser.add_argument('--output', type=str, default=str(DEFAULT_OUTPUT_DIR),
                         help='Folder output hasil pengujian')
+    # Conveyor tracker parameters
+    parser.add_argument('--inspection-line', type=float, default=0.5,
+                        help='Inspection line Y fraction (0.0=top, 1.0=bottom)')
+    parser.add_argument('--max-disappeared', type=int, default=15,
+                        help='Max frames before dropping track')
+    parser.add_argument('--max-distance', type=float, default=80.0,
+                        help='Max centroid matching distance (pixels)')
+    parser.add_argument('--no-tracker', action='store_true',
+                        help='Nonaktifkan conveyor tracker (mode legacy per-frame)')
+    # Coordinate mapping parameters
+    parser.add_argument('--px-per-mm-x', type=float, default=5.0,
+                        help='Pixels per mm on X axis')
+    parser.add_argument('--px-per-mm-y', type=float, default=5.0,
+                        help='Pixels per mm on Y axis')
+    parser.add_argument('--legacy-uart', action='store_true',
+                        help='Gunakan format legacy ASCII UART (K<id>,S<sudut>,R<koreksi>)')
 
     args = parser.parse_args()
     run_video_test(args)

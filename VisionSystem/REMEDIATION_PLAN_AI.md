@@ -94,11 +94,11 @@ Create an autonomous test script: `tests/verify_vision_system.py` that runs with
 
 Do not consider your work done until every checkbox below is verified:
 
-- [ ] `utils/angle_calculator.py` outputs continuous angles across $0^\circ$–$360^\circ$ (verified on non-orthogonal rotations).
-- [ ] No hardcoded class name fallbacks for angle logic.
-- [ ] Framed UART packet contains conveyor coordinates $(X, Y)$ in mm and CRC16 checksum.
-- [ ] Conveyor tracker queues each capacitor exactly once without serial flooding.
-- [ ] All flash-wear NVS writes removed from the real-time loop in `firmware_esp32.ino`.
-- [ ] All blocking `delay()` calls removed from firmware.
-- [ ] All hardcoded user paths (`C:\Users\HUSEN\...`) removed from `.bat` launchers.
-- [ ] `python tests/verify_vision_system.py` runs and passes with exit code 0.
+- [x] `utils/angle_calculator.py` outputs continuous angles across $0^\circ$–$360^\circ$ (verified on non-orthogonal rotations).
+- [x] No hardcoded class name fallbacks for angle logic.
+- [x] Framed UART packet contains conveyor coordinates $(X, Y)$ in mm and CRC16 checksum.
+- [x] Conveyor tracker queues each capacitor exactly once without serial flooding.
+- [x] All flash-wear NVS writes removed from the real-time loop in `firmware_esp32.ino`.
+- [x] All blocking `delay()` calls removed from firmware.
+- [x] All hardcoded user paths (`C:\Users\HUSEN\...`) removed from `.bat` launchers.
+- [x] `python tests/verify_vision_system.py` runs and passes with exit code 0.
