@@ -16,8 +16,12 @@ cmake-build-*/
 .build/
 __cmake_systeminformation/
 _deps/
+bin/
+out/
 
-# CMake cache and temporary files (in-source builds)
+# CMake cache, presets, and temporary files
+CMakeUserPresets.json
+compile_commands.json
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
@@ -82,6 +86,7 @@ JLinkExe.log
 JLinkGDBServer*.log
 openocd.log
 gdb.txt
+.gdb_history
 
 # ------------------------------------------------------------------------------
 # 2. STM32CubeIDE & Eclipse
@@ -95,10 +100,16 @@ Release/
 # ------------------------------------------------------------------------------
 # 3. Vision System (Python & Machine Learning)
 # ------------------------------------------------------------------------------
+# Environment configurations & secrets
+.env
+.env.*
+!.env.example
+
 # Python bytecode & cache
 __pycache__/
 *.py[cod]
 *$py.class
+*.cache
 
 # Virtual environments
 venv/
@@ -118,6 +129,8 @@ dist/
 .mypy_cache/
 .ruff_cache/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
 .tox/
 .nox/
@@ -141,10 +154,11 @@ runs/
 *.avi
 *.mov
 *.mkv
-05_Hasil_Pengujian/**/annotated_images/
-05_Hasil_Pengujian/video_test_results/
-05_Hasil_Pengujian/sample_images_results/annotated_images/
-05_Hasil_Pengujian/offline_batch_results/annotated_images/
+**/05_Hasil_Pengujian/**/annotated_images/
+**/05_Hasil_Pengujian/video_test_results/
+**/05_Hasil_Pengujian/sample_images_results/annotated_images/
+**/05_Hasil_Pengujian/offline_batch_results/annotated_images/
+**/05_Hasil_Pengujian/frame_read_test/
 
 # Large documentation files
 *.pdf
@@ -154,13 +168,15 @@ runs/
 # ------------------------------------------------------------------------------
 *.bak
 *.bkp
+*.opt
 
 # ------------------------------------------------------------------------------
 # 5. IDEs & Editors
 # ------------------------------------------------------------------------------
 .vscode/
 .idea/
-.zed/
+.zed/*
+!.zed/tasks.json
 *.swp
 *.swo
 *~
@@ -175,6 +191,7 @@ Desktop.ini
 .DS_Store
 ._*
 $RECYCLE.BIN/
+*.lnk
 
 # ------------------------------------------------------------------------------
 # 7. General Logs & Temporaries
