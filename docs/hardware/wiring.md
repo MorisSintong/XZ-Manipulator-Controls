@@ -11,7 +11,7 @@
 
 ## 1. System Architecture Diagram
 
-```
+```text
                              +-----------------------------------+
                              |     STM32F446RE Nucleo-64         |
                              +-----------------------------------+
@@ -40,10 +40,10 @@
 
 ## 2. Master Pinout Table (STM32 Nucleo-64)
 
-Both **Arduino Header Pin** (convenient female headers) and **Morpho Pin** (double-row male headers) are specified below:
+Both **Arduino Header Pin** (female headers) and **Morpho Pin** (double-row male headers) are specified below:
 
 | STM32 Pin | Arduino / Morpho Header | Peripheral Function | Connected Module | Module Pin / Net | Description & Notes |
-| :--- | :--- | :---: | :---: | :---: | :--- |
+| :--- | :--- | :---: | :--- | :--- | :--- |
 | **PB13** | Morpho **CN10 Pin 30** | `SPI2_SCK` (AF5) | **Both TMC2240** | Pin 14 (`SCK`) | Shared SPI Clock (2.625 MHz, SPI Mode 3) |
 | **PB14** | Morpho **CN10 Pin 28** | `SPI2_MISO` (AF5) | **Both TMC2240** | Pin 12 (`SDO` / `MISO`) | Shared SPI Data Input to MCU |
 | **PB15** | Morpho **CN10 Pin 26** | `SPI2_MOSI` (AF5) | **Both TMC2240** | Pin 15 (`SDI` / `MOSI`) | Shared SPI Data Output from MCU |
@@ -74,7 +74,7 @@ Both **Arduino Header Pin** (convenient female headers) and **Morpho Pin** (doub
 
 ### A. Module Pinout (MKS TMC2240 v1.0 standard step-stick form factor)
 
-```
+```text
                    +------------------+
               ENN -| 16            1  |- GND
          SDI(MOSI)-| 15            2  |- VDD_IO (3.3V)
@@ -97,7 +97,7 @@ Both **Arduino Header Pin** (convenient female headers) and **Morpho Pin** (doub
 | **5** | `2A` | Stepper Coil Phase B+ (Red) | Twisted pair with 2B |
 | **6** | `2B` | Stepper Coil Phase B- (Blue) | Twisted pair with 2A |
 | **7** | `GND` | Common Ground (Bridge to Pin 1) | Heavy gauge ground |
-| **8** | `VMOT` | **+24V DC** Power Supply | Equip with $100\,\mu\text{F}$ 35V/50V cap to GND |
+| **8** | `VMOT` | **+24V DC** Power Supply | Equip with 100 µF 35V/50V cap to GND |
 | **9** | `DIR` | STM32 **PC2** (CN7 Pin 34) | Signal Jumper |
 | **10** | `STEP` | STM32 **PC1** (Arduino A4 / CN7 Pin 36) | Signal Jumper |
 | **11** | `NC` | *Not Connected* | — |
@@ -119,7 +119,7 @@ Both **Arduino Header Pin** (convenient female headers) and **Morpho Pin** (doub
 | **5** | `2A` | Stepper Coil Phase B+ | Twisted pair with 2B |
 | **6** | `2B` | Stepper Coil Phase B- | Twisted pair with 2A |
 | **7** | `GND` | Common Ground (Bridge to Pin 1) | Heavy gauge ground |
-| **8** | `VMOT` | **+24V DC** Power Supply | Equip with $100\,\mu\text{F}$ 35V/50V cap to GND |
+| **8** | `VMOT` | **+24V DC** Power Supply | Equip with 100 µF 35V/50V cap to GND |
 | **9** | `DIR` | STM32 **PC5** (CN10 Pin 6) | Signal Jumper |
 | **10** | `STEP` | STM32 **PC4** (CN10 Pin 34) | Signal Jumper |
 | **11** | `NC` | *Not Connected* | — |
@@ -180,13 +180,13 @@ Standard bipolar stepper motors have two independent isolated coils: **Coil A** 
 > - Set multimeter to resistance mode ($\Omega$).
 > - Probe pairs of wires. The two wires showing $\approx 1.5 - 4\,\Omega$ are part of the **same coil**.
 > - There must be infinite resistance (open circuit) between Coil A and Coil B wires.
-> - If the motor turns backwards during operation, simply invert the motor direction pin in software or swap the two wires of **one coil only** (e.g. swap `1A` and `1B`).
+> - If the motor turns backwards during operation, invert the motor direction pin in software or swap the two wires of **one coil only** (e.g. swap `1A` and `1B`).
 
 ---
 
 ## 6. Power & Ground Distribution Rules
 
-```
+```text
      +-----------------------------------+
      |        24V DC Power Supply        |
      +-----------------------------------+
