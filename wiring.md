@@ -59,8 +59,8 @@ Both **Arduino Header Pin** (convenient female headers) and **Morpho Pin** (doub
 | **PB9** | Arduino **D14** / CN10 Pin 5 | `I2C1_SDA` (AF4) | **AS5600 Enc 1 (X-Axis)** | `SDA` | I2C Data (100–400 kHz, ~4.7k pull-up) |
 | **PA8** | Arduino **D7** / CN10 Pin 23 | `I2C3_SCL` (AF4) | **AS5600 Enc 2 (Z-Axis)** | `SCL` | I2C Clock (100–400 kHz, ~4.7k pull-up) |
 | **PC9** | Morpho **CN10 Pin 1** | `I2C3_SDA` (AF4) | **AS5600 Enc 2 (Z-Axis)** | `SDA` | I2C Data (100–400 kHz, ~4.7k pull-up) |
-| **PC13** | Onboard **Blue Button B1** | `GPIO_Input` | **User Interface** | — | Press to Start / Stop Bouncing & Homing |
-| **PA5** | Arduino **D13** / Green LD2 | `GPIO_Output` | **Status LED** | — | Solid ON during active stepper movement |
+| **PC13** | Onboard **Blue Button B1** | `GPIO_EXTI13` | **User Interface** | — | Short press: start (home + cycle) / stop; hold 1.5 s: drivers off |
+| **PA5** | Arduino **D13** / Green LD2 | `GPIO_Output` | **Status LED** | — | ON = cycling, 4 Hz = homing, 10 Hz = fault (see MotionFirmware README) |
 | **PA2** | CN10 Pin 35 (ST-Link VCOM) | `USART2_TX` (AF7) | **CDC Serial / COM9** | RX | Telemetry TX @ 115200 baud (to PC) |
 | **PA3** | CN10 Pin 37 (ST-Link VCOM) | `USART2_RX` (AF7) | **CDC Serial / COM9** | TX | Telemetry RX @ 115200 baud (from PC) |
 | **PA13** | CN10 Pin 13 (SWDIO) | `SYS_JTMS-SWDIO` | **ST-Link / J-Link OB** | SWDIO | Debug & SEGGER RTT channel |

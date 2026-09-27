@@ -35,6 +35,12 @@
     "tags": ["cmake"]
   },
   {
+    "label": "Host tests (clang)",
+    "command": "cmake -S tests -B build-host -G Ninja -DCMAKE_C_COMPILER=clang && cmake --build build-host && ctest --test-dir build-host --output-on-failure",
+    "cwd": "${ZED_WORKTREE_ROOT}/MotorControls/MotionFirmware",
+    "tags": ["test"]
+  },
+  {
     "label": "Clean",
     "command": "cmake",
     "args": ["--build", "--preset", "Debug", "--target", "clean"],
