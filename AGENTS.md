@@ -83,4 +83,13 @@ Before performing any code modifications or claiming completion, any AI assistan
   - Configured with PSReadLine predictive IntelliSense, F2 view switcher, and Up/Down history substring matching.
 - **Environment Status**:
   - System PATH: `C:\msys64\ucrt64\bin` is permanently removed.
-  - User PATH: Completely deduplicated and cleaned (17 essential entries).
+  - User PATH: Completely deduplicated and cleaned (15 essential entries, zero dead paths).
+
+### 5. Hardware & Debug Probes
+- **Primary Debug Probe**: **ST-LINK converted to SEGGER J-Link** (reflashed with Segger on-board J-Link firmware).
+  - **Probe Identification**: Presents to Windows, USB drivers, and debuggers as a **J-Link** probe (not ST-Link).
+  - **Tooling Support**: 
+    - `probe-rs`: Automatically recognizes it as a J-Link probe for zero-config flashing, DAP debugging, and RTT streaming.
+    - Local Utilities: Located at `C:\tools\stm32-jlink-starter` (in User PATH).
+    - OpenOCD / GDB: Always target `interface/jlink.cfg` or Segger J-Link GDB Server. Never suggest ST-Link specific tools (like `st-flash` or `stlink.cfg`).
+  - **Telemetry**: Full support for high-speed SEGGER RTT (Real-Time Transfer) without halting the MCU core.
