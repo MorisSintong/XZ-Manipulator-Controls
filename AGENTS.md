@@ -22,7 +22,7 @@ Before performing any code modifications or claiming completion, any AI assistan
    Provide and run `tests/verify_vision_system.py` asserting continuous angle accuracy, packet framing/CRC, and tracking debounce.
 
 
-#This is the Embedded Developer toolchains and Setups (ignore if you're not developing embedded systems or TinyML/Edge AI firmware or MotorControls).
+# This is the Embedded Developer toolchains and Setups (ignore if you're not developing embedded systems or TinyML/Edge AI firmware or MotorControls).
 
 # Developer Profile & System Toolchains
 
