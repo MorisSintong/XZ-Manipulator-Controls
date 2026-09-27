@@ -1,6 +1,6 @@
 /**
  * @file    console.h
- * @brief   Non-blocking text console on USART2 (ST-LINK/J-Link VCOM, 115200)
+ * @brief   Non-blocking text console on USART2 (VCOM of the on-board J-Link, 115200)
  *          mirrored to SEGGER RTT terminal 0.
  *
  * TX: ring buffer drained by DMA (DMA1 Stream6) - printing never blocks the

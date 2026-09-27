@@ -18,7 +18,8 @@ Wiring: [`wiring.md`](wiring.md). Axis mapping (edit `App/Inc/app_config.h` and
 | 1 = **X** (GT2 20T belt, 80 µsteps/mm) | TMC2240 #1 | PC3 | PC4 | PC5 | PC7 | TIM5 | I2C1 (PB8 SCL, PB9 SDA) |
 
 Shared SPI2 (mode 3, 2.625 MHz): PB13 SCK, PB14 MISO, PB15 MOSI. Console:
-USART2 (ST-LINK/J-Link VCOM, 115200 8N1) **and** SEGGER RTT terminal 0.
+USART2 (virtual COM port of the on-board J-Link, 115200 8N1) **and** SEGGER RTT
+terminal 0.
 
 > The thesis tables (TA 2026, tables 3.8/3.9 and section 3.6.2) assign motor 0
 > to X and swap the encoder buses. This firmware follows `wiring.md`. If your
@@ -27,6 +28,10 @@ USART2 (ST-LINK/J-Link VCOM, 115200 8N1) **and** SEGGER RTT terminal 0.
 > and reported (`[ENC] ... swap the encoder buses`).
 
 ## Build, flash, test
+
+Requirements: `arm-none-eabi-gcc` on PATH (verified with GCC 14.2.1 and 15.2.1,
+0 warnings in Debug and Release), CMake >= 3.22 and Ninja. The host tests use
+clang (LLVM-MinGW).
 
 ```powershell
 cmake --preset Debug            # or Release
