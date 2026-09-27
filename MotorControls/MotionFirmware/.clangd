@@ -1,0 +1,7 @@
+CompileFlags:
+  CompilationDatabase: "build/Debug"
+
+Diagnostics:
+  Includes:
+    IgnoreHeader:
+      - "stm32f4xx_.*\\.h"

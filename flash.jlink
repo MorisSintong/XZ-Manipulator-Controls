@@ -1,6 +1,0 @@
-r
-h
-loadfile "build/Debug/XZ-Manipulator-Controls.hex"
-r
-g
-q

@@ -1,0 +1,15 @@
+# Build directories
+build/
+bin/
+out/
+
+# CMake artifacts
+CMakeUserPresets.json
+
+# Clangd index cache
+.cache/
+
+# Editor / IDE
+.vscode/
+*.swp
+*~

@@ -1,0 +1,6 @@
+r
+h
+loadfile "build/Debug/MotionFirmware.hex"
+r
+g
+q

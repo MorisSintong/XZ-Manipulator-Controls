@@ -3,36 +3,42 @@
     "label": "Build (Debug)",
     "command": "cmake",
     "args": ["--build", "--preset", "Debug"],
+    "cwd": "${ZED_WORKTREE_ROOT}/MotorControls/MotionFirmware",
     "tags": ["build"]
   },
   {
     "label": "Build (Release)",
     "command": "cmake",
     "args": ["--build", "--preset", "Release"],
+    "cwd": "${ZED_WORKTREE_ROOT}/MotorControls/MotionFirmware",
     "tags": ["build"]
   },
   {
     "label": "Rebuild (Debug)",
     "command": "cmake",
     "args": ["--build", "--preset", "Debug", "--clean-first"],
+    "cwd": "${ZED_WORKTREE_ROOT}/MotorControls/MotionFirmware",
     "tags": ["build"]
   },
   {
     "label": "CMake: Configure (Debug)",
     "command": "cmake",
     "args": ["--preset", "Debug"],
+    "cwd": "${ZED_WORKTREE_ROOT}/MotorControls/MotionFirmware",
     "tags": ["cmake"]
   },
   {
     "label": "CMake: Configure (Release)",
     "command": "cmake",
     "args": ["--preset", "Release"],
+    "cwd": "${ZED_WORKTREE_ROOT}/MotorControls/MotionFirmware",
     "tags": ["cmake"]
   },
   {
     "label": "Clean",
     "command": "cmake",
     "args": ["--build", "--preset", "Debug", "--target", "clean"],
+    "cwd": "${ZED_WORKTREE_ROOT}/MotorControls/MotionFirmware",
     "tags": ["clean"]
   },
   {
@@ -50,6 +56,7 @@
       "-CommanderScript",
       "flash.jlink"
     ],
+    "cwd": "${ZED_WORKTREE_ROOT}/MotorControls/MotionFirmware",
     "tags": ["flash"]
   },
   {
@@ -67,6 +74,7 @@
       "-CommanderScript",
       "reset.jlink"
     ],
+    "cwd": "${ZED_WORKTREE_ROOT}/MotorControls/MotionFirmware",
     "tags": ["reset"]
   },
   {
@@ -84,6 +92,7 @@
       "-speed",
       "4000"
     ],
+    "cwd": "${ZED_WORKTREE_ROOT}/MotorControls/MotionFirmware",
     "tags": ["debug"]
   }
 ]
