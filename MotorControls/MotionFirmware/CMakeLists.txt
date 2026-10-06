@@ -44,6 +44,24 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/crc16_ccitt.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/vision_frame.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/encoder_unwrap.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/motion_units.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/motion_config.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/diag_record.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/motion_profile.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/step_engine.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/encoder_sampler.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/driver_evidence.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/uart_transport.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/homing.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/motion_executor.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/command_dispatch.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/motion_board.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/console.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/AS5600/src/as5600.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/AS5600/ports/stm32_hal/as5600_stm32_hal.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/TMC2240-Driver/driver/src/TMC2240.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/TMC2240-Driver/driver/src/tmc2240_hal.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/TMC2240-Driver/driver/src/CRC.c
@@ -54,9 +72,13 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/AS5600/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/AS5600/ports/stm32_hal
     ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/TMC2240-Driver/driver/inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/SEGGER_RTT
 )
+target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -Wall -Wextra)
 
 # Add project symbols (macros)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
