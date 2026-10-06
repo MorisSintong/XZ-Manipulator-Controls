@@ -1,0 +1,20 @@
+[project]
+name = "xz-vision-system"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = ["motion-diagnostics", "numpy", "opencv-python", "pyserial"]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+motion-diagnostics = { path = "../packages/motion_diagnostics", editable = true }
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff"]
+
+[tool.pytest.ini_options]
+pythonpath = ["04_Source_Code"]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "--basetemp=.pytest-artifacts"

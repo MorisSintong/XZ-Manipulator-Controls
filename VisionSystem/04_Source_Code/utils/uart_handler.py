@@ -1,144 +1,119 @@
-"""
-Modul Komunikasi Serial UART ke ESP32 / Mikrokontroler
-Tugas Akhir: Quality Control Kapasitor Berdasarkan Polaritas
-Husein Alhamid (4212301035)
+"""Binary STM32 transport with one asynchronous serial owner."""
 
-PENTING: Koneksi serial dibuka TANPA sinyal DTR/RTS agar ESP32
-         tidak ter-reset saat Python membuka atau menutup port COM.
-"""
-
+import struct
 import time
+import uuid
+from pathlib import Path
+
 import serial
 import serial.tools.list_ports
 
+from .diag_receiver import DiagnosticReceiver
+from .vision_command import encode_runtime_detection_packet
 
-def cari_port_esp32() -> str:
-    """
-    Otomatis mencari port COM ESP32 berdasarkan driver USB-to-UART:
-    CP210x, CH340, FTDI, USB Serial, atau Espressif.
-    """
+
+def cari_port_esp32() -> str | None:
+    """Legacy name retained; prefer an explicit STM32 VCOM port."""
     ports = list(serial.tools.list_ports.comports())
-    if not ports:
-        return None
-
-    # Prioritas deteksi chip USB serial ESP32
-    keywords = ["cp210", "ch340", "ch341", "usb serial", "ftdi", "espressif", "uart"]
-    for p in ports:
-        desc = (p.description or "").lower()
-        hwid = (p.hwid or "").lower()
-        for kw in keywords:
-            if kw in desc or kw in hwid:
-                return p.device
-
-    # Jika hanya ada 1 port COM yang tersedia, gunakan port tersebut
-    if len(ports) == 1:
-        return ports[0].device
-
-    return ports[0].device
+    return ports[0].device if len(ports) == 1 else None
 
 
 class KoneksiUART:
-    """
-    Wrapper komunikasi UART ke ESP32 dengan fitur:
-    - Auto-detection port COM ESP32 (CP210x, CH340, dsb.)
-    - Proteksi flooding (cooldown jeda pengiriman data)
-    - Auto-reconnect & fallback mode simulasi
-    - Penerimaan respon balik (ACK / Telemetri) dari ESP32
-    - TANPA reset ESP32 saat buka/tutup port (DTR/RTS disabled)
-    """
-
-    def __init__(self, port: str = "AUTO", baudrate: int = 115200, cooldown_sec: float = 0.5):
+    def __init__(
+        self, port="AUTO", baudrate=115200, cooldown_sec=0.5, csv_path=None, config=None
+    ):
         self.port_requested = port
         self.port = port
         self.baudrate = baudrate
         self.cooldown_sec = cooldown_sec
         self.waktu_kirim_terakhir = 0.0
-        self.pesan_terakhir = ""
+        self.pesan_terakhir = b""
+        self.csv_path = csv_path or Path("results") / f"vision_diag_{uuid.uuid4()}.csv"
+        self.config = config
         self.ser = None
+        self.receiver = None
         self._connect()
 
     def _connect(self):
-        target_port = self.port_requested
-        if target_port.upper() == "AUTO":
-            detected = cari_port_esp32()
-            if detected:
-                target_port = detected
-            else:
-                target_port = "COM3"
-
-        self.port = target_port
+        self.tutup()
+        target = (
+            cari_port_esp32()
+            if self.port_requested.upper() == "AUTO"
+            else self.port_requested
+        )
+        if not target:
+            print("[UART] Specify an unambiguous STM32 port; simulation only.")
+            return
+        self.port = target
         try:
-            # ═══════════════════════════════════════════════════════════════
-            # PENTING: Buka serial TANPA mengaktifkan DTR/RTS
-            # Agar ESP32 TIDAK ter-reset saat Python membuka koneksi.
-            # Ini memungkinkan log tetap tersimpan di memori ESP32.
-            # ═══════════════════════════════════════════════════════════════
             self.ser = serial.Serial()
-            self.ser.port = target_port
+            self.ser.port = target
             self.ser.baudrate = self.baudrate
-            self.ser.timeout = 0.1
-            self.ser.dtr = False   # Jangan toggle DTR (penyebab reset ESP32)
-            self.ser.rts = False   # Jangan toggle RTS
+            self.ser.timeout = 0.05
+            self.ser.write_timeout = 0.2
+            self.ser.dtr = False
+            self.ser.rts = False
             self.ser.open()
-
-            # Jeda sebentar agar koneksi stabil
-            time.sleep(0.3)
-
-            # Buang data sisa di buffer (jika ada)
-            if self.ser.in_waiting > 0:
-                self.ser.read(self.ser.in_waiting)
-
-            print(f"[UART] Terhubung ke ESP32 pada port: {self.port} @ {self.baudrate} bps")
-            print(f"[UART] Mode: DTR/RTS OFF (ESP32 tidak di-reset)")
-        except Exception as e:
-            print(f"[UART WARNING] ESP32 pada port {self.port} belum terhubung ({e}).")
-            print("                Sistem berjalan dalam mode simulasi.")
-            self.ser = None
+            self.receiver = DiagnosticReceiver(
+                self.ser, self.csv_path, self.config
+            ).start()
+            print(
+                f"[UART] Binary diagnostics connected: {target}; awaiting READY heartbeat."
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            self.tutup()
+            print(f"[UART] Simulation only: {exc}")
 
     @property
-    def is_connected(self) -> bool:
+    def is_connected(self):
         return self.ser is not None and self.ser.is_open
 
-    def kirim(self, pesan: str, force: bool = False) -> bool:
-        """
-        Mengirim string data ke ESP32 (misal: 'K2,S180.0,R180.0\\n').
-        Dilengkapi cooldown agar tidak membanjiri buffer serial ESP32.
-        """
-        sekarang = time.time()
-        # Cegah pengiriman berulang data yang sama terlalu cepat
-        if not force and (sekarang - self.waktu_kirim_terakhir) < self.cooldown_sec:
-            if pesan == self.pesan_terakhir:
-                return False
+    def kirim(self, pesan: bytes, force=False):
+        """Return queue admission, not proof of firmware completion or write success."""
+        if not isinstance(pesan, bytes):
+            raise TypeError("kirim requires the original binary bytes")
+        now = time.monotonic()
+        if (
+            not force
+            and now - self.waktu_kirim_terakhir < self.cooldown_sec
+            and pesan == self.pesan_terakhir
+        ):
+            return False
 
-        self.pesan_terakhir = pesan
-        self.waktu_kirim_terakhir = sekarang
-
-        if self.is_connected:
-            try:
-                self.ser.write(pesan.encode('ascii'))
-                return True
-            except Exception as e:
-                print(f"[UART ERROR] Gagal mengirim data ke ESP32: {e}")
-                self._connect()
+        if self.is_connected and self.receiver and self.receiver.submit(pesan):
+            self.waktu_kirim_terakhir = now
+            self.pesan_terakhir = pesan
+            return True
         return False
 
-    def baca_respon(self) -> str:
-        """Membaca balasan/ACK dari ESP32 jika ada."""
-        if self.is_connected and self.ser.in_waiting > 0:
-            try:
-                return self.ser.readline().decode('ascii', errors='ignore').strip()
-            except Exception:
-                return ""
-        return ""
+    def kirim_deteksi(
+        self, obj_id, class_id, x_mm, y_mm, angle_deg, servo_correction_deg, force=False
+    ):
+        """Build the signed, normalized runtime command; reject bad model outputs."""
+        try:
+            packet = encode_runtime_detection_packet(
+                obj_id, class_id, x_mm, y_mm, angle_deg, servo_correction_deg
+            )
+        except (ValueError, TypeError, OverflowError, struct.error) as exc:
+            if self.receiver:
+                self.receiver.reject_admission(exc)
+            else:
+                print(f"[UART] Admission rejected: {exc}")
+            return False
+        return self.kirim(packet, force=force)
+
+    @property
+    def diagnostic_health(self):
+        return (
+            self.receiver.health
+            if self.receiver
+            else {"ready": False, "fault": "disconnected"}
+        )
 
     def tutup(self):
-        """Menutup koneksi serial TANPA mereset ESP32."""
-        if self.is_connected:
-            try:
-                # Pastikan DTR tetap OFF saat menutup agar ESP32 tidak reset
-                self.ser.dtr = False
-                self.ser.rts = False
-                self.ser.close()
-                print(f"[UART] Koneksi port {self.port} ditutup (ESP32 tidak di-reset).")
-            except Exception:
-                pass
+        if self.receiver:
+            self.receiver.close()
+            self.receiver = None
+        if self.ser:
+            self.ser.close()
+            self.ser = None

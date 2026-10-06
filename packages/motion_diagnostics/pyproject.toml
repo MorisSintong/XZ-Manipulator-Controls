@@ -1,0 +1,16 @@
+[project]
+name = "motion-diagnostics"
+version = "0.1.0"
+requires-python = ">=3.10"
+description = "Shared STM32 motion diagnostic framing and shaft-equivalent metrology"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--basetemp=.pytest-artifacts"

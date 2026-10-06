@@ -202,3 +202,7 @@ $RECYCLE.BIN/
 *.temp
 *.crash
 *.stackdump
+
+# Python test artifacts
+.pytest-artifacts/
+.pytest_cache/
