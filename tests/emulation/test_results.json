@@ -1,0 +1,117 @@
+{
+  "title": "STM32F446RE UART Emulation Test Suite Results",
+  "timestamp": "2026-10-07T12:36:35.468818+00:00",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 12345,
+    "mode": "auto"
+  },
+  "summary": {
+    "total": 11,
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0,
+    "total_duration_ms": 184.63619999965886
+  },
+  "test_cases": [
+    {
+      "test_id": "TEST-01",
+      "name": "Boot Banner & Init Verification",
+      "description": "Verify STM32 firmware welcome banner and hardware init",
+      "status": "PASS",
+      "duration_ms": 0.021500000002561137,
+      "details": "Verified platform markers: ['TMC2240', 'STM32F446RE', 'Nucleo-64', 'USART2', 'SPI HAL', 'Z-Axis', 'BOUNCING', 'BUTTON'] (1906 bytes banner)",
+      "error": null
+    },
+    {
+      "test_id": "TEST-02",
+      "name": "ASCII Ping-Pong Handshake",
+      "description": "Send 'PING\\n' and assert 'ACK:PONG\\r\\n' reply",
+      "status": "PASS",
+      "duration_ms": 8.298899999317655,
+      "details": "Received 'ACK:PONG' in 8.3ms",
+      "error": null
+    },
+    {
+      "test_id": "TEST-03",
+      "name": "ASCII Status Command",
+      "description": "Send 'STATUS\\n' and assert 'ACK:STATUS,READY\\r\\n' reply",
+      "status": "PASS",
+      "duration_ms": 3.953700000238314,
+      "details": "Received 'ACK:STATUS,READY'",
+      "error": null
+    },
+    {
+      "test_id": "TEST-04",
+      "name": "Binary Detection (PASS: Class 1)",
+      "description": "Send binary framed detection packet (Obj=101, Cls=1, Ang=0\u00b0, Srv=0\u00b0)",
+      "status": "PASS",
+      "duration_ms": 11.192799999662384,
+      "details": "Validated: 'ACK:OBJ=101,CLS=1,X=120.0,Y=250.0,ANG=0.0,SRV=0.0,CRC=OK'",
+      "error": null
+    },
+    {
+      "test_id": "TEST-05",
+      "name": "Binary Detection (FAIL: Class 2)",
+      "description": "Send binary framed detection packet (Obj=202, Cls=2, Ang=180\u00b0, Srv=90\u00b0)",
+      "status": "PASS",
+      "duration_ms": 10.388600000624137,
+      "details": "Validated: 'ACK:OBJ=202,CLS=2,X=175.5,Y=310.2,ANG=180.0,SRV=90.0,CRC=OK'",
+      "error": null
+    },
+    {
+      "test_id": "TEST-06",
+      "name": "Binary Heartbeat Packet",
+      "description": "Send binary heartbeat frame (Type=0x02, Seq=555) and verify ACK",
+      "status": "PASS",
+      "duration_ms": 9.743700000399258,
+      "details": "Confirmed: 'ACK:HEARTBEAT,SEQ=555'",
+      "error": null
+    },
+    {
+      "test_id": "TEST-07",
+      "name": "Fault Injection (Corrupted CRC16)",
+      "description": "Invert CRC16 bits in detection packet and assert 'NACK:CRC_ERR'",
+      "status": "PASS",
+      "duration_ms": 8.563299999877927,
+      "details": "Fault caught: 'NACK:CRC_ERR'",
+      "error": null
+    },
+    {
+      "test_id": "TEST-08",
+      "name": "Framing Noise Recovery",
+      "description": "Inject leading noise and corrupted preamble bytes, assert clean resync",
+      "status": "PASS",
+      "duration_ms": 24.024199999985285,
+      "details": "Clean recovery verified across false preambles & raw noise: ACK:HEARTBEAT,SEQ=888",
+      "error": null
+    },
+    {
+      "test_id": "TEST-09",
+      "name": "Rapid Burst Stress Test (10 Frames)",
+      "description": "Stream 10 binary detection packets without inter-frame delay; assert in-order FIFO ACKs",
+      "status": "PASS",
+      "duration_ms": 82.85309999973833,
+      "details": "All 10 frames ACKed in exact FIFO sequence (120.7 fps)",
+      "error": null
+    },
+    {
+      "test_id": "TEST-10",
+      "name": "Legacy ASCII Format Compatibility",
+      "description": "Send legacy format 'K%d,S%f,R%f\\n' and verify backwards-compatible ACK",
+      "status": "PASS",
+      "duration_ms": 14.883900000313588,
+      "details": "Validated legacy replies: 'ACK:LEGACY,CLS=2,CORR=90.0', 'ACK:LEGACY,CLS=1,CORR=0.0'",
+      "error": null
+    },
+    {
+      "test_id": "TEST-11",
+      "name": "End-to-End Protocol Alignment",
+      "description": "Verify full round-trip symmetry: Python encode -> decode -> STM32 processing -> reply",
+      "status": "PASS",
+      "duration_ms": 10.712499999499414,
+      "details": "Complete protocol symmetry verified across Python & STM32: OBJ=999",
+      "error": null
+    }
+  ]
+}

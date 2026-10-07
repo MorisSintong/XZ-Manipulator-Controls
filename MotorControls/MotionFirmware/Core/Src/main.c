@@ -15,6 +15,7 @@
 #include "SEGGER_RTT.h"
 #include "tmc2240_hal.h"
 #include "tmc2240_core.h"
+#include "vision_uart_protocol.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -93,6 +94,7 @@ int main(void)
   MX_SPI2_Init();
   MX_USART2_UART_Init();
   SEGGER_RTT_Init();
+  VisionUart_Init(&huart2);
 
   /* Log Welcome Banner to SEGGER RTT & USART2 COM9 */
   log_printf("\r\n" RTT_CTRL_TEXT_BRIGHT_CYAN);
@@ -152,6 +154,9 @@ int main(void)
   /* Infinite loop */
   while (1)
   {
+    /* Service incoming vision UART protocol packets (non-blocking) */
+    VisionUart_Process();
+
     /* Wait for Blue User Button (PC13) press to START */
     if (HAL_GPIO_ReadPin(B1_USER_BUTTON_Port, B1_USER_BUTTON_Pin) == GPIO_PIN_RESET)
     {
@@ -262,7 +267,7 @@ int main(void)
         }
       }
     }
-    HAL_Delay(10);
+    HAL_Delay(1);
   }
 }
 

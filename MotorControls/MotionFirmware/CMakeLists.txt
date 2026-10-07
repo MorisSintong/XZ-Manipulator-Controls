@@ -44,6 +44,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/vision_uart_protocol.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/TMC2240-Driver/driver/src/TMC2240.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/TMC2240-Driver/driver/src/tmc2240_hal.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/TMC2240-Driver/driver/src/CRC.c
@@ -70,6 +71,11 @@ list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
     m
+)
+
+# Enable float formatting in snprintf/printf (newlib-nano)
+target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
+    -u _printf_float
 )
 
 # Post-build: generate .bin and .hex

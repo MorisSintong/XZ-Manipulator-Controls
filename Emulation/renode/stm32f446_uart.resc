@@ -1,0 +1,20 @@
+:name: STM32F446RE UART Emulation
+:description: STM32F446RE platform running MotionFirmware with USART2 socket bridging
+
+using sysbus
+
+$name?="stm32f446"
+mach create $name
+machine LoadPlatformDescription @platforms/cpus/stm32f4.repl
+
+$bin?=@MotorControls/MotionFirmware/build/Debug/MotionFirmware.elf
+$port?=12345
+
+sysbus LoadELF $bin
+
+emulation CreateServerSocketTerminal $port "term" false
+connector Connect sysbus.usart2 term
+
+sysbus.gpioPortC OnGPIO 13 true
+
+start

@@ -22,6 +22,7 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "vision_uart_protocol.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,7 +58,7 @@
 /* External variables --------------------------------------------------------*/
 
 /* USER CODE BEGIN EV */
-
+extern UART_HandleTypeDef huart2;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -213,5 +214,32 @@ void EXTI15_10_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+
+/**
+  * @brief This function handles USART2 global interrupt.
+  */
+void USART2_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART2_IRQn 0 */
+  /* Read received byte directly from USART2 DR register when RXNE is set */
+  if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_RXNE) != RESET)
+  {
+    uint8_t byte = (uint8_t)(huart2.Instance->DR & 0xFFU);
+    VisionUart_RxByteCallback(byte);
+  }
+
+  /* Clear Overrun Error (ORE) flag if set to prevent receiver stall */
+  if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_ORE) != RESET)
+  {
+    __HAL_UART_CLEAR_OREFLAG(&huart2);
+  }
+  /* USER CODE END USART2_IRQn 0 */
+
+  HAL_UART_IRQHandler(&huart2);
+
+  /* USER CODE BEGIN USART2_IRQn 1 */
+
+  /* USER CODE END USART2_IRQn 1 */
+}
 
 /* USER CODE END 1 */
