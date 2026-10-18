@@ -4,6 +4,7 @@
 #   - Embedded C/C++ & STM32 Firmware (CMake, STM32CubeIDE, J-Link)
 #   - Vision System (Python, YOLO / Ultralytics, OpenCV, ESP32)
 #   - PLC Ladder Logic (Omron CX-Programmer)
+#   - Hardware / PCB Design (KiCad 9 / 10)
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -202,3 +203,23 @@ $RECYCLE.BIN/
 *.temp
 *.crash
 *.stackdump
+
+# ------------------------------------------------------------------------------
+# 8. KiCad Hardware / PCB Design (Hardware/)
+# ------------------------------------------------------------------------------
+# KiCad 10 local file history (contains nested .git repo)
+**/.history/
+
+# Automatic backup archives & autosaves
+*-backups/
+_autosave-*
+*-save.pro
+*-save.kicad_pcb
+~*
+
+# KiCad local UI state, lock files, and footprint cache
+*.kicad_prl
+*.lck
+fp-info-cache
+#Sym-lib-table-lock
+#Fp-lib-table-lock

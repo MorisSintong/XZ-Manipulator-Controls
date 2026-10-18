@@ -48,6 +48,7 @@ docs/
 
 | Subsystem / Directory | Primary Role | Documentation |
 | :--- | :--- | :--- |
+| **[`Hardware/XZ-Controller/`](Hardware/XZ-Controller/)** | KiCad 10 electrical schematic, PCB layout, custom symbols/footprints & 3D STEP models | [`docs/hardware/wiring.md`](docs/hardware/wiring.md) |
 | **[`MotorControls/`](MotorControls/)** | Motion control, stepper kinematics, and driver interfaces | [`MotorControls/README.md`](MotorControls/README.md) |
 | ├── **[`MotionFirmware/`](MotorControls/MotionFirmware/)** | STM32F446RE FreeRTOS firmware, CMake/Ninja build, J-Link scripts | [`MotionFirmware/README.md`](MotorControls/MotionFirmware/README.md) |
 | └── **[`Drivers/`](MotorControls/Drivers/)** | Modular, tested C drivers for TMC2240 and AS5600 encoders | [`AS5600/README.md`](MotorControls/Drivers/AS5600/README.md), [`TMC2240/README.md`](MotorControls/Drivers/TMC2240-Driver/README.md) |
