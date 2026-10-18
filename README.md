@@ -36,25 +36,38 @@ docs/
 │   ├── system_overview.md         # Detailed block diagrams and subsystem interaction lifecycle
 │   └── communication_protocol.md  # 18-byte framed binary UART protocol & CRC16-CCITT specification
 ├── hardware/
-│   ├── wiring.md                  # Master Nucleo-64, TMC2240, AS5600, and power wiring specification
-│   └── bom_and_mechanics.md       # Bill of Materials, XZ gantry mechanics, and pneumatic specs
+│   ├── wiring.md                  # Master Nucleo-64, TMC2240, AS5600, proximity sensor & power wiring
+│   ├── bom_and_mechanics.md       # Bill of Materials, XZ gantry mechanics, and pneumatic specs
+│   └── Datasheets/                # Official STM32F446RE, Nucleo-64 (UM1724), TMC2240 & AS5600 PDFs
 └── testing/
-    └── test_methodology.md        # V-model test hierarchy, repeatability benchmarks, and acceptance criteria
+    ├── test_methodology.md        # V-model test hierarchy, repeatability benchmarks, and acceptance criteria
+    └── README.md                  # Real-case experimental test matrix & measurement sheets
 ```
 
 ---
 
 ## 3. Subsystems & Directory Layout
 
+```text
+XZ-Manipulator-Controls/
+├── docs/                  # Architecture, hardware wiring, datasheets, and testing documentation
+├── Hardware/              # KiCad 10 PCB & schematic project (XZ-Controller)
+├── MotorControls/         # Embedded STM32 firmware, drivers, Renode emulation & UART tests
+├── Program_Ladder/        # OMRON PLC conveyor ladder logic (CX-Programmer)
+└── VisionSystem/          # Host PC Python / YOLO computer vision pipeline
+```
+
 | Subsystem / Directory | Primary Role | Documentation |
 | :--- | :--- | :--- |
 | **[`Hardware/XZ-Controller/`](Hardware/XZ-Controller/)** | KiCad 10 electrical schematic, PCB layout, custom symbols/footprints & 3D STEP models | [`docs/hardware/wiring.md`](docs/hardware/wiring.md) |
-| **[`MotorControls/`](MotorControls/)** | Motion control, stepper kinematics, and driver interfaces | [`MotorControls/README.md`](MotorControls/README.md) |
-| ├── **[`MotionFirmware/`](MotorControls/MotionFirmware/)** | STM32F446RE FreeRTOS firmware, CMake/Ninja build, J-Link scripts | [`MotionFirmware/README.md`](MotorControls/MotionFirmware/README.md) |
-| └── **[`Drivers/`](MotorControls/Drivers/)** | Modular, tested C drivers for TMC2240 and AS5600 encoders | [`AS5600/README.md`](MotorControls/Drivers/AS5600/README.md), [`TMC2240/README.md`](MotorControls/Drivers/TMC2240-Driver/README.md) |
+| **[`Hardware/XZ-Controller/`](Hardware/XZ-Controller/)** | KiCad 10 electrical schematic, PCB layout, custom symbols/footprints & 3D STEP models | [`docs/hardware/wiring.md`](docs/hardware/wiring.md) |
+| **[`MotorControls/`](MotorControls/)** | Embedded STM32 subsystem (firmware, drivers, Renode emulation, and UART tests) | [`MotorControls/README.md`](MotorControls/README.md) |
+| ├── **[`MotionFirmware/`](MotorControls/MotionFirmware/)** | STM32F446RE firmware, CMake/Ninja build, J-Link scripts | [`MotionFirmware/README.md`](MotorControls/MotionFirmware/README.md) |
+| ├── **[`Drivers/`](MotorControls/Drivers/)** | Modular, tested C drivers for TMC2240 and AS5600 encoders | [`AS5600/README.md`](MotorControls/Drivers/AS5600/README.md), [`TMC2240/README.md`](MotorControls/Drivers/TMC2240-Driver/README.md) |
+| ├── **[`Emulation/`](MotorControls/Emulation/)** | Renode STM32F446RE platform emulation & USART2 socket bridge | [`Emulation/README.md`](MotorControls/Emulation/README.md) |
+| └── **[`tests/emulation/`](MotorControls/tests/emulation/)** | Automated STM32 UART protocol & Renode verification test suite | [`run_tests.py`](MotorControls/tests/emulation/run_tests.py) |
 | **[`VisionSystem/`](VisionSystem/)** | YOLO detection, PCA continuous angle calculation, conveyor tracking | [`VisionSystem/README.md`](VisionSystem/README.md) |
 | **[`Program_Ladder/`](Program_Ladder/)** | OMRON PLC conveyor control ladder logic (CX-Programmer `.cxp`) | [`Program_Ladder/README.md`](Program_Ladder/README.md) |
-| **[`Dokumentasi_Testing/`](Dokumentasi_Testing/)** | Real-case test matrices, experimental logs, and measurement sheets | [`Dokumentasi_Testing/README.md`](Dokumentasi_Testing/README.md) |
 
 ---
 
@@ -75,17 +88,18 @@ uv run python VisionSystem/04_Source_Code/4_detect_realtime.py
 uv run python VisionSystem/tests/verify_vision_system.py
 ```
 
-### B. Motion Firmware (STM32F446RE)
+### B. Motion Firmware & Emulation (STM32F446RE)
 Requires Arm GNU Toolchain (`arm-none-eabi-gcc`), CMake, and Ninja:
 ```powershell
-# 1. Navigate to firmware directory
-cd MotorControls/MotionFirmware
+# 1. Build STM32 MotionFirmware
+cmake -B MotorControls/MotionFirmware/build/Debug -S MotorControls/MotionFirmware -G Ninja
+ninja -C MotorControls/MotionFirmware/build/Debug
 
-# 2. Configure and build
-cmake -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/gcc-arm-none-eabi.cmake -DCMAKE_BUILD_TYPE=Debug
-ninja -C build
+# 2. Run STM32 UART Emulation Test Suite
+uv run python MotorControls/tests/emulation/run_tests.py
 
 # 3. Flash to target MCU via J-Link
+cd MotorControls/MotionFirmware
 .\flash_jlink.bat
 ```
 

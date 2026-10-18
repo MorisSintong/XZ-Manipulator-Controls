@@ -42,11 +42,11 @@ logging.basicConfig(
 logger = logging.getLogger("stm32_uart_test")
 
 # Workspace root resolution
-WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
+WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
 
 # Attempt to import RenodeController from Emulation.renode_runner
 try:
-    sys.path.insert(0, str(WORKSPACE_ROOT))
+    sys.path.insert(0, str(WORKSPACE_ROOT / "MotorControls"))
     from Emulation.renode_runner import RenodeController
 except ImportError:
     RenodeController = None
@@ -850,7 +850,7 @@ def run_tests_standalone(
 
     # Export JSON report
     if json_path is None:
-        json_path = WORKSPACE_ROOT / "tests" / "emulation" / "test_results.json"
+        json_path = Path(__file__).resolve().parent / "test_results.json"
     report.export_json(json_path)
 
     return 0 if test_result.wasSuccessful() else 1

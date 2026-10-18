@@ -1,17 +1,17 @@
 {
   "title": "STM32F446RE UART Emulation Test Suite Results",
-  "timestamp": "2026-10-07T12:36:35.468818+00:00",
+  "timestamp": "2026-10-18T04:38:50.020659+00:00",
   "target": {
     "host": "127.0.0.1",
     "port": 12345,
-    "mode": "auto"
+    "mode": "mock"
   },
   "summary": {
     "total": 11,
     "passed": 11,
     "failed": 0,
     "skipped": 0,
-    "total_duration_ms": 184.63619999965886
+    "total_duration_ms": 5.6467000977136195
   },
   "test_cases": [
     {
@@ -19,8 +19,8 @@
       "name": "Boot Banner & Init Verification",
       "description": "Verify STM32 firmware welcome banner and hardware init",
       "status": "PASS",
-      "duration_ms": 0.021500000002561137,
-      "details": "Verified platform markers: ['TMC2240', 'STM32F446RE', 'Nucleo-64', 'USART2', 'SPI HAL', 'Z-Axis', 'BOUNCING', 'BUTTON'] (1906 bytes banner)",
+      "duration_ms": 0.041000021155923605,
+      "details": "Verified platform markers: ['TMC2240', 'STM32F446RE', 'Nucleo-64', 'USART2', 'SPI HAL', 'Z-Axis', 'BOUNCING', 'BUTTON'] (1020 bytes banner)",
       "error": null
     },
     {
@@ -28,8 +28,8 @@
       "name": "ASCII Ping-Pong Handshake",
       "description": "Send 'PING\\n' and assert 'ACK:PONG\\r\\n' reply",
       "status": "PASS",
-      "duration_ms": 8.298899999317655,
-      "details": "Received 'ACK:PONG' in 8.3ms",
+      "duration_ms": 0.41710000368766487,
+      "details": "Received 'ACK:PONG' in 0.4ms",
       "error": null
     },
     {
@@ -37,7 +37,7 @@
       "name": "ASCII Status Command",
       "description": "Send 'STATUS\\n' and assert 'ACK:STATUS,READY\\r\\n' reply",
       "status": "PASS",
-      "duration_ms": 3.953700000238314,
+      "duration_ms": 0.36650002584792674,
       "details": "Received 'ACK:STATUS,READY'",
       "error": null
     },
@@ -46,7 +46,7 @@
       "name": "Binary Detection (PASS: Class 1)",
       "description": "Send binary framed detection packet (Obj=101, Cls=1, Ang=0\u00b0, Srv=0\u00b0)",
       "status": "PASS",
-      "duration_ms": 11.192799999662384,
+      "duration_ms": 0.5856000061612576,
       "details": "Validated: 'ACK:OBJ=101,CLS=1,X=120.0,Y=250.0,ANG=0.0,SRV=0.0,CRC=OK'",
       "error": null
     },
@@ -55,7 +55,7 @@
       "name": "Binary Detection (FAIL: Class 2)",
       "description": "Send binary framed detection packet (Obj=202, Cls=2, Ang=180\u00b0, Srv=90\u00b0)",
       "status": "PASS",
-      "duration_ms": 10.388600000624137,
+      "duration_ms": 0.6272999744396657,
       "details": "Validated: 'ACK:OBJ=202,CLS=2,X=175.5,Y=310.2,ANG=180.0,SRV=90.0,CRC=OK'",
       "error": null
     },
@@ -64,7 +64,7 @@
       "name": "Binary Heartbeat Packet",
       "description": "Send binary heartbeat frame (Type=0x02, Seq=555) and verify ACK",
       "status": "PASS",
-      "duration_ms": 9.743700000399258,
+      "duration_ms": 0.2699000178836286,
       "details": "Confirmed: 'ACK:HEARTBEAT,SEQ=555'",
       "error": null
     },
@@ -73,7 +73,7 @@
       "name": "Fault Injection (Corrupted CRC16)",
       "description": "Invert CRC16 bits in detection packet and assert 'NACK:CRC_ERR'",
       "status": "PASS",
-      "duration_ms": 8.563299999877927,
+      "duration_ms": 0.37799999699927866,
       "details": "Fault caught: 'NACK:CRC_ERR'",
       "error": null
     },
@@ -82,7 +82,7 @@
       "name": "Framing Noise Recovery",
       "description": "Inject leading noise and corrupted preamble bytes, assert clean resync",
       "status": "PASS",
-      "duration_ms": 24.024199999985285,
+      "duration_ms": 0.5330000130925328,
       "details": "Clean recovery verified across false preambles & raw noise: ACK:HEARTBEAT,SEQ=888",
       "error": null
     },
@@ -91,8 +91,8 @@
       "name": "Rapid Burst Stress Test (10 Frames)",
       "description": "Stream 10 binary detection packets without inter-frame delay; assert in-order FIFO ACKs",
       "status": "PASS",
-      "duration_ms": 82.85309999973833,
-      "details": "All 10 frames ACKed in exact FIFO sequence (120.7 fps)",
+      "duration_ms": 1.139500003773719,
+      "details": "All 10 frames ACKed in exact FIFO sequence (8775.8 fps)",
       "error": null
     },
     {
@@ -100,7 +100,7 @@
       "name": "Legacy ASCII Format Compatibility",
       "description": "Send legacy format 'K%d,S%f,R%f\\n' and verify backwards-compatible ACK",
       "status": "PASS",
-      "duration_ms": 14.883900000313588,
+      "duration_ms": 0.9057000279426575,
       "details": "Validated legacy replies: 'ACK:LEGACY,CLS=2,CORR=90.0', 'ACK:LEGACY,CLS=1,CORR=0.0'",
       "error": null
     },
@@ -109,7 +109,7 @@
       "name": "End-to-End Protocol Alignment",
       "description": "Verify full round-trip symmetry: Python encode -> decode -> STM32 processing -> reply",
       "status": "PASS",
-      "duration_ms": 10.712499999499414,
+      "duration_ms": 0.3831000067293644,
       "details": "Complete protocol symmetry verified across Python & STM32: OBJ=999",
       "error": null
     }

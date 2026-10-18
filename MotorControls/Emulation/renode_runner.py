@@ -26,9 +26,9 @@ from typing import Optional
 
 logger = logging.getLogger("renode_runner")
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_ELF_PATH = BASE_DIR / "MotorControls" / "MotionFirmware" / "build" / "Debug" / "MotionFirmware.elf"
-DEFAULT_RESC_PATH = BASE_DIR / "Emulation" / "renode" / "stm32f446_uart.resc"
+DEFAULT_RESC_PATH = Path(__file__).resolve().parent / "renode" / "stm32f446_uart.resc"
 
 
 def _crc16_ccitt(data: bytes, poly: int = 0x1021, init: int = 0xFFFF) -> int:

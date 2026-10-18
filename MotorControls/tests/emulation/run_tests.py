@@ -2,9 +2,9 @@
 """Cross-platform Python Launcher for STM32 UART Emulation Test Suite.
 
 Usage:
-    python tests/emulation/run_tests.py
-    python tests/emulation/run_tests.py --mode mock
-    python tests/emulation/run_tests.py --mode renode --build
+    python MotorControls/tests/emulation/run_tests.py
+    python MotorControls/tests/emulation/run_tests.py --mode mock
+    python MotorControls/tests/emulation/run_tests.py --mode renode --build
 """
 
 from __future__ import annotations
@@ -17,11 +17,18 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parents[1]
+REPO_ROOT = SCRIPT_DIR.parents[2]
 
 
 def build_firmware_if_needed(force: bool = False) -> bool:
-    elf_path = REPO_ROOT / "MotorControls" / "MotionFirmware" / "build" / "Debug" / "MotionFirmware.elf"
+    elf_path = (
+        REPO_ROOT
+        / "MotorControls"
+        / "MotionFirmware"
+        / "build"
+        / "Debug"
+        / "MotionFirmware.elf"
+    )
     build_dir = REPO_ROOT / "MotorControls" / "MotionFirmware" / "build" / "Debug"
     src_dir = REPO_ROOT / "MotorControls" / "MotionFirmware"
 
@@ -34,7 +41,9 @@ def build_firmware_if_needed(force: bool = False) -> bool:
             print("[WARN] cmake or ninja not found; skipping build step.")
             return False
 
-        res = subprocess.run([cmake_bin, "-B", str(build_dir), "-S", str(src_dir)], cwd=str(REPO_ROOT))
+        res = subprocess.run(
+            [cmake_bin, "-B", str(build_dir), "-S", str(src_dir)], cwd=str(REPO_ROOT)
+        )
         if res.returncode != 0:
             print("[ERROR] CMake configure failed!")
             return False
@@ -49,9 +58,15 @@ def build_firmware_if_needed(force: bool = False) -> bool:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Launcher for STM32 UART Emulation Test Suite")
-    parser.add_argument("--host", default="127.0.0.1", help="Target TCP host (default: 127.0.0.1)")
-    parser.add_argument("--port", type=int, default=12345, help="Target TCP port (default: 12345)")
+    parser = argparse.ArgumentParser(
+        description="Launcher for STM32 UART Emulation Test Suite"
+    )
+    parser.add_argument(
+        "--host", default="127.0.0.1", help="Target TCP host (default: 127.0.0.1)"
+    )
+    parser.add_argument(
+        "--port", type=int, default=12345, help="Target TCP port (default: 12345)"
+    )
     parser.add_argument(
         "--mode",
         choices=["auto", "renode", "mock"],

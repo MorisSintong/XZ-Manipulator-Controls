@@ -39,7 +39,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$RepoRoot = Split-Path -Parent (Split-Path -Parent $ScriptDir)
+$RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $ScriptDir))
 
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host "   STM32F446RE UART EMULATION TEST LAUNCHER                     " -ForegroundColor White

@@ -12,9 +12,9 @@ import unittest
 from pathlib import Path
 
 # Add workspace and Emulation directories to sys.path
-BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(BASE_DIR))
-sys.path.insert(0, str(BASE_DIR / "Emulation"))
+BASE_DIR = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(BASE_DIR / "MotorControls"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from renode_runner import (
     DEFAULT_ELF_PATH,
