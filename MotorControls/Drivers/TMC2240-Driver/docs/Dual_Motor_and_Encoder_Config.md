@@ -1,97 +1,95 @@
-# Dual Motor Configuration — STM32F446RE
+# Dual Motor & Dual Encoder Configuration — STM32F446RE
 
-This document provides an optimized, **physically contiguous** pinout configuration for running **two MKS TMC2240** stepper driver modules and **two AS5600** magnetic encoders on a single STM32F446RE Nucleo-64 board. 
+This document provides the optimized, **physically contiguous** pinout configuration for running **two BIGTREETECH (BTT) / MKS TMC2240 v1.0** stepper driver modules, **two AS5600** magnetic encoder modules, and a **5V 3-wire inductive proximity sensor** on a single STM32F446RE Nucleo-64 (`MB1136`) board.
 
-The pins have been carefully selected using matching STM32 Alternate Functions so that related signals are grouped on the same ports (Port B and Port C), making your breadboard or PCB wiring extremely clean.
+For the complete system wiring specification and power rules, see **[`docs/hardware/wiring.md`](../../../../docs/hardware/wiring.md)**.
 
 ## TMC2240 (Stepper Drivers)
 
-Both TMC2240 modules share the same SPI bus (SPI2) but use independent Chip Select (CS), STEP, and DIR pins. 
+Both TMC2240 modules share the same SPI bus (`SPI2`) and use independent Chip Select (`CS`), `STEP`, `DIR`, and `ENN` pins on Port C.
 
-### Shared SPI Bus (SPI2) — Contiguous on Port B
-| Signal | STM32 Pin | Connects to |
-| :--- | :--- | :--- |
-| **SCK** | PB13 | MKS Pin 14 (SCK) on **both** modules |
-| **MISO** | PB14 | MKS Pin 12 (SDO) on **both** modules |
-| **MOSI** | PB15 | MKS Pin 15 (SDI) on **both** modules |
+### Shared SPI Bus (`SPI2`) — Contiguous on Port B
+| Signal | STM32 Pin | Morpho Header | Connects to |
+| :--- | :--- | :--- | :--- |
+| **SCK** | `PB13` | `CN10 Pin 30` | Pin 14 (`CLK` / `SCK`) on **both** modules |
+| **MISO** | `PB14` | `CN10 Pin 28` | Pin 12 (`MISO` / `SDO`) on **both** modules |
+| **MOSI** | `PB15` | `CN10 Pin 26` | Pin 15 (`MOSI` / `SDI`) on **both** modules |
 
-### Module 1 (Motor 0) — Contiguous on Port C
-| Signal | STM32 Pin | Connects to |
-| :--- | :--- | :--- |
-| **CS 0** | PC0 | MKS Pin 13 (CS) |
-| **STEP 0** | PC1 | MKS Pin 10 (STEP) |
-| **DIR 0** | PC2 | MKS Pin 9 (DIR) |
+### Driver 0 (Z-Axis / Motor 0) — Contiguous on Port C
+| Signal | STM32 Pin | Header Pin | Connects to |
+| :--- | :--- | :--- | :--- |
+| **CS 0** | `PC0` | Arduino `A5` / `CN7 Pin 38` | Pin 13 (`CS`) |
+| **STEP 0** | `PC1` | Arduino `A4` / `CN7 Pin 36` | Pin 10 (`STEP`) |
+| **DIR 0** | `PC2` | Morpho `CN7 Pin 35` *(odd row)* | Pin 9 (`DIR`) |
+| **ENN 0** | `PC6` | Morpho `CN10 Pin 4` | Pin 16 (`EN` / `ENN`, Active LOW) |
 
-### Module 2 (Motor 1) — Contiguous on Port C
-| Signal | STM32 Pin | Connects to |
-| :--- | :--- | :--- |
-| **CS 1** | PC3 | MKS Pin 13 (CS) |
-| **STEP 1** | PC4 | MKS Pin 10 (STEP) |
-| **DIR 1** | PC5 | MKS Pin 9 (DIR) |
+### Driver 1 (X-Axis / Motor 1) — Contiguous on Port C
+| Signal | STM32 Pin | Header Pin | Connects to |
+| :--- | :--- | :--- | :--- |
+| **CS 1** | `PC3` | Morpho `CN7 Pin 37` *(odd row)* | Pin 13 (`CS`) |
+| **STEP 1** | `PC4` | Morpho `CN10 Pin 34` | Pin 10 (`STEP`) |
+| **DIR 1** | `PC5` | Morpho `CN10 Pin 6` | Pin 9 (`DIR`) |
+| **ENN 1** | `PC7` | Arduino `D9` / `CN10 Pin 19` | Pin 16 (`EN` / `ENN`, Active LOW) |
 
 ### Common Connections (Both Modules)
 | Signal | Connects to |
 | :--- | :--- |
-| **ENN** | Application-controlled GPIO for each driver; hold inactive-high during setup and on faults |
-| **VMOT** | 12V – 24V Motor Power Supply |
-| **VDD** | 3.3V from Nucleo |
-| **GND** | System Ground |
-
-This is a proposed integration pinout, not a bench-qualified configuration.
-Use an external inactive-high ENN bias during MCU reset and verify the actual
-module pinout. Serialize all access to the shared SPI bus, including complete
-two-frame reads and read-modify-write helpers. The AS5600 portion is outside
-the TMC driver software audit.
+| **VM / VMOT** | 24V DC Motor Power Supply (equip with $\ge 100\,\mu\text{F}$ low-ESR electrolytic cap per module) |
+| **VIO / VDD_IO** | 3.3V from Nucleo (`CN7 Pin 16` / `CN6 Pin 4`) |
+| **GND** | Common System Star Ground (Pins 1 & 7) |
 
 ---
 
-## AS5600 (Magnetic Encoders)
+## AS5600 (Magnetic Encoder Breakout Modules)
 
-The AS5600 has a **fixed I2C address (`0x36`)**. To read from two sensors simultaneously without an external I2C multiplexer chip, we map them to two hardware I2C peripherals. We are using `I2C1` and `I2C2`, placing all 4 pins continuously on Port B.
+The AS5600 has a **fixed I2C address (`0x36`)**. To read from two sensors simultaneously without an external I2C multiplexer chip, we map them to two independent hardware I2C peripherals: **`I2C1`** (`PB8`/`PB9`) and **`I2C3`** (`PA8`/`PC9`).
 
-### Encoder 1 (I2C1) — Contiguous on Port B
-| Signal | STM32 Pin | Notes |
-| :--- | :--- | :--- |
-| **SCL** | PB8 | Requires external pull-up resistor (~4.7kΩ to 3.3V)* |
-| **SDA** | PB9 | Requires external pull-up resistor (~4.7kΩ to 3.3V)* |
-| **VDD** | 3.3V | From Nucleo |
-| **GND** | GND | From Nucleo |
-| **DIR** | GND or 3.3V | Tie to GND for CW = increasing, 3.3V for CCW |
+> **3.3V Operation Note (`AS5600 Datasheet` Fig. 13):** Ensure the $0\,\Omega$ resistor **`R1`** on each AS5600 breakout module is populated (or tie the module's `VCC` and `3V3` pins together to Nucleo `+3V3`).
 
-### Encoder 2 (I2C3) 
-| Signal | STM32 Pin | Notes |
-| :--- | :--- | :--- |
-| **SCL** | PA8 | Requires external pull-up resistor (~4.7kΩ to 3.3V)* |
-| **SDA** | PC9 | Requires external pull-up resistor (~4.7kΩ to 3.3V)* |
-| **VDD** | 3.3V | From Nucleo |
-| **GND** | GND | From Nucleo |
-| **DIR** | GND or 3.3V | Tie to GND for CW = increasing, 3.3V for CCW |
+### Encoder 1 (`I2C1` — X-Axis)
+| Signal | STM32 Pin | Header Pin | Notes |
+| :--- | :--- | :--- | :--- |
+| **SCL** | `PB8` | Arduino `D15` / `CN10 Pin 3` | Onboard $4.7\,\text{k}\Omega$ pull-up to 3.3V |
+| **SDA** | `PB9` | Arduino `D14` / `CN10 Pin 5` | Onboard $4.7\,\text{k}\Omega$ pull-up to 3.3V |
+| **VCC & 3V3** | `+3V3` | `CN7 Pin 16` / `CN6 Pin 4` | Tied together via onboard `R1` ($0\,\Omega$) in 3.3V mode |
+| **GND** | `GND` | `CN6 Pin 6` / `CN7 Pin 19` | From Nucleo |
+| **DIR** | `GND` | Tie to `GND` | `GND` = CW increasing; `3.3V` = CCW increasing |
 
-*\*Note: Most AS5600 breakout boards already include pull-up resistors on the I2C lines. Check your specific module before adding external resistors.*
+### Encoder 2 (`I2C3` — Z-Axis)
+| Signal | STM32 Pin | Header Pin | Notes |
+| :--- | :--- | :--- | :--- |
+| **SCL** | `PA8` | Arduino `D7` / `CN10 Pin 23` | Onboard $4.7\,\text{k}\Omega$ pull-up to 3.3V |
+| **SDA** | `PC9` | Morpho `CN10 Pin 1` | Onboard $4.7\,\text{k}\Omega$ pull-up to 3.3V |
+| **VCC & 3V3** | `+3V3` | `CN7 Pin 16` / `CN6 Pin 4` | Tied together via onboard `R1` ($0\,\Omega$) in 3.3V mode |
+| **GND** | `GND` | `CN6 Pin 7` / `CN7 Pin 20` | From Nucleo |
+| **DIR** | `GND` | Tie to `GND` | `GND` = CW increasing; `3.3V` = CCW increasing |
+
+---
+
+## 5V 3-Wire Inductive Proximity Sensor (Morpho Header)
+
+| Wire Color | Signal | Nucleo Morpho Pin | Notes |
+| :--- | :--- | :--- | :--- |
+| **Brown (`BN`)** | `+5V` | `CN7 Pin 18` (`+5V`) | 5V supply rail |
+| **Blue (`BU`)** | `GND` | `CN7 Pin 19` (`GND`) | Common Ground |
+| **Black (`BK`)** | `OUT` | `CN10 Pin 2` (`PC8`) | `GPIO_Input` / `GPIO_EXTI8` (5V-tolerant `FT` pin) |
 
 ---
 
 ## Example STM32 HAL Initialization
 
-When configuring this setup in your code, your initialization block for the TMC2240 array would look like this:
-
 ```c
-// Define the 2 SPI configurations using the new CS pins
+// Define the 2 SPI configurations using the CS pins on Port C
 static const TMC2240_SPIConfig_t tmc_spi_cfgs[] = {
-    // Motor 0 (IC 0) - SPI2, CS on PC0
-    { &hspi2, GPIOC, GPIO_PIN_0, 100 }, 
-    
-    // Motor 1 (IC 1) - SPI2, CS on PC3
-    { &hspi2, GPIOC, GPIO_PIN_3, 100 } 
+    // Motor 0 (Z-Axis) - SPI2, CS on PC0
+    { &hspi2, GPIOC, GPIO_PIN_0, 100U },
+
+    // Motor 1 (X-Axis) - SPI2, CS on PC3
+    { &hspi2, GPIOC, GPIO_PIN_3, 100U }
 };
 
-// Transport initialization only; no motor defaults or activation.
 TMC2240Status status = tmc2240_hal_init(tmc_spi_cfgs, 2U);
 if (status != TMC2240_OK) {
     Error_Handler();
 }
 ```
-
-Keep both ENN inputs inactive and use the explicit checked configuration and
-activation sequence in `driver\README.md`. The snippet assumes the application's
-error handler inhibits both motors; it does not make the shared bus thread-safe.

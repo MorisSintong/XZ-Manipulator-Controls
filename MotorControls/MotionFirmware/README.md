@@ -1,6 +1,6 @@
 # MotionFirmware – XZ Manipulator Motion Controller
 
-STM32F446RE (Nucleo-64) firmware that drives the two NEMA 17 axes of the 2-Axis (XZ) Cartesian manipulator through **Trinamic TMC2240** drivers (SPI + STEP/DIR) and reads dual **AS5600** magnetic encoders (I2C).
+STM32F446RE (Nucleo-64 `MB1136`) firmware that drives the two NEMA 17 axes of the 2-Axis (XZ) Cartesian manipulator through **BIGTREETECH (BTT) / MKS TMC2240 v1.0** drivers (SPI + STEP/DIR), reads dual **AS5600** magnetic encoder modules (I2C), and interfaces with a **5V 3-wire inductive proximity sensor** on the Morpho header (`PC8`).
 
 The application features **StallGuard4** sensorless homing, travel measurement, and continuous soft/bounce cycle modes. The motion layer accepts absolute position targets in millimeters, coordinating pick-and-place trajectories commanded by the Vision System.
 
@@ -11,15 +11,15 @@ The application features **StallGuard4** sensorless homing, travel measurement, 
 Full wiring schematics, pinouts, and power distribution rules:  
 👉 **[`docs/hardware/wiring.md`](../../docs/hardware/wiring.md)**
 
-### Axis Mapping Summary
-*(Configured in `App/Inc/app_config.h` and `App/Src/app_config.c`)*
+### Axis & Sensor Mapping Summary
 
-| Axis | Driver | CS | STEP | DIR | ENN | Step Timer | AS5600 Bus |
+| Axis / Sensor | Module | CS | STEP | DIR | ENN | Step Timer | Bus / Morpho Pin |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **0 = Z** (T8x8 Lead Screw, 400 µsteps/mm) | TMC2240 #0 | `PC0` | `PC1` | `PC2` | `PC6` | `TIM2` | `I2C3` (PA8 SCL, PC9 SDA) |
-| **1 = X** (GT2 20T Belt, 80 µsteps/mm) | TMC2240 #1 | `PC3` | `PC4` | `PC5` | `PC7` | `TIM5` | `I2C1` (PB8 SCL, PB9 SDA) |
+| **0 = Z** (T8x8 Lead Screw, 400 µsteps/mm) | BTT/MKS TMC2240 #0 | `PC0` (`CN7-38`) | `PC1` (`CN7-36`) | `PC2` (`CN7-35`) | `PC6` (`CN10-4`) | `TIM2` | `I2C3` (`PA8` SCL, `PC9` SDA) |
+| **1 = X** (GT2 20T Belt, 80 µsteps/mm) | BTT/MKS TMC2240 #1 | `PC3` (`CN7-37`) | `PC4` (`CN10-34`) | `PC5` (`CN10-6`) | `PC7` (`CN10-19`) | `TIM5` | `I2C1` (`PB8` SCL, `PB9` SDA) |
+| **Proximity Sensor** (5V 3-Wire Inductive) | NPN / PNP Sensor | — | — | — | — | — | `PC8` (`CN10-2` OUT), `+5V` (`CN7-18`), `GND` (`CN7-19`) |
 
-- **Shared SPI2** (Mode 3, 2.625 MHz): `PB13` (SCK), `PB14` (MISO), `PB15` (MOSI).
+- **Shared SPI2** (Mode 3, 2.625 MHz @ 84 MHz SYSCLK): `PB13` (`CN10-30` SCK), `PB14` (`CN10-28` MISO), `PB15` (`CN10-26` MOSI).
 - **Console / Telemetry:** Dual broadcast on `USART2` (Virtual COM Port `COM9` @ 115200 8-N-1) and **SEGGER RTT** (Terminal 0).
 
 > [!NOTE]
@@ -37,7 +37,7 @@ Full wiring schematics, pinouts, and power distribution rules:
 
 ---
 
-## 3. Build & Flash
+## 3. Build, Flash & Emulation Tests
 
 From this directory (`MotorControls/MotionFirmware/`):
 
@@ -48,8 +48,8 @@ cmake --preset Debug            # or Release
 cmake --build --preset Debug    # Outputs to build/Debug/MotionFirmware.hex
 
 # Or manual CMake invocation:
-cmake -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/gcc-arm-none-eabi.cmake -DCMAKE_BUILD_TYPE=Debug
-ninja -C build
+cmake -B build/Debug -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/gcc-arm-none-eabi.cmake -DCMAKE_BUILD_TYPE=Debug
+ninja -C build/Debug
 ```
 
 ### Flashing to Target MCU via J-Link
@@ -59,13 +59,10 @@ ninja -C build
 .\flash_jlink.bat
 ```
 
-### Host Simulation Unit Tests
-Exhaustive host unit tests verifying the trapezoidal planner, StallGuard4 detector, encoder unwrap, TMC2240 math, console parser, and closed-loop homing/fault simulation:
-
+### Automated UART Protocol & Renode Emulation Suite
+From the repository root:
 ```powershell
-cmake -S tests -B build-host -G Ninja -DCMAKE_C_COMPILER=clang
-cmake --build build-host
-ctest --test-dir build-host --output-on-failure
+uv run python MotorControls/tests/emulation/run_tests.py
 ```
 
 ---
@@ -125,32 +122,8 @@ Connect to `USART2` (`COM9` @ 115200) or open SEGGER RTT Terminal 0:
 
 ---
 
-## 7. Firmware Architecture & Source Modules
-
-```text
-MotionFirmware/
-├── App/
-│   ├── Inc/ & Src/
-│   │   ├── motion_profile.c/.h  # Integer trapezoidal planner & step sequencer (Host tested)
-│   │   ├── stepgen.c/.h         # TIM2/TIM5 update ISRs for step pulse generation
-│   │   ├── stall_detect.c/.h    # StallGuard4 blanking, baseline EMA, and confirmation logic
-│   │   ├── axis_ctrl.c/.h       # Homing, cycling, positioning, and fault state machines
-│   │   ├── tmc_calc.c/.h        # Current scaling, register math, and chopper configs
-│   │   ├── tmc_axis.c/.h        # TMC2240 register configuration and health diagnostics
-│   │   ├── enc_track.c/.h       # AS5600 multi-turn angle unwrapping
-│   │   ├── encoder.c/.h         # Dual I2C driver integration & bus recovery
-│   │   ├── console.c/.h         # DMA UART & SEGGER RTT CLI console
-│   │   ├── cmd_parse.c/.h       # Tokenizer & command line interpreter
-│   │   └── app.c / app_config.c # Sequencing, B1 button debouncing, telemetry loop
-│   └── tests/                   # Complete host CTest simulation harness
-├── Core/                        # CubeMX initialization (clock, GPIO, SPI2, USART2)
-└── cmake/                       # Arm toolchain definitions and CubeMX build scripts
-```
-
----
-
-## 8. Safety & Interlocks
+## 7. Safety & Interlocks
 
 - **Power-Stage Standby:** Driver `ENN` is asserted HIGH (outputs disabled) upon reset, in `Error_Handler()`, and during fault conditions.
-- **Over-Travel Bounds:** All motion is constrained by `max_travel_mm` inside the step interrupt service routine; missed stalls trigger software timeouts before mechanical damage can occur.
+- **Over-Travel Bounds:** All motion is constrained by `max_travel_mm`; missed stalls trigger software timeouts before mechanical damage can occur.
 - **Hot-Plugging Prohibition:** Never disconnect or reconnect stepper motors while the 24V supply is energized.

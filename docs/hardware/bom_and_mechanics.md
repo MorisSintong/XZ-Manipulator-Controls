@@ -57,13 +57,14 @@ The physical sorting manipulator is a 2-Axis Cartesian Robot operating in the ve
 
 | Subsystem | Part Name | Manufacturer / Model | Quantity | Operating Specs |
 | :--- | :--- | :--- | :---: | :--- |
-| **MCU Board** | STM32 Nucleo-64 | STMicroelectronics `NUCLEO-F446RE` | 1 | Cortex-M4F @ 180 MHz, 512 KB Flash, 128 KB SRAM |
-| **Stepper Drivers** | TMC2240 Stepper Driver | MKS TMC2240 v1.0 (SPI Mode) | 2 | Trinamic TMC2240, SPI interface, StealthChop2, StallGuard4 |
-| **Position Feedback** | Magnetic Rotary Encoders | ams OSRAM `AS5600` | 2 | 12-bit contactless rotary encoder (4096 counts/rev), I2C |
+| **MCU Board** | STM32 Nucleo-64 | STMicroelectronics `NUCLEO-F446RE` (`MB1136`) | 1 | Cortex-M4F @ 84–180 MHz, 512 KB Flash, 128 KB SRAM |
+| **Stepper Drivers** | TMC2240 Stepper Driver | BIGTREETECH (BTT) / MKS TMC2240 v1.0 (SPI Mode) | 2 | Trinamic TMC2240, SPI Mode 3, $R_{\text{REF}} = 12\,\text{k}\Omega$, StealthChop2, StallGuard4 |
+| **Position Feedback** | Magnetic Rotary Encoders | ams OSRAM `AS5600` Breakout Module | 2 | 12-bit contactless rotary encoder (4096 counts/rev), Dual I2C (`I2C1` & `I2C3`), 3.3V mode (`R1` bridged) |
+| **Proximity Sensor** | 3-Wire Inductive Proximity Sensor | 5V NPN/PNP Inductive Sensor | 1 | 5V DC supply (`CN7 Pin 18`), signal on Morpho `PC8` (`CN10 Pin 2`, 5V-tolerant `FT`) |
 | **Motors** | Bipolar Stepper Motors | NEMA 17 (1.5 A - 1.8 A/phase) | 2 | $1.8^\circ$ step angle (200 full steps/rev) |
 | **Pneumatics** | Vacuum Generator / Ejector | Venturi Vacuum Ejector + Solenoid Valve (12V/24V) | 1 | Fast-response vacuum pull and blow-off release |
 | **Power Supply** | Industrial SMPS | 24V DC, 10A (240W) | 1 | Powers stepper drivers, PLC, and solenoid valves |
-| **Logic Supply** | Step-down Buck Converter | 24V ➔ 5V (3A) | 1 | Powers servos, camera lighting, and auxiliary sensors |
+| **Logic Supply** | Step-down Buck Converter | 24V ➔ 5V (3A) | 1 | Powers servos, camera lighting, and auxiliary 5V sensors |
 | **Vision Camera** | Overhead Inspection Camera | USB 2.0 / USB 3.0 Industrial Webcam | 1 | 1080p @ 30 FPS, fixed focal length, overhead perpendicular mount |
 | **Conveyor PLC** | Programmable Logic Controller| OMRON CP2E / CP1E | 1 | Relay/Transistor outputs for AC/DC conveyor motor & interlocks |
 
