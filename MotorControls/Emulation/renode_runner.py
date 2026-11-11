@@ -27,7 +27,7 @@ from typing import Optional
 logger = logging.getLogger("renode_runner")
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-DEFAULT_ELF_PATH = BASE_DIR / "MotorControls" / "MotionFirmware" / "build" / "Debug" / "MotionFirmware.elf"
+DEFAULT_ELF_PATH = BASE_DIR / "MotorControls" / "MotionFirmware" / "build" / "Debug" / "MotionFirmware_ZBounceEmulation.elf"
 DEFAULT_RESC_PATH = Path(__file__).resolve().parent / "renode" / "stm32f446_uart.resc"
 
 

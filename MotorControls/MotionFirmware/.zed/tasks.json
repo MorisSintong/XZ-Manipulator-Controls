@@ -30,6 +30,16 @@
     "tags": ["cmake"]
   },
   {
+    "label": "Host tests: StallGuard CLI",
+    "command": "cmake -S Apps/stallguard_cli/tests -B Apps/stallguard_cli/tests/build-host -G Ninja -DCMAKE_C_COMPILER=clang && cmake --build Apps/stallguard_cli/tests/build-host && ctest --test-dir Apps/stallguard_cli/tests/build-host --output-on-failure",
+    "tags": ["test"]
+  },
+  {
+    "label": "Host tests: Motion Diagnostics",
+    "command": "powershell -ExecutionPolicy Bypass -File Apps/motion_diagnostics/Tests/run_tests.ps1",
+    "tags": ["test"]
+  },
+  {
     "label": "Clean",
     "command": "cmake",
     "args": ["--build", "--preset", "Debug", "--target", "clean"],

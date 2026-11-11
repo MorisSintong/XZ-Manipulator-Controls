@@ -223,3 +223,8 @@ _autosave-*
 fp-info-cache
 #Sym-lib-table-lock
 #Fp-lib-table-lock
+
+# Python test artifacts
+.pytest-artifacts/
+.pytest_cache/
+

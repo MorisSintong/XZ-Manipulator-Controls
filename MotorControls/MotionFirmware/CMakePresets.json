@@ -6,22 +6,47 @@
             "hidden": true,
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/${presetName}",
-		    "toolchainFile": "${sourceDir}/cmake/gcc-arm-none-eabi.cmake",
-            "cacheVariables": {
-            }
+            "toolchainFile": "${sourceDir}/cmake/gcc-arm-none-eabi.cmake",
+            "cacheVariables": {}
         },
         {
             "name": "Debug",
             "inherits": "default",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug"
+                "CMAKE_BUILD_TYPE": "Debug",
+                "FIRMWARE_APP": "motion_diagnostics"
             }
         },
         {
             "name": "Release",
             "inherits": "default",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
+                "CMAKE_BUILD_TYPE": "Release",
+                "FIRMWARE_APP": "motion_diagnostics"
+            }
+        },
+        {
+            "name": "Debug-StallGuard",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "FIRMWARE_APP": "stallguard_cli"
+            }
+        },
+        {
+            "name": "Release-StallGuard",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "FIRMWARE_APP": "stallguard_cli"
+            }
+        },
+        {
+            "name": "Debug-ZBounce",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "FIRMWARE_APP": "z_bounce_emulation"
             }
         }
     ],
@@ -33,6 +58,18 @@
         {
             "name": "Release",
             "configurePreset": "Release"
+        },
+        {
+            "name": "Debug-StallGuard",
+            "configurePreset": "Debug-StallGuard"
+        },
+        {
+            "name": "Release-StallGuard",
+            "configurePreset": "Release-StallGuard"
+        },
+        {
+            "name": "Debug-ZBounce",
+            "configurePreset": "Debug-ZBounce"
         }
     ]
 }

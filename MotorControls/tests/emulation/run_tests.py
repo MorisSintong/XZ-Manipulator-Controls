@@ -27,7 +27,7 @@ def build_firmware_if_needed(force: bool = False) -> bool:
         / "MotionFirmware"
         / "build"
         / "Debug"
-        / "MotionFirmware.elf"
+        / "MotionFirmware_ZBounceEmulation.elf"
     )
     build_dir = REPO_ROOT / "MotorControls" / "MotionFirmware" / "build" / "Debug"
     src_dir = REPO_ROOT / "MotorControls" / "MotionFirmware"

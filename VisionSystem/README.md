@@ -54,6 +54,51 @@ VisionSystem/
 
 ## 3. Environment Setup (using `uv`)
 
+Binary motion diagnostics uses the normal installed shared package, never a
+`sys.path` workaround. From repository root:
+
+```powershell
+uv sync --project VisionSystem
+uv pip install --python VisionSystem\.venv\Scripts\python.exe -e packages\motion_diagnostics
+uv run --project VisionSystem python VisionSystem\tests\verify_vision_system.py
+uv run --project VisionSystem pytest
+```
+
+The manifest includes the verification/transport dependencies. Install the
+existing YOLO runtime dependencies into this same environment for camera use.
+Use an explicit STM32 VCOM port (AUTO succeeds only with exactly one port).
+`KoneksiUART.kirim` accepts original binary `bytes` and reports bounded queue
+admission, **not** confirmed physical execution. A matched homed/READY heartbeat
+is required before picks. A reader owns all RX; no ASCII ACK/readline path is
+used. RX/TX/CSV worker threads never wait on detection. CRC/resync, missing
+completions and disk/serial backpressure are exposed by `diagnostic_health`.
+Queue overflow or sustained I/O error inhibits new picks; uncertain commands
+are never automatically retried. Reconnect creates a new session and requires
+readiness again. Default logs are `results\vision_diag_<UUID>.csv` with a health
+sidecar and raw `.bin` capture; pass `csv_path` and qualified run `config` to the serial wrapper to use
+another local path/config. Without qualified matching config, values are
+recorded but excluded from acceptance metrics. Do not run bench sender and
+vision simultaneously on the same port.
+
+Runtime command construction quantizes then wraps orientation into 0…3599
+(359.95° becomes 0°), and converts the vision algorithm's clockwise 0…360°
+correction into an equivalent signed −180…+180° rotation. The exact half-turn
+tie is **+180°** (including input −180°); >180° uses the negative equivalent
+(270° → −90°). The deployed 18-byte wire format and CRC are unchanged.
+Unsupported class IDs and malformed/out-of-range packets are logged and counted
+as admission failures, not raised into inference. Readiness is homed with no
+fault bits; informational/event bits do not disable it. MSCNT qualification is
+recorded independently and does not exclude healthy encoder-based metrics.
+The v1 fault mask is `0x0003E7E2`, including active TX backpressure (bit 13);
+RX_OVERFLOW (bit 12) is an event and MSCNT_UNQUALIFIED (bit 11) is informational.
+Only STATUS and HOME_RESULT update readiness; per-command rejections remain
+logged/counted but do not pause the next object while awaiting a heartbeat.
+Unanswered control commands expire, and heartbeat IDs rotate while waiting for
+readiness; uncertain pick commands are never automatically retried.
+
+See [diagnostic tool usage](../MotorControls/MotionFirmware/tools/diag/README.md)
+and [wire/measurement contract](../docs/architecture/motion_diagnostics_design.md).
+
 This repository uses [`uv`](https://github.com/astral-sh/uv) for fast, deterministic Python virtual environment and dependency management.
 
 ```powershell

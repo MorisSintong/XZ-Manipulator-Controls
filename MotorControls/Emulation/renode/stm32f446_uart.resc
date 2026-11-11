@@ -1,5 +1,5 @@
 :name: STM32F446RE UART Emulation
-:description: STM32F446RE platform running MotionFirmware with USART2 socket bridging
+:description: STM32F446RE platform running MotionFirmware_ZBounceEmulation with USART2 socket bridging
 
 using sysbus
 
@@ -7,7 +7,7 @@ $name?="stm32f446"
 mach create $name
 machine LoadPlatformDescription @platforms/cpus/stm32f4.repl
 
-$bin?=@MotorControls/MotionFirmware/build/Debug/MotionFirmware.elf
+$bin?=@MotorControls/MotionFirmware/build/Debug/MotionFirmware_ZBounceEmulation.elf
 $port?=12345
 
 sysbus LoadELF $bin

@@ -59,10 +59,31 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define B1_Pin GPIO_PIN_13
+#define B1_GPIO_Port GPIOC
+#define B1_EXTI_IRQn EXTI15_10_IRQn
+#define TMC_CS0_Pin GPIO_PIN_0
+#define TMC_CS0_GPIO_Port GPIOC
+#define TMC_STEP0_Pin GPIO_PIN_1
+#define TMC_STEP0_GPIO_Port GPIOC
+#define TMC_DIR0_Pin GPIO_PIN_2
+#define TMC_DIR0_GPIO_Port GPIOC
+#define TMC_CS1_Pin GPIO_PIN_3
+#define TMC_CS1_GPIO_Port GPIOC
 #define USART_TX_Pin GPIO_PIN_2
 #define USART_TX_GPIO_Port GPIOA
 #define USART_RX_Pin GPIO_PIN_3
 #define USART_RX_GPIO_Port GPIOA
+#define LD2_Pin GPIO_PIN_5
+#define LD2_GPIO_Port GPIOA
+#define TMC_STEP1_Pin GPIO_PIN_4
+#define TMC_STEP1_GPIO_Port GPIOC
+#define TMC_DIR1_Pin GPIO_PIN_5
+#define TMC_DIR1_GPIO_Port GPIOC
+#define TMC_ENN0_Pin GPIO_PIN_6
+#define TMC_ENN0_GPIO_Port GPIOC
+#define TMC_ENN1_Pin GPIO_PIN_7
+#define TMC_ENN1_GPIO_Port GPIOC
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
@@ -71,29 +92,9 @@ void Error_Handler(void);
 #define SWO_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-/* Driver 0 (Motor 0) Pin Definitions */
-#define TMC_CS0_Pin          GPIO_PIN_0
-#define TMC_CS0_GPIO_Port    GPIOC
-#define TMC_STEP0_Pin        GPIO_PIN_1
-#define TMC_STEP0_GPIO_Port  GPIOC
-#define TMC_DIR0_Pin         GPIO_PIN_2
-#define TMC_DIR0_GPIO_Port   GPIOC
-#define TMC_ENN0_Pin         GPIO_PIN_6
-#define TMC_ENN0_GPIO_Port   GPIOC
-
-/* SPI2 Bus Pin Definitions */
-#define SPI2_SCK_Pin         GPIO_PIN_13
-#define SPI2_SCK_GPIO_Port   GPIOB
-#define SPI2_MISO_Pin        GPIO_PIN_14
-#define SPI2_MISO_GPIO_Port  GPIOB
-#define SPI2_MOSI_Pin        GPIO_PIN_15
-#define SPI2_MOSI_GPIO_Port  GPIOB
-
-/* User Interface Pin Definitions */
-#define B1_USER_BUTTON_Pin   GPIO_PIN_13
-#define B1_USER_BUTTON_Port  GPIOC
-#define LD2_LED_GREEN_Pin    GPIO_PIN_5
-#define LD2_LED_GREEN_Port   GPIOA
+/* Motor 0 (Z) : TMC_CS0/STEP0/DIR0/ENN0, TIM2, AS5600 on I2C3 (PA8 SCL, PC9 SDA)
+ * Motor 1 (X) : TMC_CS1/STEP1/DIR1/ENN1, TIM5, AS5600 on I2C1 (PB8 SCL, PB9 SDA)
+ * Shared SPI2 : PB13 SCK, PB14 MISO, PB15 MOSI (mode 3). See wiring.md. */
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

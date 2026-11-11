@@ -33,8 +33,12 @@ extern "C" {
 #define RTT_CTRL_TEXT_BRIGHT_CYAN     "\033[1;36m"
 #define RTT_CTRL_TEXT_BRIGHT_WHITE    "\033[1;37m"
 
-#define BUFFER_SIZE_UP    (1024)
-#define BUFFER_SIZE_DOWN  (16)
+#ifndef BUFFER_SIZE_UP
+#define BUFFER_SIZE_UP    (4096)
+#endif
+#ifndef BUFFER_SIZE_DOWN
+#define BUFFER_SIZE_DOWN  (64)
+#endif
 
 typedef struct {
   const char*       sName;
