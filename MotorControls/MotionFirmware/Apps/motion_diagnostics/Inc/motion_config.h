@@ -10,20 +10,50 @@
 #define MOTION_QUEUE_SIZE 4U
 #define MOTION_TX_SLOTS 8U
 
+/* Compile-time overrides for target builds (defaults preserve host unit test
+ * contract). */
+#ifndef MOTION_SAFE_Z_01MM
+#define MOTION_SAFE_Z_01MM 0
+#endif
+#ifndef MOTION_PICK_DEPTH_01MM
+#define MOTION_PICK_DEPTH_01MM 0
+#endif
+#ifndef MOTION_BOUNDS_CONFIRMED
+#define MOTION_BOUNDS_CONFIRMED 0
+#endif
+#ifndef MOTION_CLAMP_X
+#define MOTION_CLAMP_X 0
+#endif
+#ifndef MOTION_MSCNT_QUALIFIED
+#define MOTION_MSCNT_QUALIFIED 0
+#endif
+#ifndef MOTION_X_DIR_SIGN
+#define MOTION_X_DIR_SIGN 1
+#endif
+#ifndef MOTION_X_ENCODER_SIGN
+#define MOTION_X_ENCODER_SIGN 1
+#endif
+#ifndef MOTION_Z_DIR_SIGN
+#define MOTION_Z_DIR_SIGN (-1)
+#endif
+#ifndef MOTION_Z_ENCODER_SIGN
+#define MOTION_Z_ENCODER_SIGN 1
+#endif
+
 typedef struct {
-    uint32_t lead_um, max_rate, acceleration;
-    int32_t usable_max_01mm, home_budget_steps;
-    uint32_t home_timeout_us, backoff_steps, clearance_steps;
-    int8_t dir_sign, encoder_sign;
-    uint8_t motor, sg_threshold;
+  uint32_t lead_um, max_rate, acceleration;
+  int32_t usable_max_01mm, home_budget_steps;
+  uint32_t home_timeout_us, backoff_steps, clearance_steps;
+  int8_t dir_sign, encoder_sign;
+  uint8_t motor, sg_threshold;
 } motion_axis_config_t;
 typedef struct {
-    motion_axis_config_t axis[2];
-    int32_t safe_z_01mm, pick_depth_01mm;
-    uint32_t settle_us, dwell_us, pulse_high_us, pulse_low_us;
-    uint32_t dir_setup_us, dir_hold_us, lateness_us;
-    bool bounds_confirmed, clamp_x, mscnt_qualified;
-    uint8_t id;
+  motion_axis_config_t axis[2];
+  int32_t safe_z_01mm, pick_depth_01mm;
+  uint32_t settle_us, dwell_us, pulse_high_us, pulse_low_us;
+  uint32_t dir_setup_us, dir_hold_us, lateness_us;
+  bool bounds_confirmed, clamp_x, mscnt_qualified;
+  uint8_t id;
 } motion_config_t;
 extern const motion_config_t motion_default_config;
 bool motion_config_valid(const motion_config_t *c);

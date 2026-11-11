@@ -432,7 +432,7 @@ static void MX_GPIO_Init(void) {
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : TMC_CS0_Pin TMC_CS1_Pin TMC_ENN0_Pin TMC_ENN1_Pin */
@@ -478,6 +478,7 @@ static void MX_GPIO_Init(void) {
 void Error_Handler(void) {
   /* USER CODE BEGIN Error_Handler_Debug */
   __disable_irq();
+  GPIOC->BSRR = (uint32_t)(TMC_STEP0_Pin | TMC_STEP1_Pin) << 16U;
   fw_app_error_handler();
   while (1) {
     HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);

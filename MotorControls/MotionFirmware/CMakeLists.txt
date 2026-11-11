@@ -17,6 +17,26 @@ set(FIRMWARE_APP "motion_diagnostics" CACHE STRING
 set_property(CACHE FIRMWARE_APP PROPERTY STRINGS
     "motion_diagnostics" "stallguard_cli" "z_bounce_emulation")
 
+# Target-side configuration parameters for motion_diagnostics profile
+option(MOTION_DIAG_BOUNDS_CONFIRMED
+    "Confirm physical X/Z bounds on target so VisionSystem PICK commands are accepted" ON)
+option(MOTION_DIAG_CLAMP_X
+    "Clamp out-of-range X pick targets to [0, usable_max_01mm] instead of rejecting" OFF)
+option(MOTION_DIAG_MSCNT_QUALIFIED
+    "Enforce strict TMC2240 MSCNT phase verification on every move phase" OFF)
+set(MOTION_DIAG_SAFE_Z_01MM "0" CACHE STRING
+    "Safe Z travel height in 0.1 mm units (0 = top home clearance)")
+set(MOTION_DIAG_PICK_DEPTH_01MM "0" CACHE STRING
+    "Z pick plunge depth in 0.1 mm units (0 = safe Z dry-run; e.g. 500 = 50.0 mm plunge)")
+set(MOTION_DIAG_X_DIR_SIGN "1" CACHE STRING
+    "X-axis STEP/DIR polarity (+1 or -1)")
+set(MOTION_DIAG_X_ENCODER_SIGN "1" CACHE STRING
+    "X-axis AS5600 encoder count polarity (+1 or -1)")
+set(MOTION_DIAG_Z_DIR_SIGN "-1" CACHE STRING
+    "Z-axis STEP/DIR polarity (-1 = DIR HIGH moves UP toward home, +Z moves DOWN)")
+set(MOTION_DIAG_Z_ENCODER_SIGN "1" CACHE STRING
+    "Z-axis AS5600 encoder count polarity (+1 or -1)")
+
 set(CMAKE_PROJECT_NAME MotionFirmware)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
@@ -120,6 +140,17 @@ function(configure_firmware_target target_name app_profile)
     if(app_profile STREQUAL "motion_diagnostics")
         set(app_srcs ${DIAG_SOURCES})
         set(app_inc  ${DIAG_DIR}/Inc)
+        target_compile_definitions(${target_name} PRIVATE
+            MOTION_BOUNDS_CONFIRMED=$<BOOL:${MOTION_DIAG_BOUNDS_CONFIRMED}>
+            MOTION_CLAMP_X=$<BOOL:${MOTION_DIAG_CLAMP_X}>
+            MOTION_MSCNT_QUALIFIED=$<BOOL:${MOTION_DIAG_MSCNT_QUALIFIED}>
+            MOTION_SAFE_Z_01MM=${MOTION_DIAG_SAFE_Z_01MM}
+            MOTION_PICK_DEPTH_01MM=${MOTION_DIAG_PICK_DEPTH_01MM}
+            MOTION_X_DIR_SIGN=${MOTION_DIAG_X_DIR_SIGN}
+            MOTION_X_ENCODER_SIGN=${MOTION_DIAG_X_ENCODER_SIGN}
+            MOTION_Z_DIR_SIGN=${MOTION_DIAG_Z_DIR_SIGN}
+            MOTION_Z_ENCODER_SIGN=${MOTION_DIAG_Z_ENCODER_SIGN}
+        )
     elseif(app_profile STREQUAL "stallguard_cli")
         set(app_srcs ${SG_SOURCES})
         set(app_inc  ${SG_DIR}/Inc)

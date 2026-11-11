@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 >nul 2>&1
-title Pengujian Video QC Kapasitor + ESP32 UART - Husein Alhamid TA
+title Pengujian Video QC Kapasitor + STM32 UART - Husein Alhamid TA
 
 echo ============================================================
-echo   PENGUJIAN VIDEO QC KAPASITOR + ESP32 UART
+echo   PENGUJIAN VIDEO QC KAPASITOR + STM32 UART
 echo   Tugas Akhir: Husein Alhamid (4212301035)
 echo ============================================================
 echo.
@@ -19,22 +19,26 @@ if "%VIDEO_PATH%"=="" (
 
 echo.
 echo   Pilih mode pengujian:
-echo   [1] Dengan ESP32 UART (AUTO detect port)
-echo   [2] Dengan ESP32 UART (Pilih port manual)
-echo   [3] Tanpa ESP32 / Offline (--no-uart)
+echo   [1] Dengan STM32 UART (AUTO detect port)
+echo   [2] Dengan STM32 UART (Pilih port manual)
+echo   [3] Tanpa UART / Offline (--no-uart)
 echo.
 set /p MODE="  Pilihan (1/2/3): "
 
 cd /d "%~dp0\.."
 
-:: Auto-detect Python
-where python >nul 2>&1
-if %errorlevel% equ 0 (
-    set PYTHON_CMD=python
+:: Auto-detect Python: prefer project .venv, then active venv/conda/system
+if exist ".venv\Scripts\python.exe" (
+    set "PYTHON_CMD=.venv\Scripts\python.exe"
 ) else (
-    echo [ERROR] Python tidak ditemukan. Pastikan Python 3.10+ terinstall dan ada di PATH.
-    pause
-    exit /b 1
+    where python >nul 2>&1
+    if %errorlevel% equ 0 (
+        set PYTHON_CMD=python
+    ) else (
+        echo [ERROR] Python tidak ditemukan. Pastikan Python 3.10+ terinstall dan ada di PATH.
+        pause
+        exit /b 1
+    )
 )
 
 if "%MODE%"=="1" (
@@ -42,13 +46,13 @@ if "%MODE%"=="1" (
     echo   [INFO] Menjalankan dengan UART AUTO...
     %PYTHON_CMD% "04_Source_Code\6_test_video.py" --video "%VIDEO_PATH%" --uart-port AUTO --save-video
 ) else if "%MODE%"=="2" (
-    set /p COM_PORT="  Masukkan port COM ESP32 (contoh: COM3): "
+    set /p COM_PORT="  Masukkan port COM STM32 (contoh: COM9): "
     echo.
     echo   [INFO] Menjalankan dengan UART port %COM_PORT%...
     %PYTHON_CMD% "04_Source_Code\6_test_video.py" --video "%VIDEO_PATH%" --uart-port %COM_PORT% --save-video
 ) else (
     echo.
-    echo   [INFO] Menjalankan mode OFFLINE (tanpa ESP32)...
+    echo   [INFO] Menjalankan mode OFFLINE (tanpa UART)...
     %PYTHON_CMD% "04_Source_Code\6_test_video.py" --video "%VIDEO_PATH%" --no-uart --save-video
 )
 

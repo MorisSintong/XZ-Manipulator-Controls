@@ -97,6 +97,8 @@ void fw_app_init(void) {
   log_printf(
       "=================================================================\r\n");
   log_printf(
+      "   [PROFILE] z_bounce_emulation (Z-Bounce + Renode Vision UART) \r\n");
+  log_printf(
       "   TMC2240 Z-Axis StallGuard4 Sensorless Limit Bouncing Suite    \r\n");
   log_printf(
       "   Target: STM32F446RE Nucleo-64 @ 84 MHz                        \r\n");
@@ -179,14 +181,11 @@ void fw_app_poll(void) {
   VisionUart_Process();
 
   /* Wait for Blue User Button (PC13) press to START */
-  if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) ==
-      GPIO_PIN_RESET) {
+  if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) {
     HAL_Delay(50); /* Debounce */
-    if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) ==
-        GPIO_PIN_RESET) {
+    if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) {
       /* Wait for button release before starting */
-      while (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) ==
-             GPIO_PIN_RESET) {
+      while (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) {
         HAL_Delay(10);
       }
       HAL_Delay(100);
@@ -217,8 +216,7 @@ void fw_app_poll(void) {
         bool stalled =
             probe_until_stall(DIR_UP, &steps_up, &stall_sg, &stall_base);
 
-        if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) ==
-            GPIO_PIN_RESET) {
+        if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) {
           user_aborted = true;
           break;
         }
@@ -237,8 +235,7 @@ void fw_app_poll(void) {
         log_printf("[HOLD] Pausing 300 ms for stress relaxation...\r\n");
         HAL_Delay(300);
 
-        if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) ==
-            GPIO_PIN_RESET) {
+        if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) {
           user_aborted = true;
           break;
         }
@@ -251,8 +248,7 @@ void fw_app_poll(void) {
         stalled =
             probe_until_stall(DIR_DOWN, &steps_down, &stall_sg, &stall_base);
 
-        if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) ==
-            GPIO_PIN_RESET) {
+        if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) {
           user_aborted = true;
           break;
         }
@@ -273,8 +269,7 @@ void fw_app_poll(void) {
         log_printf("[HOLD] Pausing 300 ms for stress relaxation...\r\n");
         HAL_Delay(300);
 
-        if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) ==
-            GPIO_PIN_RESET) {
+        if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) {
           user_aborted = true;
           break;
         }
@@ -299,8 +294,7 @@ void fw_app_poll(void) {
       log_printf("============================================================="
                  "====\r\n" RTT_CTRL_RESET);
 
-      while (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) ==
-             GPIO_PIN_RESET) {
+      while (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) {
         HAL_Delay(20);
       }
     }
@@ -322,6 +316,7 @@ bool fw_app_usart2_irq(void) {
 }
 
 void fw_app_error_handler(void) {
+  HAL_GPIO_WritePin(GPIOC, TMC_STEP0_Pin | TMC_STEP1_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(GPIOC, TMC_ENN0_Pin | TMC_ENN1_Pin, GPIO_PIN_SET);
 }
 
@@ -347,8 +342,7 @@ static bool probe_until_stall(ZDirection_t dir, uint32_t *steps_moved,
   uint32_t last_telemetry_tick = HAL_GetTick();
 
   while (step_count < max_leg_steps) {
-    if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) ==
-        GPIO_PIN_RESET) {
+    if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) {
       *steps_moved = step_count;
       return false;
     }

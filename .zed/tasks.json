@@ -54,7 +54,7 @@
     "tags": ["clean"]
   },
   {
-    "label": "Flash (J-Link)",
+    "label": "Flash (J-Link) — Default Profile",
     "command": "C:/tools/jlink/JLink.exe",
     "args": [
       "-device",
@@ -67,6 +67,60 @@
       "1",
       "-CommanderScript",
       "flash.jlink"
+    ],
+    "cwd": "${ZED_WORKTREE_ROOT}/MotorControls/MotionFirmware",
+    "tags": ["flash"]
+  },
+  {
+    "label": "Flash: Motion Diagnostics (J-Link)",
+    "command": "C:/tools/jlink/JLink.exe",
+    "args": [
+      "-device",
+      "STM32F446RE",
+      "-if",
+      "SWD",
+      "-speed",
+      "4000",
+      "-autoconnect",
+      "1",
+      "-CommanderScript",
+      "flash_diagnostics.jlink"
+    ],
+    "cwd": "${ZED_WORKTREE_ROOT}/MotorControls/MotionFirmware",
+    "tags": ["flash"]
+  },
+  {
+    "label": "Flash: StallGuard CLI (J-Link)",
+    "command": "C:/tools/jlink/JLink.exe",
+    "args": [
+      "-device",
+      "STM32F446RE",
+      "-if",
+      "SWD",
+      "-speed",
+      "4000",
+      "-autoconnect",
+      "1",
+      "-CommanderScript",
+      "flash_stallguard_cli.jlink"
+    ],
+    "cwd": "${ZED_WORKTREE_ROOT}/MotorControls/MotionFirmware",
+    "tags": ["flash"]
+  },
+  {
+    "label": "Flash: Z-Bounce Emulation (J-Link)",
+    "command": "C:/tools/jlink/JLink.exe",
+    "args": [
+      "-device",
+      "STM32F446RE",
+      "-if",
+      "SWD",
+      "-speed",
+      "4000",
+      "-autoconnect",
+      "1",
+      "-CommanderScript",
+      "flash_zbounce.jlink"
     ],
     "cwd": "${ZED_WORKTREE_ROOT}/MotorControls/MotionFirmware",
     "tags": ["flash"]

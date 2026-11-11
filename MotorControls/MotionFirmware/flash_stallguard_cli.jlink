@@ -1,0 +1,6 @@
+r
+h
+loadfile "build/Debug/MotionFirmware_StallGuardCLI.hex"
+r
+g
+q

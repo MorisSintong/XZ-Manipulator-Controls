@@ -1,0 +1,6 @@
+r
+h
+loadfile "build/Debug/MotionFirmware_ZBounceEmulation.hex"
+r
+g
+q

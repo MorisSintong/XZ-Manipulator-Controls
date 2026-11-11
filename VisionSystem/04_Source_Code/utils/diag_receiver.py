@@ -3,15 +3,28 @@
 import json
 import logging
 import queue
+import sys
 import threading
 import time
 from pathlib import Path
 
-from motion_diagnostics.commands import control_packet, decode_command
-from motion_diagnostics.correlation import Correlator
-from motion_diagnostics.csv_io import CsvWriter, record_rows
-from motion_diagnostics.frames import HomeResult, Status, StreamDecoder
-from motion_diagnostics.status_bits import command_succeeded, host_ready
+try:
+    from motion_diagnostics.commands import control_packet, decode_command
+    from motion_diagnostics.correlation import Correlator
+    from motion_diagnostics.csv_io import CsvWriter, record_rows
+    from motion_diagnostics.frames import HomeResult, Status, StreamDecoder
+    from motion_diagnostics.status_bits import command_succeeded, host_ready
+except ModuleNotFoundError:
+    _pkg_src = (
+        Path(__file__).resolve().parents[3] / "packages" / "motion_diagnostics" / "src"
+    )
+    if _pkg_src.is_dir() and str(_pkg_src) not in sys.path:
+        sys.path.insert(0, str(_pkg_src))
+    from motion_diagnostics.commands import control_packet, decode_command
+    from motion_diagnostics.correlation import Correlator
+    from motion_diagnostics.csv_io import CsvWriter, record_rows
+    from motion_diagnostics.frames import HomeResult, Status, StreamDecoder
+    from motion_diagnostics.status_bits import command_succeeded, host_ready
 
 
 class DiagnosticReceiver:
