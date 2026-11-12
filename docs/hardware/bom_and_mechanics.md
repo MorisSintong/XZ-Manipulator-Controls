@@ -52,7 +52,7 @@ The physical sorting manipulator is a 2-Axis Cartesian Robot operating in the ve
 | **End-Effector Rotation**| MG90S / SG90 Metal-Gear Micro Servo *(thesis baseline)* | Continuous capacitor polarity angle adjustment *(see note below)* |
 
 > [!NOTE]
-> **End-Effector Rotation Hardware Option:** The thesis baseline BOM specifies a compact PWM servo (`MG90S`/`SG90`) for rotational correction. The current harness document instead provisions an optional third BTT/MKS TMC2240 in the SKR Octopus Pro Driver 3 / MOTOR3 socket with an open-loop NEMA 11 stepper for $\theta$-axis actuation. Neither rotational actuator nor the vacuum valve is driven in the current dry-run `motion_diagnostics` firmware profile.
+> **End-Effector Rotation Hardware Option:** The thesis baseline BOM specifies a compact PWM servo (`MG90S`/`SG90`) for rotational correction. The current harness document instead provisions an optional third BTT/MKS TMC2240 in the SKR Octopus Pro Driver 3 / MOTOR2 socket with an open-loop NEMA 11 stepper for $\theta$-axis actuation. Neither rotational actuator nor the vacuum valve is driven in the current dry-run `motion_diagnostics` firmware profile.
 
 ---
 

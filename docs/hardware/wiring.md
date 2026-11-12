@@ -14,14 +14,14 @@ Use the board's silkscreened driver sockets and matching motor output terminals.
 | Axis | Driver socket / motor output | STEP | DIR | Enable (active low) | SPI CS | DIAG / endstop |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | X | Driver 0 / MOTOR0 | `PF13` | `PF12` | `PF14` | `PC4` | `PG6` |
-| Z | Driver 2 / MOTOR2 | `PF11` | `PG3` | `PG5` | `PC6` | `PG10` |
-| Optional theta | Driver 3 / MOTOR3 (E0) | `PG4` | `PC1` | `PA2` | `PC7` | `PG11` |
+| Z | Driver 2 / MOTOR1 | `PF11` | `PG3` | `PG5` | `PC6` | `PG10` |
+| Optional theta | Driver 3 / MOTOR2 (E0) | `PG4` | `PC1` | `PA2` | `PC7` | `PG11` |
 
 `!` in a firmware pin definition means active-low (for example, `!PF14`). Driver 1 / MOTOR1 is the board's Y channel and is unused by the current XZ design. The optional theta channel is not actuated by the current firmware profile.
 
 The board routes driver SPI internally. Configure the H723 firmware for the board's shared SPI1 bus (`PA5` SCK, `PA6` MISO, `PA7` MOSI) and the per-socket chip-select pins in the table; do not run extra SPI wires between the sockets and expansion headers. Configure the installed TMC2240 modules for SPI.
 
-With power disconnected, insert each module in the socket for its axis and align its pin-1/orientation marking with the board and module documentation. Connect each motor to the matching board output (`MOTOR0` for X, `MOTOR2` for Z, optional `MOTOR3` for theta). Never insert or remove a driver or motor connector while the board is powered.
+With power disconnected, insert each module in the socket for its axis and align its pin-1/orientation marking with the board and module documentation. Connect each motor to the matching board output (`MOTOR0` for X, `MOTOR1` for Z, optional `MOTOR2` for theta). Never insert or remove a driver or motor connector while the board is powered.
 
 ## 2. Power distribution
 
@@ -31,8 +31,8 @@ With power disconnected, insert each module in the socket for its axis and align
 24 V supply (-) ──> SKR MAIN POWER (-) ──> common system ground
 
 SKR MOTOR0 ──> X-axis NEMA 17
-SKR MOTOR2 ──> Z-axis NEMA 17
-SKR MOTOR3 ──> optional theta motor
+SKR MOTOR1 ──> Z-axis NEMA 17
+SKR MOTOR2 ──> optional theta motor
 ```
 
 - Feed the board from its `MAIN POWER` input. BTT documents `MAIN POWER` for up to 28 V; 24 V is within that limit.
