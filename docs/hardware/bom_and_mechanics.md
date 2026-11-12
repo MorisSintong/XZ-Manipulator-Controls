@@ -52,7 +52,7 @@ The physical sorting manipulator is a 2-Axis Cartesian Robot operating in the ve
 | **End-Effector Rotation**| MG90S / SG90 Metal-Gear Micro Servo *(thesis baseline)* | Continuous capacitor polarity angle adjustment *(see note below)* |
 
 > [!NOTE]
-> **End-Effector Rotation Hardware Option:** The thesis baseline BOM specifies a compact PWM servo (`MG90S`/`SG90`) for rotational correction, while the expanded Nucleo-64 Morpho harness in [`wiring.md`](wiring.md) also provisions a 3rd BTT/MKS TMC2240 + open-loop NEMA 11 stepper (`PC10`/`PC11`/`PC12`/`PD2`) for $\theta$-axis actuation. Neither rotational actuator nor the vacuum valve is driven in the current dry-run `motion_diagnostics` firmware profile.
+> **End-Effector Rotation Hardware Option:** The thesis baseline BOM specifies a compact PWM servo (`MG90S`/`SG90`) for rotational correction. The current harness document instead provisions an optional third BTT/MKS TMC2240 in the SKR Octopus Pro Driver 3 / MOTOR3 socket with an open-loop NEMA 11 stepper for $\theta$-axis actuation. Neither rotational actuator nor the vacuum valve is driven in the current dry-run `motion_diagnostics` firmware profile.
 
 ---
 
@@ -60,14 +60,14 @@ The physical sorting manipulator is a 2-Axis Cartesian Robot operating in the ve
 
 | Subsystem | Part Name | Manufacturer / Model | Quantity | Operating Specs |
 | :--- | :--- | :--- | :---: | :--- |
-| **MCU Board** | STM32 Nucleo-64 | STMicroelectronics `NUCLEO-F446RE` (`MB1136`) | 1 | Cortex-M4F @ 84–180 MHz, 512 KB Flash, 128 KB SRAM |
-| **Stepper Drivers** | TMC2240 Stepper Driver | BIGTREETECH (BTT) / MKS TMC2240 v1.0 (SPI Mode) | 2 | Trinamic TMC2240, SPI Mode 3, $R_{\text{REF}} = 12\,\text{k}\Omega$, StealthChop2, StallGuard4 |
-| **Position Feedback** | Magnetic Rotary Encoders | ams OSRAM `AS5600` Breakout Module | 2 | 12-bit contactless rotary encoder (4096 counts/rev), Dual I2C (`I2C1` & `I2C3`), 3.3V mode (`R1` bridged) |
-| **Proximity Sensor** | 3-Wire Inductive Proximity Sensor | 5V NPN/PNP Inductive Sensor | 1 | 5V DC supply (`CN7 Pin 18`), signal on Morpho `PC8` (`CN10 Pin 2`, 5V-tolerant `FT`) |
+| **MCU Board** | SKR Octopus Pro V1.1 | BIGTREETECH `SKR Octopus Pro V1.1` with STM32H723 | 1 | Physical controller board; the checked-in firmware still targets NUCLEO-F446RE and requires an H723 port |
+| **Stepper Drivers** | TMC2240 Stepper Driver | BIGTREETECH (BTT) / MKS TMC2240 v1.0 (SPI Mode) | 2 (3rd optional) | Install in SKR driver sockets 0 (X), 2 (Z), optional 3 (theta); shared board SPI1 |
+| **Position Feedback** | Magnetic Rotary Encoders | ams OSRAM `AS5600` Breakout Module | 2 | 12-bit contactless rotary encoder (4096 counts/rev), separate 3.3 V I2C buses (`PE8`/`PE9` and proposed software-I2C `PE7`/`PE10`) |
+| **Proximity Sensor** | 3-Wire Inductive Proximity Sensor | 5V NPN/PNP Inductive Sensor | 1 | Connect through the board's dedicated `PROBE` input (`PC5`); check sensor output type and interface |
 | **Motors** | Bipolar Stepper Motors | NEMA 17 (1.5 A - 1.8 A/phase) | 2 | $1.8^\circ$ step angle (200 full steps/rev) |
 | **Pneumatics** | Vacuum Generator / Ejector | Venturi Vacuum Ejector + Solenoid Valve (12V/24V) | 1 | Fast-response vacuum pull and blow-off release |
 | **Power Supply** | Industrial SMPS | 24V DC, 10A (240W) | 1 | Powers stepper drivers, PLC, and solenoid valves |
-| **Logic Supply** | Step-down Buck Converter | 24V ➔ 5V (3A) | 1 | Powers servos, camera lighting, and auxiliary 5V sensors |
+| **Logic Supply** | Step-down Regulators | 24V ➔ 5V (3A) and 5V/24V ➔ 3.3V | 1 set | Powers auxiliary 5V loads and 3.3V logic/sensors as required |
 | **Vision Camera** | Overhead Inspection Camera | USB 2.0 / USB 3.0 Industrial Webcam | 1 | 1080p @ 30 FPS, fixed focal length, overhead perpendicular mount |
 | **Conveyor PLC** | Programmable Logic Controller| OMRON CP2E / CP1E | 1 | Relay/Transistor outputs for AC/DC conveyor motor & interlocks |
 

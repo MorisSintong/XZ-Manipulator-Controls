@@ -11,13 +11,15 @@ References below use **printed datasheet pages**, not PDF viewer page numbers. A
 | **A** | [Official AS5600 datasheet](https://www.infineon.com/assets/row/public/documents/30/49/infineon-as5600-datasheet-en.pdf), legacy ams **v1-06, 2018-Jun-20**, linked by [Infineon's AS5600 product page](https://www.infineon.com/part/AS5600) | VERIFIED: fetched using `web_fetch`, then PDF text read in memory. Front notice says Infineon acquired ownership effective **2026-Jul-01** and is distributing the unchanged legacy ams-OSRAM document. PDF viewer page = printed page + **2**, because of the notice/cover. [A, front notice/cover] |
 | **T** | [Official ADI TMC2240 datasheet URL](https://www.analog.com/media/en/technical-documentation/data-sheets/tmc2240_datasheet.pdf); alternate official Trinamic URLs under `https://www.trinamic.com/fileadmin/assets/Products/ICs_Documents/` | **UNVERIFIED**: repeated `web_fetch` and direct retrieval attempts timed out; alternate `TMC2240_datasheet.pdf` and `TMC2240_datasheet_rev1.09.pdf` redirected to unreachable ADI support. No official TMC2240 PDF was available in this worktree. Do not interpret repository constants as independently verified datasheet facts. |
 | **R-M** | [BOM/mechanics](bom_and_mechanics.md), §§2–3; task hardware specification | Design inputs, not independently measured mechanics |
-| **R-W** | [Wiring](wiring.md), §§1–4 | Repository board connection specification |
+| **R-W** | [Wiring](wiring.md), §§1–4 | Proposed SKR Octopus Pro physical connections; not hardware qualification |
 | **R-P** | [UART protocol](../architecture/communication_protocol.md), §§1–3 | Repository protocol specification |
 | **R-A** | `MotorControls\Drivers\AS5600\include\as5600.h`, `src\as5600.c`, `ports\stm32_hal\as5600_stm32_hal.{h,c}`, `docs\integration.md` | Directly inspected driver/API evidence |
 | **R-T** | `MotorControls\Drivers\TMC2240-Driver\driver\inc\{tmc2240_hal.h,tmc2240_core.h,TMC2240_HW_Abstraction.h}`, `driver\src\{tmc2240_hal.c,TMC2240.c}` | Directly inspected driver/API evidence; hardware interpretation remains UNVERIFIED against T |
 | **R-F** | `MotorControls\MotionFirmware\Core\Src\main.c`: `configure_tmc2240_motor`, `probe_until_stall`, `dump_driver_diagnostics`, peripheral initialization | 2026-10-06 single-axis baseline snapshot (since moved to `Apps\z_bounce_emulation\` alongside `Apps\motion_diagnostics\` and `Apps\stallguard_cli\`) |
 
 **Scope boundary:** motor-shaft sensing is not carriage-position sensing. Neither driver evidence nor shaft angle detects belt slip, pulley/coupler slip downstream of the magnet, screw backlash, compliance, or pitch/lead calibration errors.
+
+**Board transition:** `wiring.md` now describes the SKR Octopus Pro V1.1 / STM32H723 physical target. Firmware observations below remain tied to the existing STM32F446RE implementation; its `SPI2`, `I2C1`, and `I2C3` assignments are not SKR pin mappings or evidence that the H723 port is complete.
 
 ## AS5600 measurement registers
 

@@ -3,7 +3,7 @@
 **Project:** Integrasi Computer Vision dan Sistem Sortasi Konveyor untuk Pengendalian Kualitas (Quality Control) Komponen Kapasitor Berdasarkan Polaritas  
 **Repository:** `XZ-Manipulator-Controls`  
 
-**Implementation status:** The host VisionSystem and dual-axis `motion_diagnostics` firmware profile are implemented. The current motion-control profile uses a cooperative foreground state machine with timer-compare interrupts and has no RTOS implementation. A future systems stage may evaluate an RTOS if more complex kinematics and coordinated real-time responsibilities warrant task scheduling; this is an option, not a current commitment. The default safe-Z and pick-depth settings are zero, and the firmware does not actuate the vacuum or orientation servo. Hardware qualification and the complete physical sorting cycle remain outstanding.
+**Implementation status:** The host VisionSystem and dual-axis `motion_diagnostics` firmware profile are implemented. The physical controller target is now the BTT SKR Octopus Pro V1.1 (STM32H723), but the checked-in motion firmware and build still target the STM32F446RE Nucleo-64 and have not been ported. The current motion-control profile uses a cooperative foreground state machine with timer-compare interrupts and has no RTOS implementation. A future systems stage may evaluate an RTOS if more complex kinematics and coordinated real-time responsibilities warrant task scheduling; this is an option, not a current commitment. The default safe-Z and pick-depth settings are zero, and the firmware does not actuate the vacuum or orientation servo. Hardware qualification and the complete physical sorting cycle remain outstanding.
 
 ---
 
@@ -19,12 +19,11 @@ The automated quality control and sorting cell integrates three synchronized lay
    - Default pixel-to-millimeter mapping uses configured per-axis scales and origin offsets. The mapper supports an optional homography, but the live launcher does not load a calibrated homography file.
    - The $\pm 2.5^\circ$ orientation result is covered by synthetic tests; physical accuracy remains unqualified.
    - Packet assembly with CRC16 and transmission via high-speed UART to the motion controller.
-2. **Motion & Actuation Layer (STM32F446RE - cooperative diagnostic firmware):**
-   - 2-Axis ($XZ$) Cartesian gantry motion control.
-   - Closed-loop position verification using dual AS5600 12-bit magnetic encoders over dual hardware I2C buses (`I2C1`, `I2C3`).
-   - Trinamic TMC2240 stepper drivers configured and monitored via high-speed SPI (`SPI2`).
-   - Sensorless homing and mechanical stall detection using StallGuard4.
-   - Current diagnostic profile records conveyor Y, class, angle, and correction but does not actuate the vacuum gripper or orientation servo.
+2. **Motion & Actuation Layer (planned BTT SKR Octopus Pro V1.1 / STM32H723; firmware port pending):**
+   - Planned physical mapping: X and Z TMC2240s in SKR driver sockets 0 and 2, with board-specific connections in `docs/hardware/wiring.md`.
+   - The existing Nucleo firmware uses dual AS5600 buses (`I2C1`, `I2C3`) and TMC2240 `SPI2`; those are F446 assignments, not the H723 board mapping.
+   - The H723 firmware port, including encoder buses, driver SPI, UART, timers, and homing, is pending.
+   - The existing diagnostic profile records conveyor Y, class, angle, and correction but does not actuate the vacuum gripper or orientation servo.
 3. **Material Handling & Interlocking Layer (OMRON PLC):**
    - Conveyor belt drive control and variable frequency / speed regulation.
    - Proximity optical sensors for part arrival detection.
@@ -40,16 +39,16 @@ flowchart TD
         Track --> UART_TX[Framed UART Packet Encoder (CRC16)]
     end
 
-    subgraph MCU ["Motion Control Layer (STM32F446RE / Cooperative State Machine)"]
-        UART_RX[DMA Circular UART RX] --> Parser[CRC16 Validator & Motion Queue]
+    subgraph MCU ["Motion Control Hardware (SKR Octopus Pro V1.1 / STM32H723; firmware port pending)"]
+        UART_RX[UART / USB link - H723 mapping pending] --> Parser[CRC16 Validator & Motion Queue]
         Parser --> MotionTask[Foreground Motion Executor]
         MotionTask --> EncTask[Foreground AS5600 Sampling]
-        MotionTask --> Telemetry[Binary USART2 / SEGGER RTT Logs]
+        MotionTask --> Telemetry[Board serial link / diagnostic logs - H723 mapping pending]
 
-        MotionTask -->|SPI2 & Step/Dir| TMC[Dual TMC2240 Stepper Drivers]
+        MotionTask -->|SPI1 & board driver sockets| TMC[Dual TMC2240 Stepper Drivers]
         MotionTask -. inactive in current profile .-> Servo[End-Effector Reorientation Servo]
         MotionTask -. inactive in current profile .-> Vac[Vacuum Solenoid Ejector]
-        EncTask -->|I2C1 & I2C3| AS5600[Dual AS5600 Magnetic Encoders]
+        EncTask -->|I2C buses per wiring.md| AS5600[Dual AS5600 Magnetic Encoders]
     end
 
     subgraph PLC ["Material Handling Layer (OMRON PLC)"]
@@ -58,7 +57,7 @@ flowchart TD
         Ladder -. intended, not hardware-qualified interlock .-> MCU
     end
 
-    UART_TX -->|USB-UART / 115200 baud| UART_RX
+    UART_TX -->|115200 baud; H723 physical link pending| UART_RX
     TMC --> XZ_Gantry[2-Axis XZ Cartesian Manipulator]
 ```
 
@@ -76,7 +75,8 @@ flowchart TD
 - **Outputs:** Framed binary telemetry packet dispatched to STM32.
 
 ### B. Motion Controller Firmware (`MotorControls/MotionFirmware/`)
-- **Target:** STM32F446RE (`NUCLEO-F446RE`). The core clock (84 MHz) and peripheral bindings are defined by `MotionFirmware.ioc`.
+- **Existing firmware target:** STM32F446RE (`NUCLEO-F446RE`). Its core clock and peripheral bindings are defined by `MotionFirmware.ioc`; this firmware is not compatible with the H723 board without a port.
+- **Physical board target:** BTT SKR Octopus Pro V1.1 (STM32H723), with TMC2240 modules in the X, Z, and optional theta driver sockets. H723 peripheral, UART, timer, encoder, and driver settings remain to be implemented and hardware-qualified.
 - **Selectable firmware profiles** (built side-by-side from a shared CubeMX HAL base):
   - **`motion_diagnostics` (default):** Cooperative foreground state machine with circular `USART2` RX DMA, timer-compare step generation (`TIM2`/`TIM5`), and binary-only metrology replies. It has no RTOS implementation; future task scheduling may be evaluated if the kinematics and coordination workload grows.
   - **`stallguard_cli`:** Interactive ASCII console (`USART2` + SEGGER RTT) for two-end StallGuard4 homing, travel calibration, and `soft`/`bounce` axis cycling.
@@ -118,6 +118,6 @@ The sequence below describes the target workcell workflow; it is not fully imple
 
 - **Host ➔ STM32 Command Wire Format:** [`communication_protocol.md`](communication_protocol.md)
 - **STM32 ➔ Host Diagnostic Records & Metrology Design:** [`motion_diagnostics_design.md`](motion_diagnostics_design.md)
-- **Nucleo-64 Morpho Pinout & Harness Wiring:** [`../hardware/wiring.md`](../hardware/wiring.md)
+- **SKR Octopus Pro V1.1 Pinout & Harness Wiring:** [`../hardware/wiring.md`](../hardware/wiring.md)
 - **Mechanical & Electrical Bill of Materials:** [`../hardware/bom_and_mechanics.md`](../hardware/bom_and_mechanics.md)
 - **Verification & Test Plan Index:** [`../testing/README.md`](../testing/README.md)

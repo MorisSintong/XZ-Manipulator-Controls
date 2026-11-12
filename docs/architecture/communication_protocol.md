@@ -1,8 +1,11 @@
 # Host PC ➔ STM32 Communication Protocol Specification
 
-**Subsystem:** Vision System (Host PC) to Motion Controller (STM32F446RE)  
-**Physical Layer:** Full-Duplex UART via USB-CDC / Hardware Serial  
-**Baud Rate:** 115200 bps (8-N-1: 8 data bits, no parity, 1 stop bit)  
+- **Subsystem:** Vision System (Host PC) to Motion Controller (existing implementation: STM32F446RE; physical target: SKR Octopus Pro V1.1 / STM32H723)
+- **Physical Layer:** Full-Duplex UART via USB-CDC / Hardware Serial
+- **Baud Rate:** 115200 bps (8-N-1: 8 data bits, no parity, 1 stop bit)
+
+> [!IMPORTANT]
+> This protocol is implemented by the existing NUCLEO-F446RE firmware. The SKR Octopus Pro V1.1 H723 firmware port has not been completed; its UART/USB interface and pins must be configured before connecting the host. Do not assume the Nucleo USART2 or ST-LINK VCOM wiring carries over.
 
 ---
 
