@@ -1,18 +1,21 @@
-# MotionFirmware – XZ Manipulator Motion Controller
+# MotionFirmware — StallGuard4 Interactive CLI Profile (`stallguard_cli`)
 
-STM32F446RE (Nucleo-64) firmware that drives the two NEMA 17 axes of the 2-Axis (XZ) Cartesian manipulator through **Trinamic TMC2240** drivers (SPI + STEP/DIR) and reads dual **AS5600** magnetic encoders (I2C).
+Interactive STM32F446RE (Nucleo-64) firmware profile that drives the two NEMA 17 axes of the 2-Axis (XZ) Cartesian manipulator through **Trinamic TMC2240** drivers (SPI + STEP/DIR) and reads dual **AS5600** magnetic encoders (I2C).
 
-The application features **StallGuard4** sensorless homing, travel measurement, and continuous soft/bounce cycle modes. The motion layer accepts absolute position targets in millimeters, coordinating pick-and-place trajectories commanded by the Vision System.
+> [!IMPORTANT]
+> This is the interactive **`stallguard_cli`** bench/calibration profile under [`MotorControls/MotionFirmware/Apps/stallguard_cli/`](./) (built as `MotionFirmware_StallGuardCLI.*`). For the default binary-only live vision & metrology executor (`motion_diagnostics`), see [`../motion_diagnostics/README.md`](../motion_diagnostics/README.md) and [`../../README.md`](../../README.md).
+
+The application features two-end **StallGuard4** sensorless homing, travel measurement, and continuous `soft`/`bounce` cycle modes over an interactive ASCII console (`USART2` + SEGGER RTT).
 
 ---
 
 ## 1. Hardware Mapping
 
 Full wiring schematics, pinouts, and power distribution rules:  
-👉 **[`docs/hardware/wiring.md`](../../docs/hardware/wiring.md)**
+👉 **[`docs/hardware/wiring.md`](../../../../docs/hardware/wiring.md)**
 
 ### Axis Mapping Summary
-*(Configured in `App/Inc/app_config.h` and `App/Src/app_config.c`)*
+*(Configured in `Apps/stallguard_cli/Inc/app_config.h` and `Apps/stallguard_cli/Src/app_config.c`)*
 
 | Axis | Driver | CS | STEP | DIR | ENN | Step Timer | AS5600 Bus |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
@@ -39,33 +42,32 @@ Full wiring schematics, pinouts, and power distribution rules:
 
 ## 3. Build & Flash
 
-From this directory (`MotorControls/MotionFirmware/`):
+Run from `MotorControls\MotionFirmware\` (the firmware root containing `CMakePresets.json`):
 
 ### Target Cross-Compilation (STM32F446RE)
 ```powershell
-# Using CMake presets:
-cmake --preset Debug            # or Release
-cmake --build --preset Debug    # Outputs to build/Debug/MotionFirmware.hex
+# Build with Debug-StallGuard preset (sets MotionFirmware.hex = stallguard_cli,
+# and also emits build\Debug-StallGuard\MotionFirmware_StallGuardCLI.hex):
+cmake --preset Debug-StallGuard            # or Release-StallGuard
+cmake --build --preset Debug-StallGuard
 
-# Or manual CMake invocation:
-cmake -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/gcc-arm-none-eabi.cmake -DCMAKE_BUILD_TYPE=Debug
-ninja -C build
+# Note: even under the default `Debug` preset, `MotionFirmware_StallGuardCLI.hex`
+# is built side-by-side in `build\Debug\`.
 ```
 
 ### Flashing to Target MCU via J-Link
 ```powershell
-.\flash.cmd
-# Or:
-.\flash_jlink.bat
+# Explicitly flash the stallguard_cli image via flash_stallguard_cli.jlink:
+.\flash.cmd stallguard
 ```
 
 ### Host Simulation Unit Tests
 Exhaustive host unit tests verifying the trapezoidal planner, StallGuard4 detector, encoder unwrap, TMC2240 math, console parser, and closed-loop homing/fault simulation:
 
 ```powershell
-cmake -S tests -B build-host -G Ninja -DCMAKE_C_COMPILER=clang
-cmake --build build-host
-ctest --test-dir build-host --output-on-failure
+cmake -S Apps\stallguard_cli\tests -B Apps\stallguard_cli\tests\build-host -G Ninja -DCMAKE_C_COMPILER=clang
+cmake --build Apps\stallguard_cli\tests\build-host
+ctest --test-dir Apps\stallguard_cli\tests\build-host --output-on-failure
 ```
 
 ---
@@ -128,13 +130,14 @@ Connect to `USART2` (`COM9` @ 115200) or open SEGGER RTT Terminal 0:
 ## 7. Firmware Architecture & Source Modules
 
 ```text
-MotionFirmware/
-├── App/
+MotorControls/MotionFirmware/
+├── Apps/stallguard_cli/
 │   ├── Inc/ & Src/
 │   │   ├── motion_profile.c/.h  # Integer trapezoidal planner & step sequencer (Host tested)
 │   │   ├── stepgen.c/.h         # TIM2/TIM5 update ISRs for step pulse generation
 │   │   ├── stall_detect.c/.h    # StallGuard4 blanking, baseline EMA, and confirmation logic
 │   │   ├── axis_ctrl.c/.h       # Homing, cycling, positioning, and fault state machines
+│   │   ├── axis_hw.c/.h         # Hardware binding for timer/GPIO/SPI/I2C axes
 │   │   ├── tmc_calc.c/.h        # Current scaling, register math, and chopper configs
 │   │   ├── tmc_axis.c/.h        # TMC2240 register configuration and health diagnostics
 │   │   ├── enc_track.c/.h       # AS5600 multi-turn angle unwrapping
@@ -143,7 +146,7 @@ MotionFirmware/
 │   │   ├── cmd_parse.c/.h       # Tokenizer & command line interpreter
 │   │   └── app.c / app_config.c # Sequencing, B1 button debouncing, telemetry loop
 │   └── tests/                   # Complete host CTest simulation harness
-├── Core/                        # CubeMX initialization (clock, GPIO, SPI2, USART2)
+├── Core/                        # Shared CubeMX initialization (clock, GPIO, SPI2, USART2, I2C, TIM)
 └── cmake/                       # Arm toolchain definitions and CubeMX build scripts
 ```
 

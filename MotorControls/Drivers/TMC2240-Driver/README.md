@@ -64,9 +64,8 @@ TMC2240_STM32_Driver_Package/
 │   ├── Test-TMC2240.hex                # Intel HEX image (STM32CubeProgrammer)
 │   └── Test-TMC2240.elf                # ELF binary with full debug symbols
 │
-└── docs/                               # Technical documentation & datasheets
-    ├── README.md                       # Documentation index
-    ├── Datasheet_TMC2240.pdf           # Trinamic TMC2240 official datasheet (Rev 2)
+└── docs/                               # Technical documentation
+    ├── README.md                       # Documentation index (vendor PDF datasheet is not bundled)
     ├── API_Reference.md                # Comprehensive API and register documentation
     ├── Hardware_Guide.md               # Pinouts, motor wiring, and power supply notes
     ├── Audit_and_Fix_Log.md            # Hardware register verification & audit history
@@ -77,7 +76,7 @@ TMC2240_STM32_Driver_Package/
 
 ## ⚡ Quick Start
 
-### Existing Firmware
+### Option 1: Pre-Compiled Diagnostic Firmware
 The files in `firmware` are regenerated diagnostics-only Release builds with
 source/binary provenance. They are build-verified but hardware-unverified,
 not an unconditional release qualification. Old auto-motion images are not
@@ -98,7 +97,10 @@ distributed. Read `firmware\README.md` before considering a hardware test.
 
 ---
 
-## 🔌 Hardware Connections (NUCLEO-F446RE to MKS TMC2240)
+## 🔌 Standalone Example Pinout (NUCLEO-F446RE to Single MKS TMC2240)
+
+> [!IMPORTANT]
+> The table below applies **only** to the standalone single-motor `Test-TMC2240` example inside `examples/STM32CubeIDE_Project/`. For the **XZ-Manipulator gantry** (`MotionFirmware`), use the master ST Morpho pinout in [`docs/hardware/wiring.md`](../../../docs/hardware/wiring.md) (`SPI2` on `PB13`/`PB14`/`PB15`; Motor 0/1 controls on `PC0..PC7`).
 
 | STM32 Nucleo Pin | MKS TMC2240 Pin | Signal | Description |
 |:----------------:|:---------------:|:------:|:------------|

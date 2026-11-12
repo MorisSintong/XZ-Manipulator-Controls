@@ -19,14 +19,15 @@ MotorControls/Emulation/
 
 ## 2. Emulation Script (`stm32f446_uart.resc`)
 
-The script loads the virtual platform, flashes the target ELF, and bridges `sysbus.usart2` to a TCP server socket:
+The script loads the virtual platform, flashes the `z_bounce_emulation` profile ELF, and bridges `sysbus.usart2` to a TCP server socket:
 
 - **Platform**: `@platforms/cpus/stm32f4.repl` (Cortex-M4 @ 84 MHz / 125 MIPS)
-- **Firmware Binary**: `$bin?=@MotorControls/MotionFirmware/build/Debug/MotionFirmware.elf`
+- **Firmware Binary**: `$bin?=@MotorControls/MotionFirmware/build/Debug/MotionFirmware_ZBounceEmulation.elf`
 - **UART Bridge**: `emulation CreateServerSocketTerminal $port "term" false` connected to `sysbus.usart2`
 - **Default Port**: `12345` (TCP localhost)
 
 Variables `$bin` and `$port` can be dynamically overridden by pre-defining them before including the script.
+If Renode is not on `PATH` or in a standard install location, set `RENODE_PATH` to the full path of `renode.exe` before running the harness.
 
 ---
 

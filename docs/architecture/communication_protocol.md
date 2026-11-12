@@ -8,7 +8,7 @@
 
 ## 1. Frame Structure Overview
 
-The deployed command uses a fixed-length 18-byte binary frame with synchronization preambles and CRC16-CCITT validation. The diagnostic runtime is a cooperative foreground state machine with UART DMA; FreeRTOS queue descriptions are a future integration, not a requirement of this build. USART2 is binary-only; human firmware logs use RTT.
+The deployed command uses a fixed-length 18-byte binary frame with synchronization preambles and CRC16-CCITT validation. The diagnostic runtime is a cooperative foreground state machine with UART DMA and has no RTOS implementation. An RTOS and its queues may be evaluated in a future systems stage if more complex kinematics and real-time coordination warrant task scheduling; neither is a requirement of this build or protocol. USART2 is binary-only; human firmware logs use RTT.
 
 ```text
  +-------+-------+------+-----------+---------+-----------+-----------+-------------+------------------+---------------+-------------+
@@ -39,24 +39,28 @@ The deployed command uses a fixed-length 18-byte binary frame with synchronizati
 
 ---
 
-## 3. CRC-16 Calculation Specification
-
-Golden deployed command: object=1, class=1, X=150 mm, Y=100 mm, angle=correction=0:
-`AA5501010001DC05E803000000009A740D0A`. CRC is `0x749A`, stored LE (`9A74`).
-The legacy payload-only CRC `0x82BB` is **not accepted**. `"123456789"` gives `0x29B1`.
-For C call `crc16_ccitt(frame, 14)`; for Python calculate over `frame[:14]`.
-
-Firmware accepts types 01/02/03/04. Production `uart_protocol.py` emits 01/02;
-the bench sender additionally emits 03/04. Y is conveyor Y, **not manipulator Z**.
-Z safe height/depth is a fixed qualified firmware configuration. Class/angle/correction
-are echoed but not actuator commands in the diagnostic slice.
+## 3. CRC-16 Calculation & Command Semantics
 
 - **Algorithm:** CRC-16/CCITT-FALSE
 - **Polynomial:** $0x1021$ ($x^{16} + x^{12} + x^5 + 1$)
 - **Initial Value:** $0xFFFF$
-- **RefIn:** False (MSB first)
-- **RefOut:** False (MSB first)
+- **RefIn / RefOut:** `false` / `false` (MSB first)
 - **XorOut:** $0x0000$
+- **Command Coverage:** Bytes **`0…13` inclusive** (preamble `0xAA 0x55` included; stored little-endian in bytes `14…15`).
+  - C call: `crc16_ccitt(frame, 14)`
+  - Python call: `calculate_crc16(frame[:14])`
+
+### Verification Test Vectors
+- **Standard ASCII check:** `"123456789"` $\to$ `0x29B1`
+- **Golden deployed command** (`OBJECT_ID=1`, `CLASS_ID=1`, `X=150.0 mm`, `Y=100.0 mm`, `ANGLE=0.0°`, `CORR=0.0°`):
+  - Hex bytes: `AA5501010001DC05E803000000009A740D0A`
+  - Computed CRC: `0x749A` (encoded little-endian as `9A 74`).
+  - Legacy payload-only CRC (`0x82BB`, omitting `AA 55`) is **rejected**.
+
+### Operational & Coordinate Rules
+- **Supported message types:** Firmware accepts `0x01`, `0x02`, `0x03`, and `0x04`. Live `VisionSystem` (`uart_protocol.py`) emits `0x01` (Pick) and `0x02` (Heartbeat); the `motion-diag` bench CLI additionally emits `0x03` (Software Abort) and `0x04` (Re-homing).
+- **Coordinate meaning:** `POS_Y_MM` is **conveyor longitudinal $Y$**, **not manipulator vertical $Z$**. Safe $Z$ height and pick depth are fixed, qualified firmware configuration parameters (`motion_config.c`).
+- **Diagnostic profile behavior:** In `motion_diagnostics`, `POS_Y_MM`, `CLASS_ID`, `ANGLE_DEG`, and `CORRECTION_DEG` are validated and echoed in completion records, not used to actuate vacuum or servo hardware.
 
 ### Reference C Implementation (STM32 Firmware)
 ```c
@@ -117,14 +121,16 @@ It is for local display only. The diagnostic firmware has no ASCII parser/fallba
 The vision runtime sends the original 18-byte `bytes` object without text conversion;
 do not send display strings or mix binary replies with console text.
 
-## 6. STM32 → PC Diagnostic Replies
+## 6. STM32 ➔ PC Binary Diagnostic Replies (`v1`)
 
-See [motion diagnostics design, §3](motion_diagnostics_design.md#3-stm32--pc-wire-protocol-version-1)
-for the authoritative v1 wire layouts: D3 7E preamble, LE header, COMMAND_RESULT
-356 bytes (three distinct X_MOVE/Z_DOWN/Z_UP phases), HOME_RESULT 124 bytes,
-STATUS 116 bytes. Their CRC covers **bytes 2…39+payload_len**, unlike commands.
-Use the installed `motion_diagnostics.frames.StreamDecoder` for arbitrary chunks;
-never `readline` because preambles and CRLF can occur inside payloads.
-Host session/send sequence is correlated locally using exact command echo and
-firmware ordinal, not embedded in the unchanged command. Software abort does not
-replace a physical interlock or Z anti-drop provision.
+See [`motion_diagnostics_design.md` §3](motion_diagnostics_design.md#3-stm32--pc-wire-protocol-version-1) for the authoritative `v1` reply specification:
+
+| Record Type | ID | Payload | Total Length | Summary |
+| :--- | :---: | :---: | :---: | :--- |
+| `COMMAND_RESULT` | `0x81` | 312 B | **356 B** | Common 40 B header + three 104 B phase blocks (`X_MOVE`, `Z_DOWN`, `Z_UP`) + CRC16 + CRLF |
+| `HOME_RESULT` | `0x82` | 80 B | **124 B** | Common 40 B header + two 40 B axis homing blocks (`X`, `Z`) + CRC16 + CRLF |
+| `STATUS` | `0x83` | 72 B | **116 B** | Common 40 B header + 72 B status/counter snapshot + CRC16 + CRLF |
+
+- **Distinct Framing & CRC Coverage:** Replies start with preamble `0xD3 0x7E` (distinct from command `0xAA 0x55`) and a 38-byte little-endian header (`bytes 2…39`). Unlike commands, reply CRC16-CCITT covers **bytes `2…(39 + payload_len)` inclusive** (preamble excluded).
+- **Stream Decoding:** Always decode incoming bytes with `motion_diagnostics.frames.StreamDecoder` over arbitrary read chunks—**never** `readline()`, because `0x0D 0x0A` and preamble byte pairs can legally appear inside binary payloads.
+- **Host Correlation & Safety:** Host `session_id` and `host_send_seq` are correlated locally using exact command echo fields and firmware `command_seq` ordinals (they are not embedded in the 18-byte command). Software abort (`0x03`) does not replace a physical emergency stop or mechanical Z anti-drop support.

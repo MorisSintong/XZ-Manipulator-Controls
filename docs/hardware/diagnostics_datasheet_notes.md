@@ -15,7 +15,7 @@ References below use **printed datasheet pages**, not PDF viewer page numbers. A
 | **R-P** | [UART protocol](../architecture/communication_protocol.md), §§1–3 | Repository protocol specification |
 | **R-A** | `MotorControls\Drivers\AS5600\include\as5600.h`, `src\as5600.c`, `ports\stm32_hal\as5600_stm32_hal.{h,c}`, `docs\integration.md` | Directly inspected driver/API evidence |
 | **R-T** | `MotorControls\Drivers\TMC2240-Driver\driver\inc\{tmc2240_hal.h,tmc2240_core.h,TMC2240_HW_Abstraction.h}`, `driver\src\{tmc2240_hal.c,TMC2240.c}` | Directly inspected driver/API evidence; hardware interpretation remains UNVERIFIED against T |
-| **R-F** | `MotorControls\MotionFirmware\Core\Src\main.c`: `configure_tmc2240_motor`, `probe_until_stall`, `dump_driver_diagnostics`, peripheral initialization | Current single-axis firmware, not the future dual-axis design |
+| **R-F** | `MotorControls\MotionFirmware\Core\Src\main.c`: `configure_tmc2240_motor`, `probe_until_stall`, `dump_driver_diagnostics`, peripheral initialization | 2026-10-06 single-axis baseline snapshot (since moved to `Apps\z_bounce_emulation\` alongside `Apps\motion_diagnostics\` and `Apps\stallguard_cli\`) |
 
 **Scope boundary:** motor-shaft sensing is not carriage-position sensing. Neither driver evidence nor shaft angle detects belt slip, pulley/coupler slip downstream of the magnet, screw backlash, compliance, or pitch/lead calibration errors.
 

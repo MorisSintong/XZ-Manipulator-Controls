@@ -11,14 +11,16 @@
 - **System Purpose:**  
   Automated Quality Control (QC) and sorting of electrolytic capacitors on an industrial conveyor using a 2-axis (XZ) Cartesian Manipulator with vacuum suction cup and micro-servo reorientation.
 - **Hardware Integration Target:**
-  - **Vision:** Overhead camera $\to$ PC running Ultralytics YOLO + Continuous Angle Estimation $\to$ Camera-to-Conveyor Homography (pixel to mm).
-  - **Microcontroller:** **STM32F446RE** running FreeRTOS with DMA UART (circular buffer).
+  - **Vision:** Overhead camera $\to$ PC running Ultralytics YOLO + Continuous Angle Estimation $\to$ Camera-to-Conveyor coordinate mapping (pixel to mm; optional homography supported).
+  - **Microcontroller:** **STM32F446RE** with circular-DMA UART. The current `motion_diagnostics` profile uses a cooperative foreground state machine; FreeRTOS integration is not part of the current firmware.
   - **Motion Controller:** STM32 controls **TMC2240** stepper drivers (SPI / Step-Dir) for X and Z axes, with **AS5600** magnetic encoders (I2C) and vacuum solenoid valve.
   - **Sorting Jig & Conveyor Line:** Coordinated with **OMRON CP2E-N PLC** via Modbus TCP/IP.
 
 ---
 
-## 2. Documented Critical Faults (Must Be Remediated)
+## 2. Baseline Faults Recorded Before Remediation
+
+The following describes the baseline reported when this plan was written; it is not a claim that every fault remains in the current checkout. Use the live source and automated verification suite to determine current status.
 
 1. **Quantized Angle Trap in `utils/angle_calculator.py`:**
    - The current code clamps orientation to only 4 discrete angles ($0^\circ, 90^\circ, 180^\circ, 270^\circ$). Continuous angles (e.g. $15^\circ, 30^\circ, 45^\circ, 60^\circ, 135^\circ$) are forcefully corrupted.
@@ -38,7 +40,9 @@
 
 ---
 
-## 3. Strict Step-by-Step Execution Roadmap
+## 3. Remediation Requirements and Verification
+
+The steps below define the acceptance requirements for the baseline faults above; they are not assertions that those faults remain in the current checkout. The Section 4 checklist and `tests/verify_vision_system.py` determine current completion status. Rerun the suite after changes to the VisionSystem or its wire contract.
 
 ### Step 1: Continuous Angle & Polarity Detection (`utils/angle_calculator.py`)
 - Implement continuous angle calculation using Principal Component Analysis (PCA) on the capacitor contour or OpenCV Minimum Area Bounded Box with proper version-agnostic angle unwrapping.
@@ -73,7 +77,7 @@ Byte 16-17: Delimiter / Tail (0x0D 0x0A -> \r\n)
   - **COMPLETELY REMOVE** `preferences.putString` / `simpanEntryNVS` from the real-time packet loop. Store logs only in volatile RAM buffers.
   - **REMOVE** all blocking `delay()` calls. Use non-blocking `millis()` state machine.
   - Support the new framed UART packet parsing with CRC16 verification.
-- Document the exact C/C++ struct and FreeRTOS queue interface so Moris can integrate it directly into `MotorControls` for the STM32F446RE.
+- Document the exact C/C++ wire layout and bounded motion-queue interface. The current firmware is cooperative; describe any FreeRTOS port as future integration, not current behavior.
 
 ### Step 5: Portability & Launchers
 - Modify all `.bat` files in `06_Launchers/` and `TEST_OFFLINE.bat`:

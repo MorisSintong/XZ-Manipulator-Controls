@@ -39,21 +39,50 @@ MotorControls/MotionFirmware/
 
 ## 2. Building All Firmware Targets
 
-A single CMake build compiles the shared STM32 HAL once and produces `.elf`, `.hex`, and `.bin` images for **all three profiles** side-by-side in `build/<Preset>/`:
+A single CMake build compiles the shared STM32 HAL once and produces `.elf`, `.hex`, and `.bin` images for **all three profiles** side-by-side in `build/<Preset>/` (`MotionFirmware_Diagnostics.*`, `MotionFirmware_StallGuardCLI.*`, and `MotionFirmware_ZBounceEmulation.*`), while copying the selected preset's default profile to `MotionFirmware.*`:
 
 ```powershell
-# Default preset (MotionFirmware.hex = motion_diagnostics, plus all 3 named targets):
+# Default preset (MotionFirmware.hex = motion_diagnostics; Release preset also available):
 cmake --preset Debug
 cmake --build --preset Debug
 
-# Or set MotionFirmware.hex to the interactive StallGuard CLI profile:
+# Interactive StallGuard CLI as default MotionFirmware.hex (Release-StallGuard also available):
 cmake --preset Debug-StallGuard
 cmake --build --preset Debug-StallGuard
+
+# Z-bounce emulation responder as default MotionFirmware.hex:
+cmake --preset Debug-ZBounce
+cmake --build --preset Debug-ZBounce
 ```
 
 ---
 
-## 3. Running Host Unit Tests & Verification Suites
+## 3. Flashing & Real-Time Telemetry (SEGGER J-Link)
+
+Helper scripts in `MotorControls/MotionFirmware/` flash the target **NUCLEO-F446RE** over SWD and open SEGGER RTT / debug sessions:
+
+```powershell
+# Flash default MotionFirmware.hex or select a named profile explicitly:
+.\flash.cmd                 # Flashes default MotionFirmware.hex (via flash.jlink)
+.\flash.cmd diagnostics     # Flashes MotionFirmware_Diagnostics.hex
+.\flash.cmd stallguard      # Flashes MotionFirmware_StallGuardCLI.hex
+.\flash.cmd zbounce         # Flashes MotionFirmware_ZBounceEmulation.hex
+
+# Alternative standalone J-Link Commander wrapper for default MotionFirmware.hex:
+.\flash_jlink.bat
+
+# Stream non-blocking SEGGER RTT Terminal 0 logs or reset/erase target:
+.\rtt.cmd                   # Or .\open_rtt_viewer.bat
+.\reset.cmd
+.\erase.cmd
+```
+
+> [!NOTE]
+> `flash.cmd`, `rtt.cmd`, `reset.cmd`, and `erase.cmd` invoke `C:\tools\jlink\JLink.exe` (while `flash_jlink.bat` checks `C:\Program Files\SEGGER\JLink_V978\JLink.exe`), or you can flash any `.elf` directly with `probe-rs run --chip STM32F446RETx`.
+
+---
+
+## 4. Running Host Unit Tests & Verification Suites
 
 ### A. `motion_diagnostics` Host CTest + Cortex-M4 Compile Check (21 tests)
 ```powershell
@@ -62,14 +91,14 @@ cmake --build --preset Debug-StallGuard
 
 ### B. `stallguard_cli` Host Closed-Loop Simulation CTest (3 suites)
 ```powershell
-cmake -S Apps/stallguard_cli/tests -B Apps/stallguard_cli/tests/build-host -G Ninja -DCMAKE_C_COMPILER=gcc
-cmake --build Apps/stallguard_cli/tests/build-host
-ctest --test-dir Apps/stallguard_cli/tests/build-host --output-on-failure
+cmake -S Apps\stallguard_cli\tests -B Apps\stallguard_cli\tests\build-host -G Ninja -DCMAKE_C_COMPILER=gcc
+cmake --build Apps\stallguard_cli\tests\build-host
+ctest --test-dir Apps\stallguard_cli\tests\build-host --output-on-failure
 ```
 
 ### C. Host Python Diagnostics Library & CLI Tests (run from repository root)
 ```powershell
-uv run --project packages/motion_diagnostics pytest packages/motion_diagnostics/tests
-uv run --project MotorControls/MotionFirmware/tools/diag pytest MotorControls/MotionFirmware/tools/diag/tests
-uv run --project VisionSystem pytest VisionSystem/tests/test_diag_transport.py
+uv run --project packages\motion_diagnostics pytest packages\motion_diagnostics\tests
+uv run --project MotorControls\MotionFirmware\tools\diag pytest MotorControls\MotionFirmware\tools\diag\tests
+uv run --project VisionSystem pytest VisionSystem\tests\test_diag_transport.py
 ```

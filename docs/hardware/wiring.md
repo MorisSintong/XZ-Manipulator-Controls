@@ -5,9 +5,9 @@
 **Target Board:** STM32F446RE Nucleo-64 (`MB1136` — **ST Morpho Headers `CN7` & `CN10` Only**)  
 **Actuators:**  
 - **Z-Axis & X-Axis (Closed-Loop):** 2× NEMA 17 Stepper Motors driven by **BIGTREETECH (BTT) / MKS TMC2240 v1.0** StepStick Modules (SPI Mode, $R_{\text{REF}} = 12\,\text{k}\Omega$)  
-- **End-Effector Rotational / $\theta$-Axis (Open-Loop):** 1× NEMA 11 Stepper Motor driven by a 3rd **BTT / MKS TMC2240 v1.0** StepStick Module (SPI Mode, $R_{\text{REF}} = 12\,\text{k}\Omega$, no rotary encoder)  
+- **End-Effector Rotational / $\theta$-Axis (Open-Loop Harness Provision):** 1× NEMA 11 Stepper Motor driven by a 3rd **BTT / MKS TMC2240 v1.0** StepStick Module (SPI Mode, $R_{\text{REF}} = 12\,\text{k}\Omega$, no rotary encoder; provisioned on `CN7 Pins 1–4`, inactive in current dual-axis `X`/`Z` firmware profiles)  
 **Sensors:** 2× **AS5600 Breakout Modules** (12-bit Magnetic Absolute Rotary Encoders on X & Z axes, Dual I2C), 1× **5V 3-Wire Inductive Proximity Sensor** (Morpho GPIO)  
-**Telemetry:** Dual Broadcast on USART2 (115200 baud, ST-LINK VCOM `COM9`) and SEGGER RTT Terminal 0  
+**Telemetry:** Profile-dependent on `USART2` (115200 baud, ST-LINK VCOM `COM9`, if present on probe) and **SEGGER RTT Terminal 0**: `motion_diagnostics` uses binary-only `USART2` frames + RTT human logs, whereas `stallguard_cli` broadcasts interactive ASCII on both `USART2` and RTT  
 
 ---
 

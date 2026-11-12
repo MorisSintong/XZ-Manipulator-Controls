@@ -19,8 +19,6 @@ The PLC operates as the industrial material handling layer, responsible for:
 | File | Type | Description |
 | :--- | :--- | :--- |
 | `TUGAS_AKHIR_CX.cxp` | CX-Programmer Project | Primary ladder logic project file |
-| `TUGAS_AKHIR_CX.opt` | Option File | Workspace options, memory layout, and window states |
-| `TUGAS_AKHIR_CX.bak` | Backup File | Previous version auto-backup |
 
 ---
 

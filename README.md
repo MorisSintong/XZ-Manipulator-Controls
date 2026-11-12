@@ -8,20 +8,20 @@ Undergraduate Thesis Engineering Repository (*Tugas Akhir - Teknik Elektro / Sis
 
 ## 1. System Overview
 
-This repository houses the full-stack engineering implementation of an automated industrial inspection and sorting workcell for electrolytic capacitors:
+This repository contains software, firmware, hardware design, and test documentation for an automated capacitor inspection and sorting prototype:
 1. **Perception & Quality Control:** Real-time overhead computer vision pipeline (YOLO + PCA continuous angle calculation) detecting capacitor polarity orientation and spatial coordinates on a moving conveyor belt.
-2. **Motion & Actuation:** High-precision 2-Axis ($XZ$) Cartesian Manipulator driven by an STM32F446RE microcontroller running FreeRTOS, Trinamic TMC2240 SPI smart stepper drivers, AS5600 12-bit magnetic rotary encoders, and a pneumatic vacuum suction gripper.
+2. **Motion & Actuation:** 2-Axis ($XZ$) Cartesian manipulator firmware for STM32F446RE, TMC2240 SPI stepper drivers, and AS5600 12-bit magnetic encoders. The default firmware profile is a cooperative, dry-run diagnostic executor; vacuum and servo actuation and hardware qualification are not complete.
 3. **Conveyor & Material Handling:** Industrial conveyor workstation interlocked via an OMRON PLC running custom ladder logic.
 
 ```mermaid
 flowchart LR
     A[Overhead Camera] --> B[Vision System<br/>Python + YOLO]
-    B -->|Framed UART 115200<br/>CRC16-CCITT| C[Motion Controller<br/>STM32F446RE FreeRTOS]
+    B -->|Framed UART 115200<br/>CRC16-CCITT| C[Motion Controller<br/>STM32F446RE cooperative diagnostics]
     C -->|SPI2 / Step-Dir| D[TMC2240 Drivers<br/>NEMA 17 Steppers]
     C -->|I2C1 / I2C3| E[AS5600 Encoders<br/>Position Feedback]
-    C -->|PWM & GPIO| F[Vacuum Gripper &<br/>Orientation Servo]
+    C -. not active in diagnostic profile .-> F[Vacuum Gripper &<br/>Orientation Servo]
     G[Conveyor Belt] <-->|Sensors & Interlocks| H[OMRON PLC<br/>Ladder Logic]
-    H <-->|Hardware Handshake| C
+    H -. intended interlock .-> C
 ```
 
 ---
@@ -33,15 +33,16 @@ All core engineering specifications, protocols, wiring diagrams, and test guides
 ```text
 docs/
 ├── architecture/
-│   ├── system_overview.md         # Detailed block diagrams and subsystem interaction lifecycle
-│   └── communication_protocol.md  # 18-byte framed binary UART protocol & CRC16-CCITT specification
+│   ├── system_overview.md            # Block diagrams, subsystem roles & target sorting lifecycle
+│   ├── communication_protocol.md     # 18-byte Host->STM32 UART frame & CRC16-CCITT specification
+│   └── motion_diagnostics_design.md  # Dual-axis STM32->Host binary records, state machine & metrology
 ├── hardware/
-│   ├── wiring.md                  # Master Nucleo-64, TMC2240, AS5600, proximity sensor & power wiring
-│   ├── bom_and_mechanics.md       # Bill of Materials, XZ gantry mechanics, and pneumatic specs
-│   └── Datasheets/                # Official STM32F446RE, Nucleo-64 (UM1724), TMC2240 & AS5600 PDFs
+│   ├── wiring.md                     # Master Nucleo-64 Morpho, TMC2240, AS5600 & sensor wiring
+│   ├── bom_and_mechanics.md          # Bill of Materials, XZ gantry mechanics, and pneumatic specs
+│   └── diagnostics_datasheet_notes.md # Datasheet evidence and open questions; vendor PDFs are not bundled
 └── testing/
-    ├── test_methodology.md        # V-model test hierarchy, repeatability benchmarks, and acceptance criteria
-    └── README.md                  # Real-case experimental test matrix & measurement sheets
+    ├── README.md                     # Automated test suites & bench verification index
+    └── Perencanaan_Test_Realcase_XZ_Manipulator_Lengkap.xlsx
 ```
 
 ---
@@ -50,23 +51,25 @@ docs/
 
 ```text
 XZ-Manipulator-Controls/
-├── docs/                  # Architecture, hardware wiring, datasheets, and testing documentation
+├── docs/                  # Architecture, wire contracts, hardware wiring/notes & testing guides
 ├── Hardware/              # KiCad 10 PCB & schematic project (XZ-Controller)
-├── MotorControls/         # Embedded STM32 firmware, drivers, Renode emulation & UART tests
+├── MotorControls/         # Embedded STM32 firmware profiles, C drivers, Renode emulation & CLI tools
+├── packages/              # Shared Python libraries (motion_diagnostics framing, CSV & metrics)
 ├── Program_Ladder/        # OMRON PLC conveyor ladder logic (CX-Programmer)
-└── VisionSystem/          # Host PC Python / YOLO computer vision pipeline
+└── VisionSystem/          # Host PC Python / YOLO computer vision & UART telemetry pipeline
 ```
 
 | Subsystem / Directory | Primary Role | Documentation |
 | :--- | :--- | :--- |
 | **[`Hardware/XZ-Controller/`](Hardware/XZ-Controller/)** | KiCad 10 electrical schematic, PCB layout, custom symbols/footprints & 3D STEP models | [`docs/hardware/wiring.md`](docs/hardware/wiring.md) |
-| **[`Hardware/XZ-Controller/`](Hardware/XZ-Controller/)** | KiCad 10 electrical schematic, PCB layout, custom symbols/footprints & 3D STEP models | [`docs/hardware/wiring.md`](docs/hardware/wiring.md) |
-| **[`MotorControls/`](MotorControls/)** | Embedded STM32 subsystem (firmware, drivers, Renode emulation, and UART tests) | [`MotorControls/README.md`](MotorControls/README.md) |
-| ├── **[`MotionFirmware/`](MotorControls/MotionFirmware/)** | STM32F446RE firmware, CMake/Ninja build, J-Link scripts | [`MotionFirmware/README.md`](MotorControls/MotionFirmware/README.md) |
-| ├── **[`Drivers/`](MotorControls/Drivers/)** | Modular, tested C drivers for TMC2240 and AS5600 encoders | [`AS5600/README.md`](MotorControls/Drivers/AS5600/README.md), [`TMC2240/README.md`](MotorControls/Drivers/TMC2240-Driver/README.md) |
-| ├── **[`Emulation/`](MotorControls/Emulation/)** | Renode STM32F446RE platform emulation & USART2 socket bridge | [`Emulation/README.md`](MotorControls/Emulation/README.md) |
+| **[`MotorControls/`](MotorControls/)** | Embedded STM32 subsystem (multi-profile firmware, drivers, Renode emulation & host CLI) | [`MotorControls/README.md`](MotorControls/README.md) |
+| ├── **[`MotionFirmware/`](MotorControls/MotionFirmware/)** | STM32F446RE CMake/Ninja suite (`motion_diagnostics`, `stallguard_cli`, `z_bounce_emulation`) | [`MotionFirmware/README.md`](MotorControls/MotionFirmware/README.md) |
+| ├── **[`MotionFirmware/tools/diag/`](MotorControls/MotionFirmware/tools/diag/)** | Host Python bench CLI (`motion-diag`) for capture, sequences, heartbeats & reports | [`tools/diag/README.md`](MotorControls/MotionFirmware/tools/diag/README.md) |
+| ├── **[`Drivers/`](MotorControls/Drivers/)** | Modular, host-tested C drivers for TMC2240 (SPI) and AS5600 (I2C) encoders | [`AS5600/README.md`](MotorControls/Drivers/AS5600/README.md), [`TMC2240-Driver/README.md`](MotorControls/Drivers/TMC2240-Driver/README.md) |
+| ├── **[`Emulation/`](MotorControls/Emulation/)** | Renode STM32F446RE platform emulation & USART2 TCP socket bridge | [`Emulation/README.md`](MotorControls/Emulation/README.md) |
 | └── **[`tests/emulation/`](MotorControls/tests/emulation/)** | Automated STM32 UART protocol & Renode verification test suite | [`run_tests.py`](MotorControls/tests/emulation/run_tests.py) |
-| **[`VisionSystem/`](VisionSystem/)** | YOLO detection, PCA continuous angle calculation, conveyor tracking | [`VisionSystem/README.md`](VisionSystem/README.md) |
+| **[`packages/motion_diagnostics/`](packages/motion_diagnostics/)** | Shared Python wire decoder, CRC16, correlation registry, long-form CSV & metrology | [`motion_diagnostics_design.md`](docs/architecture/motion_diagnostics_design.md) |
+| **[`VisionSystem/`](VisionSystem/)** | YOLO capacitor detection, PCA continuous angle calculation & conveyor tracking | [`VisionSystem/README.md`](VisionSystem/README.md) |
 | **[`Program_Ladder/`](Program_Ladder/)** | OMRON PLC conveyor control ladder logic (CX-Programmer `.cxp`) | [`Program_Ladder/README.md`](Program_Ladder/README.md) |
 
 ---
@@ -74,33 +77,41 @@ XZ-Manipulator-Controls/
 ## 4. Quick Start Guide
 
 ### A. Vision System (Host PC)
-Requires Python 3.12+ (managed deterministically via [`uv`](https://github.com/astral-sh/uv)):
+Requires Python 3.10+ per `VisionSystem/pyproject.toml` (examples below use Python 3.12), managed via [`uv`](https://github.com/astral-sh/uv) from the repository root:
 ```powershell
-# 1. Setup virtual environment and dependencies
-uv venv --python 3.12
-.venv\Scripts\activate
-uv pip install ultralytics opencv-python numpy pyserial pytest
+# 1. Sync declared dependencies (includes local editable motion-diagnostics package)
+uv sync --project VisionSystem --python 3.12
 
-# 2. Run real-time detection & telemetry stream
-uv run python VisionSystem/04_Source_Code/4_detect_realtime.py
+# 2. Install Ultralytics YOLO into the same environment for live camera inference
+uv pip install --python VisionSystem\.venv\Scripts\python.exe ultralytics
 
-# 3. Run automated verification suite (Angle, CRC, Debounce)
-uv run python VisionSystem/tests/verify_vision_system.py
+# 3. Run real-time detection & binary UART telemetry stream
+uv run --project VisionSystem python VisionSystem\04_Source_Code\4_detect_realtime.py --uart-port COM9
+
+# 4. Run offline verification & transport test suites (no hardware required)
+uv run --project VisionSystem python VisionSystem\tests\verify_vision_system.py
+uv run --project VisionSystem pytest
 ```
 
 ### B. Motion Firmware & Emulation (STM32F446RE)
 Requires Arm GNU Toolchain (`arm-none-eabi-gcc`), CMake, and Ninja:
 ```powershell
-# 1. Build STM32 MotionFirmware
-cmake -B MotorControls/MotionFirmware/build/Debug -S MotorControls/MotionFirmware -G Ninja
-ninja -C MotorControls/MotionFirmware/build/Debug
+# 1. Build all three STM32 firmware profiles (default MotionFirmware.* = motion_diagnostics)
+Push-Location MotorControls\MotionFirmware
+cmake --preset Debug
+cmake --build --preset Debug
+Pop-Location
 
-# 2. Run STM32 UART Emulation Test Suite
-uv run python MotorControls/tests/emulation/run_tests.py
+# 2. Run host CTest + Cortex-M4 compile check for motion_diagnostics
+.\MotorControls\MotionFirmware\Apps\motion_diagnostics\Tests\run_tests.ps1
 
-# 3. Flash to target MCU via J-Link
-cd MotorControls/MotionFirmware
-.\flash_jlink.bat
+# 3. Run STM32 UART Renode / Mock emulation suite (targets z_bounce_emulation)
+uv run python MotorControls\tests\emulation\run_tests.py
+
+# 4. Flash a profile to NUCLEO-F446RE via SEGGER J-Link (diagnostics | stallguard | zbounce)
+Push-Location MotorControls\MotionFirmware
+.\flash.cmd diagnostics
+Pop-Location
 ```
 
 ---

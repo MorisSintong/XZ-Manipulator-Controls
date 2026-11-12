@@ -2,6 +2,8 @@
 
 Machine vision inspection, continuous capacitor orientation tracking, and real-time UART telemetry pipeline for the XZ Manipulator Quality Control cell.
 
+The host pipeline uses a cooperative STM32 diagnostic firmware profile; it does not depend on a FreeRTOS task scheduler. Pixel coordinates are mapped with configured per-axis scale and origin offsets by default. The mapper supports an optional homography, but the live launcher does not load a calibrated homography file.
+
 ---
 
 ## 1. Overview & Pipeline Architecture
@@ -10,18 +12,18 @@ The **VisionSystem** handles overhead automated optical inspection (AOI) of elec
 1. **Object Detection:** Detects capacitors using Ultralytics YOLO models.
 2. **Orientation & Polarity Estimation:** Calculates continuous physical orientation across $[0^\circ, 360^\circ)$ using Principal Component Analysis (PCA) and localized polarity strip/lead analysis.
 3. **Spatial Tracking:** Centroid-based conveyor tracking with debounce thresholds to prevent duplicate triggers on moving parts.
-4. **Coordinate Transformation:** Homography mapping from camera pixel coordinates $(u, v)$ to conveyor frame physical coordinates $(X, Y)$ in millimeters.
+4. **Coordinate Transformation:** Pixel-to-millimeter mapping from camera coordinates $(u, v)$ to conveyor coordinates $(X, Y)$ using configured scale and origin offsets; an optional homography is available through the mapper API.
 5. **Framed Telemetry Dispatch:** Packages target data into 18-byte binary frames with CRC16-CCITT and transmits to the STM32F446RE motion controller over UART.
 
 ```text
  +---------------------+       +---------------------+       +---------------------+
  |  Overhead Camera    |  ➔    |  YOLO Detection &   |  ➔    |  PCA Orientation &  |
- |  (1080p @ 30 FPS)   |       |  Bounding Box ROI   |       |  Polarity Analyzer  |
+ |  (USB Video Stream) |       |  Bounding Box ROI   |       |  Polarity Analyzer  |
  +---------------------+       +---------------------+       +---------------------+
                                                                         |
  +---------------------+       +---------------------+                  v
- | STM32 FreeRTOS      |      |  Framed UART Packet |      |  Spatial Conveyor   |
- | Motion Controller   |       |  (18B + CRC16)      |       |  Tracker & Debounce |
+ | STM32F446RE Motion  |      |  Framed UART Packet |      |  Spatial Conveyor   |
+ | (Cooperative Diag.) |       |  (18B + CRC16)      |       |  Tracker & Debounce |
  +---------------------+       +---------------------+       +---------------------+
 ```
 
@@ -32,122 +34,127 @@ The **VisionSystem** handles overhead automated optical inspection (AOI) of elec
 ```text
 VisionSystem/
 ├── README.md                      # This subsystem guide
-├── REMEDIATION_PLAN_AI.md         # Active engineering audit & thesis compliance roadmap
+├── REMEDIATION_PLAN_AI.md         # Engineering audit & thesis compliance specification
+├── pyproject.toml                 # Project manifest & editable motion-diagnostics dependency
+├── TEST_OFFLINE.bat               # Top-level offline test convenience script
 ├── 01_Dokumen_TA/                 # Official thesis proposal & specifications (TA_2026_extracted.txt)
 ├── 04_Source_Code/                # Core Python source code
 │   ├── 1_train.py                 # YOLO model training
 │   ├── 2_evaluate.py              # Precision, recall, and mAP evaluation
 │   ├── 3_test_offline.py          # Offline batch validation on test images
-│   ├── 4_detect_realtime.py       # Live camera detection, tracking, and UART streaming
+│   ├── 4_detect_realtime.py       # Live camera detection, tracking, and binary UART streaming
 │   ├── 5_test_single_image.py     # Single image test with annotated overlay
 │   ├── 6_test_video.py            # Video stream simulation test
 │   ├── 7_test_frame_read.py       # Camera acquisition latency benchmark
 │   ├── diagnostik_uart.py         # Serial port loopback and diagnosis utility
-│   ├── firmware_esp32/            # Auxiliary ESP32 serial bridge firmware
-│   └── utils/                     # Angle calculation, camera homography, UART protocols
-├── 06_Launchers/                  # Double-clickable Windows batch launcher scripts
-└── tests/                         # Automated programmatic verification suites
-    └── verify_vision_system.py    # Angle, framing, CRC16, and debounce tests
+│   ├── test_uart_esp32.py         # Auxiliary ESP32 UART bridge test script
+│   ├── firmware_esp32/            # Auxiliary ESP32 non-blocking serial bridge sketch
+│   └── utils/                     # Core vision & transport modules
+│       ├── angle_calculator.py    # Continuous PCA orientation [0°, 360°) & polarity estimation
+│       ├── conveyor_tracker.py    # Centroid tracker with inspection-line FIFO debounce
+│       ├── uart_protocol.py       # 18-byte frame encoder/decoder, CRC16 & pixel-to-mm mapper
+│       ├── vision_command.py      # Runtime angle quantization, wrapping & servo sign conversion
+│       ├── uart_handler.py        # Bounded non-blocking serial owner (KoneksiUART)
+│       └── diag_receiver.py       # Background STM32 binary reply decoder & CSV/raw logger
+├── 06_Launchers/                  # Double-clickable portable Windows batch launchers
+├── SERVO/                         # Auxiliary standalone servo test sketch (SERVO.ino)
+└── tests/                         # Automated offline verification suites
+    ├── verify_vision_system.py    # Continuous angle, 18B framing, CRC16, debounce & launcher checks
+    └── test_diag_transport.py     # Binary transport, correlation, fault bitmask & worker tests
 ```
 
 ---
 
 ## 3. Environment Setup (using `uv`)
 
-Binary motion diagnostics uses the normal installed shared package, never a
-`sys.path` workaround. From repository root:
+`VisionSystem/pyproject.toml` supports **Python 3.10+** (examples below use Python 3.12). Binary motion diagnostics uses the workspace's shared [`packages/motion_diagnostics`](../packages/motion_diagnostics/) package installed normally via `uv`—never a `sys.path` workaround.
+
+Run from the **repository root**:
 
 ```powershell
-uv sync --project VisionSystem
-uv pip install --python VisionSystem\.venv\Scripts\python.exe -e packages\motion_diagnostics
+# 1. Create VisionSystem\.venv and install declared transport, OpenCV, NumPy & test dependencies
+uv sync --project VisionSystem --python 3.12
+
+# 2. Install Ultralytics into the same environment for YOLO camera/model inference
+uv pip install --python VisionSystem\.venv\Scripts\python.exe ultralytics
+
+# 3. Verify offline suites
 uv run --project VisionSystem python VisionSystem\tests\verify_vision_system.py
 uv run --project VisionSystem pytest
 ```
 
-The manifest includes the verification/transport dependencies. Install the
-existing YOLO runtime dependencies into this same environment for camera use.
-Use an explicit STM32 VCOM port (AUTO succeeds only with exactly one port).
-`KoneksiUART.kirim` accepts original binary `bytes` and reports bounded queue
-admission, **not** confirmed physical execution. A matched homed/READY heartbeat
-is required before picks. A reader owns all RX; no ASCII ACK/readline path is
-used. RX/TX/CSV worker threads never wait on detection. CRC/resync, missing
-completions and disk/serial backpressure are exposed by `diagnostic_health`.
-Queue overflow or sustained I/O error inhibits new picks; uncertain commands
-are never automatically retried. Reconnect creates a new session and requires
-readiness again. Default logs are `results\vision_diag_<UUID>.csv` with a health
-sidecar and raw `.bin` capture; pass `csv_path` and qualified run `config` to the serial wrapper to use
-another local path/config. Without qualified matching config, values are
-recorded but excluded from acceptance metrics. Do not run bench sender and
-vision simultaneously on the same port.
+---
 
-Runtime command construction quantizes then wraps orientation into 0…3599
-(359.95° becomes 0°), and converts the vision algorithm's clockwise 0…360°
-correction into an equivalent signed −180…+180° rotation. The exact half-turn
-tie is **+180°** (including input −180°); >180° uses the negative equivalent
-(270° → −90°). The deployed 18-byte wire format and CRC are unchanged.
-Unsupported class IDs and malformed/out-of-range packets are logged and counted
-as admission failures, not raised into inference. Readiness is homed with no
-fault bits; informational/event bits do not disable it. MSCNT qualification is
-recorded independently and does not exclude healthy encoder-based metrics.
-The v1 fault mask is `0x0003E7E2`, including active TX backpressure (bit 13);
-RX_OVERFLOW (bit 12) is an event and MSCNT_UNQUALIFIED (bit 11) is informational.
-Only STATUS and HOME_RESULT update readiness; per-command rejections remain
-logged/counted but do not pause the next object while awaiting a heartbeat.
-Unanswered control commands expire, and heartbeat IDs rotate while waiting for
-readiness; uncertain pick commands are never automatically retried.
+## 4. Runtime Transport, Readiness & Angle Contract
 
-See [diagnostic tool usage](../MotorControls/MotionFirmware/tools/diag/README.md)
-and [wire/measurement contract](../docs/architecture/motion_diagnostics_design.md).
+### A. Serial Port Ownership & Non-Blocking Worker Queues
+- **Single Serial Owner:** Pass an explicit STM32 VCOM port such as `--uart-port COM9` (`AUTO` succeeds only when exactly one serial port is present). Do **not** run the [`motion-diag`](../MotorControls/MotionFirmware/tools/diag/README.md) bench CLI and live vision simultaneously on the same port.
+- **Byte-Preserving Admission:** `KoneksiUART.kirim` accepts raw 18-byte `bytes` frames only (text strings are rejected) and reports bounded TX queue admission—**not** confirmed physical motion execution.
+- **Decoupled Threads:** Background RX, TX, and CSV worker threads (`DiagnosticReceiver`) own all serial I/O and disk writes; detection never calls `readline`, waits for ASCII ACKs, or blocks on motion completion.
+- **Session & Fault Handling:** Queue overflow or sustained serial/disk I/O failure inhibits new picks without crashing inference. Uncertain pick commands are **never** automatically retried. Reconnecting opens a new host session and requires readiness confirmation again.
+- **Telemetry Artifacts:** By default, sessions write `results\vision_diag_<UUID>.csv`, a `.health.json` transport health sidecar (`diagnostic_health` exposes CRC/resync counts, missing completions, and serial/disk backpressure), and a raw `.bin` capture. Pass `csv_path` and a qualified run `config` to customize paths; without a matching qualified config, rows are recorded in CSV but excluded from nominal acceptance metrics.
 
-This repository uses [`uv`](https://github.com/astral-sh/uv) for fast, deterministic Python virtual environment and dependency management.
+### B. Readiness & Fault Bitmask Policy (`v1`)
+- **Gate Before Picks:** An identity-matched homed/`READY` status is required before pick commands are admitted. Only `STATUS` (`0x83`) and `HOME_RESULT` (`0x82`) update readiness; per-command rejections are logged and counted without stalling subsequent objects while awaiting a heartbeat.
+- **Fault Mask (`0x0003E7E2`):** Readiness requires both axes homed and zero active fault bits under `0x0003E7E2` (which includes active `TX_BACKPRESSURE`, bit 13).
+  - `RX_OVERFLOW` (bit 12) is a per-record event bit and does not latch readiness off.
+  - `MSCNT_UNQUALIFIED` (bit 11) is informational and is recorded independently without excluding healthy AS5600 encoder metrics.
+- **Control Timeouts:** Unanswered control commands expire cleanly, and heartbeat object IDs rotate while polling for readiness.
 
-```powershell
-# 1. Create a virtual environment with Python 3.12
-uv venv --python 3.12
-
-# 2. Activate the virtual environment
-.venv\Scripts\activate
-
-# 3. Install required dependencies
-uv pip install ultralytics opencv-python numpy pyserial pytest
-```
+### C. Orientation Quantization & Servo Correction
+- **Angle Wrapping (`0…3599`):** Runtime command construction quantizes orientation to $0.1^\circ$ and wraps into `0…3599` (so $359.95^\circ$ quantizes to `0`, i.e., $0.0^\circ$).
+- **Signed Shortest-Turn Correction (`−180.0°…+180.0°`):** Converts the vision pipeline's clockwise $0^\circ\text{–}360^\circ$ correction into signed $[-180^\circ, +180^\circ]$:
+  - Values $> 180^\circ$ map to the negative equivalent (e.g., $270^\circ \to -90^\circ$).
+  - The exact half-turn tie is **`+180°`** (including input $-180^\circ$).
+- **Input Validation:** The deployed 18-byte wire format and CRC16-CCITT (over bytes `0…13`) are unchanged. Unsupported class IDs and malformed or out-of-range packets are logged and counted as admission failures rather than raising exceptions into the camera loop.
 
 ---
 
-## 4. Running the Vision Pipeline
+## 5. Running the Vision Pipeline
 
 ### Live Real-Time Detection & Sorting Stream
 ```powershell
-# Launch real-time detection on the default camera (Camera 0)
-uv run python VisionSystem/04_Source_Code/4_detect_realtime.py
+# Launch real-time detection with explicit STM32 VCOM port
+uv run --project VisionSystem python VisionSystem\04_Source_Code\4_detect_realtime.py --uart-port COM9
 
-# Or use the launcher script:
+# Dry-run vision & tracking overlay without UART hardware
+uv run --project VisionSystem python VisionSystem\04_Source_Code\4_detect_realtime.py --no-uart
+
+# Optional calibration & tracker flags
+uv run --project VisionSystem python VisionSystem\04_Source_Code\4_detect_realtime.py `
+  --uart-port COM9 --source 0 --inspection-line 0.5 --px-per-mm-x 5.0 --px-per-mm-y 5.0
+
+# Or use the portable Windows batch launcher:
 .\VisionSystem\06_Launchers\3_UJI_REALTIME.bat
 ```
 
-### Offline Testing on Static Images
+### Offline Testing & Model Evaluation
 ```powershell
-uv run python VisionSystem/04_Source_Code/3_test_offline.py
-```
+# Offline batch validation on static test images
+uv run --project VisionSystem python VisionSystem\04_Source_Code\3_test_offline.py
 
-### Model Evaluation
-```powershell
-uv run python VisionSystem/04_Source_Code/2_evaluate.py
-```
-
----
-
-## 5. Verification & Automated Testing
-
-To verify angle calculation accuracy, UART framing, CRC16 checksums, and tracker debouncing without physical hardware connected:
-
-```powershell
-uv run python VisionSystem/tests/verify_vision_system.py
+# Precision, recall, and mAP evaluation
+uv run --project VisionSystem python VisionSystem\04_Source_Code\2_evaluate.py
 ```
 
 ---
 
-## 6. Communication Protocol
+## 6. Verification & Automated Testing
 
-For the complete 18-byte binary frame definition and CRC16 specification connecting to the STM32 controller:  
-👉 **[`docs/architecture/communication_protocol.md`](../docs/architecture/communication_protocol.md)**
+Run both offline test suites without physical camera or MCU hardware connected:
+
+```powershell
+# 1. Thesis remediation suite (PCA angle accuracy, 18B CRC16 framing, FIFO debounce, launcher portability)
+uv run --project VisionSystem python VisionSystem\tests\verify_vision_system.py
+
+# 2. Binary diagnostics transport, correlation, readiness bitmask & worker thread tests
+uv run --project VisionSystem pytest
+```
+
+---
+
+## 7. Protocol & Diagnostics References
+
+- **Host ➔ STM32 18-byte command protocol & CRC16:** [`docs/architecture/communication_protocol.md`](../docs/architecture/communication_protocol.md)
+- **STM32 ➔ Host binary diagnostic records & metrology contract:** [`docs/architecture/motion_diagnostics_design.md`](../docs/architecture/motion_diagnostics_design.md)
+- **Host bench CLI (`motion-diag`):** [`MotorControls/MotionFirmware/tools/diag/README.md`](../MotorControls/MotionFirmware/tools/diag/README.md)

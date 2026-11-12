@@ -49,7 +49,10 @@ The physical sorting manipulator is a 2-Axis Cartesian Robot operating in the ve
 | **Z-Axis Resolution** | 8 mm advance per revolution | $\approx 400\ \text{steps/mm}$ @ 1/16 microstepping |
 | **Stroke Length** | $X$: 300 mm, $Z$: 150 mm | Tailored to industrial conveyor width |
 | **End-Effector Gripper**| Pneumatic Suction Cup (SMC / Festo industrial silicone cup) | Non-destructive capacitor pick-up |
-| **End-Effector Rotation**| MG90S / SG90 Metal-Gear Micro Servo | Continuous capacitor polarity angle adjustment |
+| **End-Effector Rotation**| MG90S / SG90 Metal-Gear Micro Servo *(thesis baseline)* | Continuous capacitor polarity angle adjustment *(see note below)* |
+
+> [!NOTE]
+> **End-Effector Rotation Hardware Option:** The thesis baseline BOM specifies a compact PWM servo (`MG90S`/`SG90`) for rotational correction, while the expanded Nucleo-64 Morpho harness in [`wiring.md`](wiring.md) also provisions a 3rd BTT/MKS TMC2240 + open-loop NEMA 11 stepper (`PC10`/`PC11`/`PC12`/`PD2`) for $\theta$-axis actuation. Neither rotational actuator nor the vacuum valve is driven in the current dry-run `motion_diagnostics` firmware profile.
 
 ---
 
