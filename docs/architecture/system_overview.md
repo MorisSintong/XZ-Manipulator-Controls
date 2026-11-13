@@ -3,7 +3,7 @@
 **Project:** Integrasi Computer Vision dan Sistem Sortasi Konveyor untuk Pengendalian Kualitas (Quality Control) Komponen Kapasitor Berdasarkan Polaritas  
 **Repository:** `XZ-Manipulator-Controls`  
 
-**Implementation status:** The host VisionSystem and dual-axis `motion_diagnostics` firmware profile are implemented. The physical controller target is now the BTT SKR Octopus Pro V1.1 (STM32H723), but the checked-in motion firmware and build still target the STM32F446RE Nucleo-64 and have not been ported. The current motion-control profile uses a cooperative foreground state machine with timer-compare interrupts and has no RTOS implementation. A future systems stage may evaluate an RTOS if more complex kinematics and coordinated real-time responsibilities warrant task scheduling; this is an option, not a current commitment. The default safe-Z and pick-depth settings are zero, and the firmware does not actuate the vacuum or orientation servo. Hardware qualification and the complete physical sorting cycle remain outstanding.
+**Implementation status:** The host VisionSystem and dual-axis `motion_diagnostics` firmware profile are implemented and configured for the **BIGTREETECH SKR Octopus Pro V1.1 (STM32H723ZET6)** board (`MotionFirmware.ioc`, `Core/`, `Drivers/STM32H7xx_HAL_Driver/`, and all three application profiles). The current motion-control profile uses a cooperative foreground state machine with timer-compare interrupts (`TIM2`/`TIM5`) and has no RTOS implementation. A future systems stage may evaluate an RTOS if more complex kinematics and coordinated real-time responsibilities warrant task scheduling; this is an option, not a current commitment. Target builds default to `MOTION_DIAG_BOUNDS_CONFIRMED=ON` with zero safe-Z and pick-depth settings (`SAFE_Z=0`, `PICK_DEPTH=0` dry-run), and the firmware does not actuate the vacuum or orientation servo. Physical hardware qualification and the complete physical sorting cycle remain outstanding.
 
 ---
 
@@ -19,11 +19,10 @@ The automated quality control and sorting cell integrates three synchronized lay
    - Default pixel-to-millimeter mapping uses configured per-axis scales and origin offsets. The mapper supports an optional homography, but the live launcher does not load a calibrated homography file.
    - The $\pm 2.5^\circ$ orientation result is covered by synthetic tests; physical accuracy remains unqualified.
    - Packet assembly with CRC16 and transmission via high-speed UART to the motion controller.
-2. **Motion & Actuation Layer (planned BTT SKR Octopus Pro V1.1 / STM32H723; firmware port pending):**
-   - Planned physical mapping: X and Z TMC2240s in SKR driver sockets 0 and 2, with board-specific connections in `docs/hardware/wiring.md`.
-   - The existing Nucleo firmware uses dual AS5600 buses (`I2C1`, `I2C3`) and TMC2240 `SPI2`; those are F446 assignments, not the H723 board mapping.
-   - The H723 firmware port, including encoder buses, driver SPI, UART, timers, and homing, is pending.
-   - The existing diagnostic profile records conveyor Y, class, angle, and correction but does not actuate the vacuum gripper or orientation servo.
+2. **Motion & Actuation Layer (BTT SKR Octopus Pro V1.1 / STM32H723ZET6):**
+   - Physical socket mapping (see [`docs/hardware/wiring.md`](../hardware/wiring.md)): X-axis (`motor=1`, `TIM5`) on `MOTOR0`, Z-axis (`motor=0`, `TIM2`) on `MOTOR1`, and provisioned Rotation ($\theta$-axis, `motor=2`, initialized disabled) on `MOTOR2_1`.
+   - Dual AS5600 magnetic encoders (`0x36`) connected via independent `I2C1` (`PB8`/`PB9` on `J73`) and `I2C4` (`PB6`/`PB7` on `J43`, powered from `J73` `3.3V`), plus shared TMC2240 `SPI1` (`PA5`/`PA6`/`PA7`, Mode 3, 3.125 MHz) and `USART2` (`PD5`/`PD6` on `J26` at `115200 8N1`).
+   - The existing diagnostic profile records conveyor Y, class, angle, and correction but does not actuate the vacuum gripper, orientation servo, or `PC5` `PROBE` proximity input.
 3. **Material Handling & Interlocking Layer (OMRON PLC):**
    - Conveyor belt drive control and variable frequency / speed regulation.
    - Proximity optical sensors for part arrival detection.
@@ -39,16 +38,16 @@ flowchart TD
         Track --> UART_TX[Framed UART Packet Encoder (CRC16)]
     end
 
-    subgraph MCU ["Motion Control Hardware (SKR Octopus Pro V1.1 / STM32H723; firmware port pending)"]
-        UART_RX[UART / USB link - H723 mapping pending] --> Parser[CRC16 Validator & Motion Queue]
+    subgraph MCU ["Motion Control Hardware (SKR Octopus Pro V1.1 / STM32H723ZET6)"]
+        UART_RX[USART2 RX DMA PD5/PD6 J26] --> Parser[CRC16 Validator & Motion Queue]
         Parser --> MotionTask[Foreground Motion Executor]
         MotionTask --> EncTask[Foreground AS5600 Sampling]
-        MotionTask --> Telemetry[Board serial link / diagnostic logs - H723 mapping pending]
+        MotionTask --> Telemetry[USART2 TX DMA / SEGGER RTT Logs]
 
-        MotionTask -->|SPI1 & board driver sockets| TMC[Dual TMC2240 Stepper Drivers]
+        MotionTask -->|SPI1 PA5-7 & TIM2/TIM5 STEP-DIR| TMC[Dual TMC2240 Drivers + Theta Slot]
         MotionTask -. inactive in current profile .-> Servo[End-Effector Reorientation Servo]
         MotionTask -. inactive in current profile .-> Vac[Vacuum Solenoid Ejector]
-        EncTask -->|I2C buses per wiring.md| AS5600[Dual AS5600 Magnetic Encoders]
+        EncTask -->|I2C1 X PB8-9 / I2C4 Z PB6-7| AS5600[Dual AS5600 Magnetic Encoders]
     end
 
     subgraph PLC ["Material Handling Layer (OMRON PLC)"]
@@ -57,7 +56,7 @@ flowchart TD
         Ladder -. intended, not hardware-qualified interlock .-> MCU
     end
 
-    UART_TX -->|115200 baud; H723 physical link pending| UART_RX
+    UART_TX -->|115200 baud 8N1| UART_RX
     TMC --> XZ_Gantry[2-Axis XZ Cartesian Manipulator]
 ```
 
@@ -75,16 +74,15 @@ flowchart TD
 - **Outputs:** Framed binary telemetry packet dispatched to STM32.
 
 ### B. Motion Controller Firmware (`MotorControls/MotionFirmware/`)
-- **Existing firmware target:** STM32F446RE (`NUCLEO-F446RE`). Its core clock and peripheral bindings are defined by `MotionFirmware.ioc`; this firmware is not compatible with the H723 board without a port.
-- **Physical board target:** BTT SKR Octopus Pro V1.1 (STM32H723), with TMC2240 modules in the X, Z, and optional theta driver sockets. H723 peripheral, UART, timer, encoder, and driver settings remain to be implemented and hardware-qualified.
-- **Selectable firmware profiles** (built side-by-side from a shared CubeMX HAL base):
-  - **`motion_diagnostics` (default):** Cooperative foreground state machine with circular `USART2` RX DMA, timer-compare step generation (`TIM2`/`TIM5`), and binary-only metrology replies. It has no RTOS implementation; future task scheduling may be evaluated if the kinematics and coordination workload grows.
+- **Target hardware:** STM32H723ZET6 on the **BIGTREETECH SKR Octopus Pro V1.1** (400 MHz CPU / 200 MHz HCLK / 100 MHz APB1 & APB2 from 25 MHz HSE), defined by `MotionFirmware.ioc`, with TMC2240 drivers on `MOTOR0` (X), `MOTOR1` (Z), and provisioned `MOTOR2_1` ($\theta$, initialized disabled). Physical hardware qualification on the gantry remains outstanding.
+- **Selectable firmware profiles** (built side-by-side from a shared CubeMX STM32H7 HAL base):
+  - **`motion_diagnostics` (default):** Cooperative foreground state machine with circular `USART2` RX DMA (`DMA1_Stream0`) / TX DMA (`DMA1_Stream1`), timer-compare step generation (`TIM2` for Z / `TIM5` for X), and binary-only metrology replies. It has no RTOS implementation; future task scheduling may be evaluated if the kinematics and coordination workload grows.
   - **`stallguard_cli`:** Interactive ASCII console (`USART2` + SEGGER RTT) for two-end StallGuard4 homing, travel calibration, and `soft`/`bounce` axis cycling.
-  - **`z_bounce_emulation`:** Single-axis Z bounce responder used by the Renode/Mock UART emulation harness.
+  - **`z_bounce_emulation`:** Single-axis Z bounce responder (`Z` on `MOTOR1`) and hybrid binary/ASCII UART parser used by the emulation harness and protocol validation tests.
 - In `motion_diagnostics`, the firmware validates 18-byte binary frames, homes Z upward then X, and executes an absolute X move followed by configured Z down/dwell/up phases only when readiness and bounds allow.
-- AS5600 samples and driver evidence are collected by the foreground executor; timer-compare ISRs generate the step edges.
+- AS5600 samples (`I2C1` / `I2C4`) and driver evidence (`SPI1`) are collected by the foreground executor; timer-compare ISRs (`TIM2` / `TIM5`) generate the step edges.
 - Conveyor Y, class, angle, and servo correction are echoed in diagnostic records; the current profile does not perform conveyor timing prediction, suction, bin selection, or servo control.
-- The default configuration is a dry run with zero pick depth and `bounds_confirmed=false`. Firmware compilation and host tests do not qualify physical hardware.
+- Target builds default in `CMakeLists.txt` to `MOTION_DIAG_BOUNDS_CONFIRMED=ON` (`bounds_confirmed=true`, while the host-test fallback in `motion_config.h` is `0`) with `MOTION_DIAG_SAFE_Z_01MM=0` and `MOTION_DIAG_PICK_DEPTH_01MM=0` (dry run). Firmware compilation and host tests do not qualify physical hardware.
 
 ### C. Industrial Conveyor Controller (`Program_Ladder/`)
 - **Target:** OMRON PLC (CP1E / CP2E family) programmed via CX-Programmer.

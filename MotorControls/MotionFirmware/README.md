@@ -1,6 +1,6 @@
 # MotionFirmware — STM32H723 (SKR Octopus Pro V1.1) XZ Manipulator Firmware Suite
 
-STM32H723 (`BIGTREETECH SKR Octopus Pro V1.1`, 400 MHz CPU / 200 MHz HCLK from 25 MHz HSE) firmware suite for the 2-Axis (XZ) Cartesian manipulator, driving two **Trinamic TMC2240** stepper drivers (shared `SPI1` + per-socket `STEP`/`DIR`/`ENN`/`CS`) and reading dual **AS5600** magnetic encoders (`I2C1` on `J73` `PB8`/`PB9` for X-axis, `I2C4` on `J43` BLTouch `PB6`/`PB7` for Z-axis).
+STM32H723ZET6 (`BIGTREETECH SKR Octopus Pro V1.1`, 400 MHz CPU / 200 MHz HCLK / 100 MHz APB1 & APB2 from 25 MHz HSE) firmware suite for the 2-Axis (XZ) Cartesian manipulator, driving **Trinamic TMC2240** stepper drivers (shared `SPI1` + per-socket `STEP`/`DIR`/`ENN`/`CS`) and reading dual **AS5600** magnetic encoders (`I2C1` on `J73` `PB8`/`PB9` for X-axis, `I2C4` on `J43` BLTouch `PB6`/`PB7` for Z-axis).
 
 This project uses a **single shared CubeMX `Core/` and `Drivers/` layer** ([MotionFirmware.ioc](MotionFirmware.ioc)) with selectable application profiles under [`Apps/`](Apps/):
 
@@ -8,7 +8,7 @@ This project uses a **single shared CubeMX `Core/` and `Drivers/` layer** ([Moti
 | :--- | :--- | :--- | :--- |
 | **`motion_diagnostics`** *(default)* | [`Apps/motion_diagnostics/`](Apps/motion_diagnostics/README.md) | `MotionFirmware_Diagnostics.*` *(and default `MotionFirmware.*`)* | Binary-only `USART2` (`PD5`/`PD6`) DMA vision pick executor (`0x01..0x04`), single-end StallGuard4 homing (Z then X), 1 MHz timer compare stepping (`TIM2`/`TIM5`), and 356/124/116-byte binary evidence records (`MSCNT` + unwrapped AS5600 + step counts) for the Python [`tools/diag`](tools/diag/README.md) analyzer and live `VisionSystem`. |
 | **`stallguard_cli`** | [`Apps/stallguard_cli/`](Apps/stallguard_cli/README.md) | `MotionFirmware_StallGuardCLI.*` | Interactive ASCII CLI (`USART2` + SEGGER RTT) with two-end StallGuard4 sensorless homing, full travel & encoder-ratio calibration, continuous **`soft`** and **`bounce`** cycling modes, and live closed-loop step-loss supervision. |
-| **`z_bounce_emulation`** | [`Apps/z_bounce_emulation/`](Apps/z_bounce_emulation/) | `MotionFirmware_ZBounceEmulation.*` | Single-axis Z StallGuard4 bounce demo + `VisionUart` ASCII/binary protocol responder. |
+| **`z_bounce_emulation`** | [`Apps/z_bounce_emulation/`](Apps/z_bounce_emulation/README.md) | `MotionFirmware_ZBounceEmulation.*` | Single-axis Z StallGuard4 bounce demo + `VisionUart` binary (`0x01`/`0x02`) & legacy ASCII responder. |
 
 ---
 
@@ -18,6 +18,7 @@ This project uses a **single shared CubeMX `Core/` and `Drivers/` layer** ([Moti
 | :--- | :--- | :--- | :--- |
 | **X-Axis TMC2240** (`motor=1`, `TIM5`) | `TMC_STEP1` / `TMC_DIR1` / `TMC_ENN1` / `TMC_CS1` / `TMC_DIAG1` | `PF13` / `PF12` / `PF14` / `PC4` / `PG6` | **Driver 0 (`MOTOR0`)** socket |
 | **Z-Axis TMC2240** (`motor=0`, `TIM2`) | `TMC_STEP0` / `TMC_DIR0` / `TMC_ENN0` / `TMC_CS0` / `TMC_DIAG0` | `PG0` / `PG1` / `PF15` / `PD11` / `PG9` | **Driver 1 (`MOTOR1`)** socket |
+| **Rotation ($\theta$) TMC2240** (`motor=2`, provisioned) | `TMC_STEP2` / `TMC_DIR2` / `TMC_ENN2` / `TMC_CS2` / `TMC_DIAG2` | `PF11` / `PG3` / `PG5` / `PC6` / `PG10` | **Driver 2 (`MOTOR2_1`)** socket (initialized disabled; open-loop placeholder) |
 | **Shared TMC2240 SPI** | `SPI1` (Mode 3, 8-bit, 3.125 MHz) | `PA5` (SCK), `PA6` (MISO), `PA7` (MOSI) | Internal driver SPI bus |
 | **X-Axis AS5600 Encoder** | `I2C1` (400 kHz Fast Mode) | `PB8` (SCL), `PB9` (SDA) | **`J73` (`I2C`)** 4-pin header (3.3V, GND, SCL, SDA) |
 | **Z-Axis AS5600 Encoder** | `I2C4` (400 kHz Fast Mode) | `PB6` (SCL), `PB7` (SDA) | **`J43` (`BL_Touch`)** header (power AS5600 from `J73` 3.3V) |
@@ -25,6 +26,9 @@ This project uses a **single shared CubeMX `Core/` and `Drivers/` layer** ([Moti
 | **E-Stop / Button** | `B1` (`EXTI15_10_IRQn`, active-low, on-board 10k pull-up) | `PG15` | **`J34` (`STOP7`)** endstop header |
 | **Status / Heartbeat LED** | `LD2` | `PD15` | **`FAN5`** indicator LED `D27` |
 | **SWD + SEGGER RTT** | `SYS_JTMS-SWDIO` / `SYS_JTCK-SWCLK` | `PA13` (SWDIO), `PA14` (SWCLK) | **`J45` (`SWD`)** header |
+
+> [!NOTE]
+> The Octopus Pro `PROBE` input (`PC5`) described in [`docs/hardware/wiring.md`](../../docs/hardware/wiring.md) is **not** configured or read in `MotionFirmware` yet. `TMC_*2` (`MOTOR2_1`) is configured at reset with `ENN2` (`PG5`) and `CS2` (`PC6`) HIGH (disabled) and no active motion profile.
 
 ---
 
@@ -48,22 +52,28 @@ cmake --build --preset Debug-ZBounce
 
 ---
 
-## 3. Bootloader Backup/Restore, Flashing & Real-Time Telemetry (SEGGER J-Link)
+## 3. Bootloader Backup/Restore, Flashing & Real-Time Telemetry
 
-The firmware links directly at `0x08000000` for zero-offset SWD flashing and SEGGER RTT debugging. Before your first SWD flash on a new Octopus Pro board, back up the factory 128 KiB BTT bootloader so you can restore it at any time:
+The firmware links directly at `0x08000000` for zero-offset SWD flashing and SEGGER RTT debugging. Before your first SWD flash on a new Octopus Pro board, back up the factory 128 KiB BTT bootloader so you can restore it at any time (a copy of the official 128 KiB BTT H723 bootloader and guide is also archived in `tools/btt_bootloader/`):
 
 ```powershell
 # 1. Back up the factory 128 KiB BTT bootloader (0x08000000..0x0801FFFF) before first flash:
 .\backup_bootloader.cmd     # Saves bootloader_btt_octopus_pro_128k.bin and flash_full_backup_512k.bin
 
-# 2. Flash default MotionFirmware.hex or select a named profile explicitly:
+# 2. Flash default MotionFirmware.hex or select a named profile explicitly (SEGGER J-Link SWD):
 .\flash.cmd                 # Flashes default MotionFirmware.hex (via flash.jlink)
 .\flash.cmd diagnostics     # Flashes MotionFirmware_Diagnostics.hex
 .\flash.cmd stallguard      # Flashes MotionFirmware_StallGuardCLI.hex
 .\flash.cmd zbounce         # Flashes MotionFirmware_ZBounceEmulation.hex
+# Or via USB-C DFU (STM32CubeProgrammer CLI, BOOT0 jumper fitted, flashes build\Release or build\Debug MotionFirmware.bin):
+.\flash_dfu.cmd
+# Or standalone J-Link batch script (expects C:\Program Files\SEGGER\JLink_V978\JLink.exe):
+.\flash_jlink.bat
 
-# 3. Stream non-blocking SEGGER RTT Terminal 0 logs (scans RAM_D1 0x24000000):
+# 3. Stream non-blocking SEGGER RTT Terminal 0 logs (scans RAM_D1 0x24000000), debug, or monitor serial:
 .\rtt.cmd                   # Or .\open_rtt_viewer.bat
+.\gdb_server.cmd            # Starts JLinkGDBServerCL for STM32H723ZE on SWD 4000 kHz
+.\monitor_com9.ps1          # Lightweight PowerShell COM port viewer (default COM9 @ 115200)
 .\reset.cmd
 .\erase.cmd
 
@@ -72,7 +82,7 @@ The firmware links directly at `0x08000000` for zero-offset SWD flashing and SEG
 ```
 
 > [!NOTE]
-> `flash.cmd`, `rtt.cmd`, `reset.cmd`, `erase.cmd`, `backup_bootloader.cmd`, and `restore_bootloader.cmd` invoke `C:\tools\jlink\JLink.exe` targeting `-device STM32H723ZE`, or you can flash/stream RTT from any `.elf` directly with `probe-rs run --chip STM32H723ZETx build\Debug\MotionFirmware.elf`.
+> `flash.cmd`, `rtt.cmd`, `reset.cmd`, `erase.cmd`, `gdb_server.cmd`, `backup_bootloader.cmd`, and `restore_bootloader.cmd` invoke `C:\tools\jlink\` targeting `-device STM32H723ZE`, or you can flash/stream RTT from any `.elf` directly with `probe-rs run --chip STM32H723ZETx build\Debug\MotionFirmware.elf`.
 
 ---
 
@@ -83,9 +93,9 @@ The firmware links directly at `0x08000000` for zero-offset SWD flashing and SEG
 .\Apps\motion_diagnostics\Tests\run_tests.ps1
 ```
 
-### B. `stallguard_cli` Host Closed-Loop Simulation CTest (3 suites)
+### B. `stallguard_cli` Host Closed-Loop Simulation CTest (3 suites; supports `gcc` or `clang`)
 ```powershell
-cmake -S Apps\stallguard_cli\tests -B Apps\stallguard_cli\tests\build-host -G Ninja -DCMAKE_C_COMPILER=gcc
+cmake -S Apps\stallguard_cli\tests -B Apps\stallguard_cli\tests\build-host -G Ninja -DCMAKE_C_COMPILER=clang
 cmake --build Apps\stallguard_cli\tests\build-host
 ctest --test-dir Apps\stallguard_cli\tests\build-host --output-on-failure
 ```

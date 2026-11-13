@@ -734,7 +734,7 @@ static void probe_drivers(void) {
       axis_ctrl_set_driver_ready(ax, true);
     } else {
       if ((g_probe_fail[ax] % 20U) == 0U) {
-        LOG("[TMC] %c: TMC2240 #%u not ready (%s) - VM (24 V) on? SPI2/CS "
+        LOG("[TMC] %c: TMC2240 #%u not ready (%s) - VM (24 V) on? SPI1/CS "
             "wiring?",
             axis_name(ax), (unsigned)ax, tmc_status_name(r));
       }

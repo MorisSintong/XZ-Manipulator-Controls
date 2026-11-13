@@ -1,8 +1,6 @@
 # MotionFirmware — dual-axis motion diagnostics
 
-STM32F446RE HAL firmware for two STEP/DIR TMC2240 motors and motor-shaft AS5600
-encoders. The runtime is a cooperative foreground state machine with timer
-compare ISRs, not an RTOS or an autonomous bounce/cycling demo.
+STM32H723 HAL firmware (`BIGTREETECH SKR Octopus Pro V1.1`) for two STEP/DIR TMC2240 motors and motor-shaft AS5600 encoders. The runtime is a cooperative foreground state machine with timer compare ISRs, not an RTOS or an autonomous bounce/cycling demo.
 
 The implementation/wire contract and bench acceptance procedure are in
 [`motion_diagnostics_design.md`, especially §7](../../../../docs/architecture/motion_diagnostics_design.md).
@@ -11,20 +9,15 @@ Datasheet limitations are tracked in
 
 ## Hardware and coordinate mapping
 
-| Wire axis | Motor | CS / STEP / DIR / ENN | Timer | Encoder |
-|---|---|---|---|---|
-| 0 = X, positive away from home | 1 | PC3 / PC4 / PC5 / PC7 | TIM5 | I2C1 PB8/PB9 |
-| 1 = Z, positive downward | 0 | PC0 / PC1 / PC2 / PC6 | TIM2 | I2C3 PA8/PC9 |
+| Wire axis | Motor | Driver socket | CS / STEP / DIR / ENN | Timer | Encoder |
+|---|---|---|---|---|---|
+| 0 = X, positive away from home | 1 | `MOTOR0` | `PC4` / `PF13` / `PF12` / `PF14` | `TIM5` | `I2C1` `PB8`/`PB9` (`J73`) |
+| 1 = Z, positive downward | 0 | `MOTOR1` | `PD11` / `PG0` / `PG1` / `PF15` | `TIM2` | `I2C4` `PB6`/`PB7` (`J43`, 3.3V from `J73`) |
 
-SPI2 is shared, mode 3, 2.625 MHz, on PB13/PB14/PB15. Encoder buses are
-400 kHz, both at 7-bit address 0x36. Follow the physical harness specified in
-[`wiring.md`](../../../../docs/hardware/wiring.md); verify direction, encoder and MSCNT
-signs separately. There is no automatic detection or swapping of buses.
-
-**USART2 is binary only:** 115200 8-N-1 on PA2/PA3, circular RX DMA1 Stream5,
-whole-frame TX DMA1 Stream6. COM numbers are host-dependent. Human messages and
-`printf` go only to nonblocking SEGGER RTT terminal 0. No ASCII tokenizer,
-RTT input merging, `readline`, or UART text banner is supported.
+- **SPI1** is shared, mode 3, 3.125 MHz, on `PA5` (SCK), `PA6` (MISO), `PA7` (MOSI). `MOTOR2_1` (`CS2=PC6`, `ENN2=PG5`) is initialized disabled at boot and during fault shutdown. Encoder buses run at 400 kHz, both at 7-bit address `0x36`. Follow the physical harness specified in [`wiring.md`](../../../../docs/hardware/wiring.md); verify direction, encoder and MSCNT signs separately. There is no automatic detection or swapping of buses.
+- **USART2 is binary only:** `115200 8N1` on `PD5` (TX) / `PD6` (RX) via header `J26`, circular RX `DMA1_Stream0`, whole-frame TX `DMA1_Stream1`. COM numbers are host-dependent. Human messages and `printf` go only to nonblocking SEGGER RTT terminal 0. No ASCII tokenizer, RTT input merging, `readline`, or UART text banner is supported.
+- **Button `B1` (`PG15` / `STOP7`):** Active-low with on-board 10 kΩ pull-up and RC filter; triggers `EXTI15_10_IRQn` as an immediate software abort, **not** a start/resume/off control.
+- **Status LED `LD2` (`PD15` / `FAN5` D27):** Indicates firmware/driver state.
 
 ## Runtime
 
@@ -51,21 +44,21 @@ An explicit re-home can reseed healthy encoders and clear the software abort
 only after B1 is released; a held B1 also blocks boot homing.
 Persistent driver GSTAT faults require operator review and board restart after
 the underlying cause is corrected; re-home does not silently acknowledge them.
-B1 is an immediate software abort, **not** a start/resume/off control.
 
 ### Bring-up defaults
 
-`Apps\motion_diagnostics\Src\motion_config.c` is the immutable run configuration (ID 1):
+`Apps\motion_diagnostics\Src\motion_config.c` (with compile-time defaults from `MotorControls\MotionFirmware\CMakeLists.txt`) configures run ID 1:
 
 - 3200 rising STEP events/rev, MRES=4, **DEDGE=0, INTPOL=0**.
 - X 40 mm/rev (80 steps/mm); Z 8 mm/rev (400 steps/mm).
 - **500 steps/s start, 2000 steps/s cap**, 4000 steps/s² acceleration.
 - STEP high/low minimum 5 µs; DIR setup/hold 20 µs; late-edge budget 20 µs.
   These are conservative application choices, **not verified electrical minima**.
-- Safe Z = pick depth = **0 (dry run)**; no suction or servo actuation.
-- Candidate usable maxima X 290 mm / Z 140 mm, but
-  **`bounds_confirmed=false` disables all picks** until bench qualification.
-  Qualify clearance, usable limits and positive pick depth before enabling them.
+- Safe Z = pick depth = **0 (dry run)** by default (`MOTION_DIAG_SAFE_Z_01MM=0`, `MOTION_DIAG_PICK_DEPTH_01MM=0`); no suction or servo actuation.
+- Candidate usable maxima X 290 mm / Z 140 mm:
+  - Target firmware CMake builds default `MOTION_DIAG_BOUNDS_CONFIRMED=ON` (`bounds_confirmed=true`) so bench dry-run pick commands (`SAFE_Z=0`, `PICK_DEPTH=0`) execute once homed.
+  - Standalone host tests fall back to `MOTION_BOUNDS_CONFIRMED=0` (`motion_config.h`), where `bounds_confirmed=false` disables picks.
+  - Qualify physical clearance, usable limits, and positive pick depth before setting nonzero plunge depths.
 - Homing seek budgets X 23200 steps / 30 s; Z 56000 steps / 40 s; SG threshold 10,
   400 ms blanking, four distinct low observations. These are tuning inputs, not
   verified SG4 operating conditions; support Z and supervise first homing.
@@ -105,7 +98,7 @@ try {
 
 Host CTest uses `-Wall -Wextra -Werror -Wconversion -Wsign-conversion` and
 ASan/UBSan when the compiler supports them. `run_tests.ps1` also compiles every
-HAL-independent App source for Cortex-M4. Tests cover framing, full record
+HAL-independent App source for **Cortex-M7** (`-mcpu=cortex-m7 -mfpu=fpv5-d16 -mfloat-abi=hard`). Tests cover framing, full record
 packing, rational rounding, timer edges/abort/starvation, encoder validity,
 queue admission, phase sequencing and bounded Z-before-X homing.
 All host executables share pre-main Windows Error Reporting/assert-abort dialog
@@ -132,9 +125,7 @@ bytes 0…13. No native C struct is transmitted.
 `Apps\motion_diagnostics\Inc` and `Apps\motion_diagnostics\Src` contain HAL-independent config, packer, DMA-queue/parser
 transport, profile/step engine, sampler, driver evidence, homing, executor and
 dispatch, while `Apps\motion_diagnostics\Src\motion_board.c` binds GPIO/timer/DMA and existing driver APIs and
-`Apps\motion_diagnostics\Src\console.c` provides RTT-only logging. CubeMX scaffold in `Core\` was selectively imported from
-the reference branch because CubeMX was unavailable; `.ioc`, MSP, interrupts,
-HAL configuration and TIM/I2C vendor sources were updated together. Compare
+`Apps\motion_diagnostics\Src\console.c` provides RTT-only logging. CubeMX scaffold in `Core\` targets STM32H723ZET6 (`MotionFirmware.ioc`, `stm32h7xx_hal_msp.c`, `stm32h7xx_it.c`). Compare
 interrupt hooks and application calls remain in USER CODE sections. TIM2/TIM5
 free-run at 1 MHz; CCR1 is a software deadline, not an AF output on the STEP pins.
 

@@ -3,7 +3,7 @@
 This guide contains **legacy NUCLEO-F446RE example wiring only**. It does not describe the current controller or board pinout.
 
 > [!IMPORTANT]
-> The current physical controller is the BIGTREETECH SKR Octopus Pro V1.1 (STM32H723ZET6). Use the [current SKR wiring guide](../../../../docs/hardware/wiring.md). The bundled F446 firmware and pin assignments must not be used on the SKR; the H723 firmware port is pending.
+> The current physical controller is the BIGTREETECH SKR Octopus Pro V1.1 (STM32H723ZET6). Use the [current SKR wiring guide](../../../../docs/hardware/wiring.md) and the active H723 firmware in [MotorControls/MotionFirmware](../../../MotionFirmware/README.md). The bundled F446 firmware and pin assignments below must not be used on the SKR.
 
 ## 1. Single Motor Pinout (Demo Setup)
 
@@ -48,4 +48,4 @@ does not itself guarantee that physical outputs are disabled.
 ---
 
 ## 3. Dual Motor & Dual Encoder Wiring
-For running two motors and two magnetic encoders (AS5600) on a single STM32F446RE, see [Dual_Motor_and_Encoder_Config.md](Dual_Motor_and_Encoder_Config.md).
+For running two motors and two magnetic encoders (AS5600) on a single legacy STM32F446RE, see [Dual_Motor_and_Encoder_Config.md](Dual_Motor_and_Encoder_Config.md). For the active SKR Octopus Pro V1.1 / STM32H723ZET6 wiring, see [docs/hardware/wiring.md](../../../../docs/hardware/wiring.md).

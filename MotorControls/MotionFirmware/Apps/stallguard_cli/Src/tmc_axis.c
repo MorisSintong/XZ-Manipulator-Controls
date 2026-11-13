@@ -3,7 +3,7 @@
  * @brief   TMC2240 per-axis setup, profiles and supervision (see tmc_axis.h).
  *
  * All calls are made from the main loop only: the TMC2240 driver has no
- * internal locking and both chips share SPI2.
+ * internal locking and both chips share SPI1.
  */
 #include "tmc_axis.h"
 

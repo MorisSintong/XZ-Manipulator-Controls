@@ -9,7 +9,7 @@ This directory contains the ladder logic program for the conveyor feeding and so
 The PLC operates as the industrial material handling layer, responsible for:
 - Conveyor belt start/stop and variable speed control.
 - Optical proximity sensing for part presence and arrival gating.
-- Interlocking with the STM32F446RE motion controller (handling pickup synchronization, busy signals, and cycle completion).
+- Interlocking with the STM32H723ZET6 (`BIGTREETECH SKR Octopus Pro V1.1`) motion controller (handling pickup synchronization, busy signals, and cycle completion).
 - Emergency stop (E-STOP) hardware safety trip and fault monitoring.
 
 ---

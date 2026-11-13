@@ -3,7 +3,7 @@
 This pinout is an older configuration for two BIGTREETECH (BTT) / MKS TMC2240 v1.0 modules, two AS5600 encoders, and a proximity sensor on a NUCLEO-F446RE (`MB1136`). It is **not** the current SKR wiring.
 
 > [!IMPORTANT]
-> The current physical controller is the BIGTREETECH SKR Octopus Pro V1.1 (STM32H723ZET6). Use the [current system wiring](../../../../docs/hardware/wiring.md); the Nucleo pin assignments below do not apply. H723 firmware integration remains pending.
+> The current physical controller is the BIGTREETECH SKR Octopus Pro V1.1 (STM32H723ZET6). Use the [current system wiring](../../../../docs/hardware/wiring.md) and the active H723 firmware in [MotorControls/MotionFirmware](../../../MotionFirmware/README.md); the Nucleo pin assignments below do not apply.
 
 ## TMC2240 (Stepper Drivers)
 

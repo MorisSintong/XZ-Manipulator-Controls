@@ -13,7 +13,7 @@ The **VisionSystem** handles overhead automated optical inspection (AOI) of elec
 2. **Orientation & Polarity Estimation:** Calculates continuous physical orientation across $[0^\circ, 360^\circ)$ using Principal Component Analysis (PCA) and localized polarity strip/lead analysis.
 3. **Spatial Tracking:** Centroid-based conveyor tracking with debounce thresholds to prevent duplicate triggers on moving parts.
 4. **Coordinate Transformation:** Pixel-to-millimeter mapping from camera coordinates $(u, v)$ to conveyor coordinates $(X, Y)$ using configured scale and origin offsets; an optional homography is available through the mapper API.
-5. **Framed Telemetry Dispatch:** Packages target data into 18-byte binary frames with CRC16-CCITT and transmits to the STM32F446RE motion controller over UART.
+5. **Framed Telemetry Dispatch:** Packages target data into 18-byte binary frames with CRC16-CCITT and transmits to the **STM32H723ZET6** (`BIGTREETECH SKR Octopus Pro V1.1`) motion controller over `USART2` (`PD5`/`PD6`).
 
 ```text
  +---------------------+       +---------------------+       +---------------------+
@@ -21,8 +21,8 @@ The **VisionSystem** handles overhead automated optical inspection (AOI) of elec
  |  (USB Video Stream) |       |  Bounding Box ROI   |       |  Polarity Analyzer  |
  +---------------------+       +---------------------+       +---------------------+
                                                                         |
- +---------------------+       +---------------------+                  v
- | STM32F446RE Motion  |      |  Framed UART Packet |      |  Spatial Conveyor   |
+ +---------------------+       +---------------------+                 v
+ | STM32H723ZET6 (SKR) |      |  Framed UART Packet |      |  Spatial Conveyor   |
  | (Cooperative Diag.) |       |  (18B + CRC16)      |       |  Tracker & Debounce |
  +---------------------+       +---------------------+       +---------------------+
 ```
@@ -34,7 +34,7 @@ The **VisionSystem** handles overhead automated optical inspection (AOI) of elec
 ```text
 VisionSystem/
 ├── README.md                      # This subsystem guide
-├── REMEDIATION_PLAN_AI.md         # Engineering audit & thesis compliance specification
+├── REMEDIATION_PLAN_AI.md         # Historical remediation spec & regression guardrails (complete)
 ├── pyproject.toml                 # Project manifest & editable motion-diagnostics dependency
 ├── TEST_OFFLINE.bat               # Top-level offline test convenience script
 ├── 01_Dokumen_TA/                 # Official thesis proposal & specifications (TA_2026_extracted.txt)
@@ -48,7 +48,7 @@ VisionSystem/
 │   ├── 7_test_frame_read.py       # Camera acquisition latency benchmark
 │   ├── diagnostik_uart.py         # Serial port loopback and diagnosis utility
 │   ├── test_uart_esp32.py         # Auxiliary ESP32 UART bridge test script
-│   ├── firmware_esp32/            # Auxiliary ESP32 non-blocking serial bridge sketch
+│   ├── firmware_esp32/            # Remediated non-blocking ESP32 serial bridge sketch (RAM log buffer)
 │   └── utils/                     # Core vision & transport modules
 │       ├── angle_calculator.py    # Continuous PCA orientation [0°, 360°) & polarity estimation
 │       ├── conveyor_tracker.py    # Centroid tracker with inspection-line FIFO debounce
@@ -57,17 +57,20 @@ VisionSystem/
 │       ├── uart_handler.py        # Bounded non-blocking serial owner (KoneksiUART)
 │       └── diag_receiver.py       # Background STM32 binary reply decoder & CSV/raw logger
 ├── 06_Launchers/                  # Double-clickable portable Windows batch launchers
-├── SERVO/                         # Auxiliary standalone servo test sketch (SERVO.ino)
+├── SERVO/                         # Legacy standalone ESP32 servo sketch (see caution below)
 └── tests/                         # Automated offline verification suites
     ├── verify_vision_system.py    # Continuous angle, 18B framing, CRC16, debounce & launcher checks
     └── test_diag_transport.py     # Binary transport, correlation, fault bitmask & worker tests
 ```
 
+> [!CAUTION]
+> `VisionSystem/SERVO/SERVO.ino` is a legacy standalone bench sketch that still uses the old ASCII `K<id>,S<angle>,R<corr>` format, blocking `delay()` calls, and NVS `Preferences` flash writes on every packet. For ESP32 bridge testing, use the remediated non-blocking [`04_Source_Code/firmware_esp32/firmware_esp32.ino`](04_Source_Code/firmware_esp32/firmware_esp32.ino) instead.
+
 ---
 
 ## 3. Environment Setup (using `uv`)
 
-`VisionSystem/pyproject.toml` supports **Python 3.10+** (examples below use Python 3.12). Binary motion diagnostics uses the workspace's shared [`packages/motion_diagnostics`](../packages/motion_diagnostics/) package installed normally via `uv`—never a `sys.path` workaround.
+`VisionSystem/pyproject.toml` supports **Python 3.10+** (examples below use Python 3.12). Binary motion diagnostics uses the workspace's shared [`packages/motion_diagnostics`](../packages/motion_diagnostics/README.md) package installed normally via `uv`—never a `sys.path` workaround.
 
 Run from the **repository root**:
 
@@ -80,7 +83,7 @@ uv pip install --python VisionSystem\.venv\Scripts\python.exe ultralytics
 
 # 3. Verify offline suites
 uv run --project VisionSystem python VisionSystem\tests\verify_vision_system.py
-uv run --project VisionSystem pytest
+uv run --project VisionSystem pytest VisionSystem\tests
 ```
 
 ---
@@ -88,7 +91,7 @@ uv run --project VisionSystem pytest
 ## 4. Runtime Transport, Readiness & Angle Contract
 
 ### A. Serial Port Ownership & Non-Blocking Worker Queues
-- **Single Serial Owner:** Pass an explicit STM32 VCOM port such as `--uart-port COM9` (`AUTO` succeeds only when exactly one serial port is present). Do **not** run the [`motion-diag`](../MotorControls/MotionFirmware/tools/diag/README.md) bench CLI and live vision simultaneously on the same port.
+- **Single Serial Owner:** Pass an explicit STM32 VCOM/UART port such as `--uart-port COM9` (`AUTO` succeeds only when exactly one serial port is present). Do **not** run the [`motion-diag`](../MotorControls/MotionFirmware/tools/diag/README.md) bench CLI and live vision simultaneously on the same port.
 - **Byte-Preserving Admission:** `KoneksiUART.kirim` accepts raw 18-byte `bytes` frames only (text strings are rejected) and reports bounded TX queue admission—**not** confirmed physical motion execution.
 - **Decoupled Threads:** Background RX, TX, and CSV worker threads (`DiagnosticReceiver`) own all serial I/O and disk writes; detection never calls `readline`, waits for ASCII ACKs, or blocks on motion completion.
 - **Session & Fault Handling:** Queue overflow or sustained serial/disk I/O failure inhibits new picks without crashing inference. Uncertain pick commands are **never** automatically retried. Reconnecting opens a new host session and requires readiness confirmation again.
@@ -114,7 +117,7 @@ uv run --project VisionSystem pytest
 
 ### Live Real-Time Detection & Sorting Stream
 ```powershell
-# Launch real-time detection with explicit STM32 VCOM port
+# Launch real-time detection with explicit STM32 UART port
 uv run --project VisionSystem python VisionSystem\04_Source_Code\4_detect_realtime.py --uart-port COM9
 
 # Dry-run vision & tracking overlay without UART hardware
@@ -148,7 +151,7 @@ Run both offline test suites without physical camera or MCU hardware connected:
 uv run --project VisionSystem python VisionSystem\tests\verify_vision_system.py
 
 # 2. Binary diagnostics transport, correlation, readiness bitmask & worker thread tests
-uv run --project VisionSystem pytest
+uv run --project VisionSystem pytest VisionSystem\tests
 ```
 
 ---
@@ -157,4 +160,5 @@ uv run --project VisionSystem pytest
 
 - **Host ➔ STM32 18-byte command protocol & CRC16:** [`docs/architecture/communication_protocol.md`](../docs/architecture/communication_protocol.md)
 - **STM32 ➔ Host binary diagnostic records & metrology contract:** [`docs/architecture/motion_diagnostics_design.md`](../docs/architecture/motion_diagnostics_design.md)
+- **Shared Python diagnostic codec & metrology:** [`packages/motion_diagnostics/README.md`](../packages/motion_diagnostics/README.md)
 - **Host bench CLI (`motion-diag`):** [`MotorControls/MotionFirmware/tools/diag/README.md`](../MotorControls/MotionFirmware/tools/diag/README.md)

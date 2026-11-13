@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Automated Emulation Test Suite for STM32F446RE UART Protocol.
+"""Automated Emulation Test Suite for STM32H723 UART Protocol.
 
-Verifies the STM32F446RE MCU's ability to receive, process, validate, and respond
+Verifies the STM32H723 MCU's ability to receive, process, validate, and respond
 to UART messages sent by the Python Vision System across Renode emulation and QEMU.
 
 Coverage:
@@ -129,7 +129,7 @@ class TestRunReport:
         sub_border = "-" * 109
 
         print("\n" + C_CYAN + border + C_RESET)
-        print(f"{C_WHITE} STM32F446RE UART PROTOCOL EMULATION VERIFICATION REPORT{C_RESET}")
+        print(f"{C_WHITE} STM32H723 UART PROTOCOL EMULATION VERIFICATION REPORT{C_RESET}")
         print(f" Target: {self.target_host}:{self.target_port} | Mode: {self.mode.upper()} | Time: {self.start_time.strftime('%Y-%m-%d %H:%M:%S UTC')}")
         print(C_CYAN + border + C_RESET)
         print(
@@ -161,7 +161,7 @@ class TestRunReport:
     def export_json(self, file_path: Path) -> None:
         file_path.parent.mkdir(parents=True, exist_ok=True)
         data = {
-            "title": "STM32F446RE UART Emulation Test Suite Results",
+            "title": "STM32H723 UART Emulation Test Suite Results",
             "timestamp": self.start_time.isoformat(),
             "target": {
                 "host": self.target_host,
@@ -303,7 +303,7 @@ class STM32UartDirectClient:
 
 
 class TestSTM32UartEmulation(unittest.TestCase):
-    """TestSuite verifying STM32F446RE UART protocol parser implementation."""
+    """TestSuite verifying STM32H723 UART protocol parser implementation."""
 
     controller: Optional[Any] = None
     client: Optional[STM32UartDirectClient] = None
@@ -408,10 +408,10 @@ class TestSTM32UartEmulation(unittest.TestCase):
             # Assert key platform / firmware initialization markers
             expected_markers = [
                 "TMC2240",
-                "STM32F446RE",
-                "Nucleo-64",
+                "STM32H723",
+                "SKR Octopus Pro V1.1",
                 "USART2",
-                "SPI HAL",
+                "SPI1",
                 "Z-Axis",
                 "BOUNCING",
                 "BUTTON",
@@ -857,7 +857,7 @@ def run_tests_standalone(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="STM32F446RE UART Emulation Automated Test Suite")
+    parser = argparse.ArgumentParser(description="STM32H723 UART Emulation Automated Test Suite")
     parser.add_argument("--host", default="127.0.0.1", help="Target TCP host (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=12345, help="Target TCP port (default: 12345)")
     parser.add_argument(

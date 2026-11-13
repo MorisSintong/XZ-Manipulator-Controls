@@ -1,6 +1,6 @@
 # MotionFirmware — StallGuard4 Interactive CLI Profile (`stallguard_cli`)
 
-Interactive STM32F446RE (Nucleo-64) firmware profile that drives the two NEMA 17 axes of the 2-Axis (XZ) Cartesian manipulator through **Trinamic TMC2240** drivers (SPI + STEP/DIR) and reads dual **AS5600** magnetic encoders (I2C).
+Interactive **STM32H723ZET6 (`BIGTREETECH SKR Octopus Pro V1.1`)** firmware profile that drives the two NEMA 17 axes of the 2-Axis (XZ) Cartesian manipulator through **Trinamic TMC2240** drivers (`SPI1` + STEP/DIR) and reads dual **AS5600** magnetic encoders (`I2C1` & `I2C4`).
 
 > [!IMPORTANT]
 > This is the interactive **`stallguard_cli`** bench/calibration profile under [`MotorControls/MotionFirmware/Apps/stallguard_cli/`](./) (built as `MotionFirmware_StallGuardCLI.*`). For the default binary-only live vision & metrology executor (`motion_diagnostics`), see [`../motion_diagnostics/README.md`](../motion_diagnostics/README.md) and [`../../README.md`](../../README.md).
@@ -17,16 +17,17 @@ Full wiring schematics, pinouts, and power distribution rules:
 ### Axis Mapping Summary
 *(Configured in `Apps/stallguard_cli/Inc/app_config.h` and `Apps/stallguard_cli/Src/app_config.c`)*
 
-| Axis | Driver | CS | STEP | DIR | ENN | Step Timer | AS5600 Bus |
+| Axis | Driver Socket | CS | STEP | DIR | ENN | Step Timer | AS5600 Bus |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **0 = Z** (T8x8 Lead Screw, 400 µsteps/mm) | TMC2240 #0 | `PC0` | `PC1` | `PC2` | `PC6` | `TIM2` | `I2C3` (PA8 SCL, PC9 SDA) |
-| **1 = X** (GT2 20T Belt, 80 µsteps/mm) | TMC2240 #1 | `PC3` | `PC4` | `PC5` | `PC7` | `TIM5` | `I2C1` (PB8 SCL, PB9 SDA) |
+| **0 = Z** (T8x8 Lead Screw, 400 µsteps/mm) | TMC2240 #0 (`MOTOR1`) | `PD11` | `PG0` | `PG1` | `PF15` | `TIM2` | `I2C4` (`PB6` SCL, `PB7` SDA on `J43`) |
+| **1 = X** (GT2 20T Belt, 80 µsteps/mm) | TMC2240 #1 (`MOTOR0`) | `PC4` | `PF13` | `PF12` | `PF14` | `TIM5` | `I2C1` (`PB8` SCL, `PB9` SDA on `J73`) |
 
-- **Shared SPI2** (Mode 3, 2.625 MHz): `PB13` (SCK), `PB14` (MISO), `PB15` (MOSI).
-- **Console / Telemetry:** Dual broadcast on `USART2` (Virtual COM Port `COM9` @ 115200 8-N-1) and **SEGGER RTT** (Terminal 0).
+- **Shared `SPI1`** (Mode 3, 3.125 MHz): `PA5` (SCK), `PA6` (MISO), `PA7` (MOSI). `MOTOR2_1` (`CS2=PC6`, `ENN2=PG5`) is kept disabled at reset and in fault shutdown.
+- **Console / Telemetry:** Dual broadcast on `USART2` (`PD5`/`PD6` on `J26` @ `115200 8N1`) and **SEGGER RTT** (Terminal 0).
+- **Button `B1` / LED `LD2`:** `B1` on `PG15` (`STOP7` `J34`), `LD2` on `PD15` (`FAN5` LED `D27`).
 
 > [!NOTE]
-> The thesis document (TA 2026, Tables 3.8/3.9 and Section 3.6.2) assigns motor 0 to X and swaps the encoder buses. This firmware follows `docs/hardware/wiring.md`. If your physical harness follows the thesis proposal, swap the two entries of `g_app_axis_cfg[]` and the `APP_AXIS*_ENCODER_I2C` macros. Swapped encoders are automatically detected during homing and reported via console (`[ENC] ... swap the encoder buses`).
+> The thesis document (TA 2026, Tables 3.8/3.9 and Section 3.6.2) assigns motor 0 to X and uses legacy F446 encoder buses (`I2C1`/`I2C3`). This firmware follows the SKR Octopus Pro V1.1 wiring in `docs/hardware/wiring.md`. If your physical encoder connections are swapped, `stallguard_cli` detects the mismatch during homing and logs `[ENC] ... swap the encoder buses`.
 
 ---
 
@@ -35,8 +36,8 @@ Full wiring schematics, pinouts, and power distribution rules:
 - **Arm GNU Toolchain** (`arm-none-eabi-gcc` 14.2+ or 15.3+)
 - **CMake** (v3.22+)
 - **Ninja** build system
-- **Clang / LLVM-MinGW** (for running host simulation unit tests)
-- **SEGGER J-Link** or ST-Link utility
+- **Clang / LLVM-MinGW or GCC** (for running host simulation unit tests)
+- **SEGGER J-Link** (`probe-rs`, `flash.cmd`, or `flash_dfu.cmd` via STM32CubeProgrammer)
 
 ---
 
@@ -44,7 +45,7 @@ Full wiring schematics, pinouts, and power distribution rules:
 
 Run from `MotorControls\MotionFirmware\` (the firmware root containing `CMakePresets.json`):
 
-### Target Cross-Compilation (STM32F446RE)
+### Target Cross-Compilation (STM32H723ZET6)
 ```powershell
 # Build with Debug-StallGuard preset (sets MotionFirmware.hex = stallguard_cli,
 # and also emits build\Debug-StallGuard\MotionFirmware_StallGuardCLI.hex):
@@ -62,7 +63,7 @@ cmake --build --preset Debug-StallGuard
 ```
 
 ### Host Simulation Unit Tests
-Exhaustive host unit tests verifying the trapezoidal planner, StallGuard4 detector, encoder unwrap, TMC2240 math, console parser, and closed-loop homing/fault simulation:
+Exhaustive host unit tests verifying the trapezoidal planner, StallGuard4 detector, encoder unwrap, TMC2240 math, console parser, and closed-loop homing/fault simulation (supports `clang` or `gcc`):
 
 ```powershell
 cmake -S Apps\stallguard_cli\tests -B Apps\stallguard_cli\tests\build-host -G Ninja -DCMAKE_C_COMPILER=clang
@@ -74,12 +75,12 @@ ctest --test-dir Apps\stallguard_cli\tests\build-host --output-on-failure
 
 ## 4. Operation & User Interface
 
-1. **Power Up:** Power the Nucleo and the 24V motor supply (order does not matter: drivers that do not respond are polled every 0.5 s; LD2 blinks at 1 Hz until detected).
-2. **Start Cycle:** Press **Blue Button B1** (or type `start` in console): Z-axis homes first, then X-axis homes, followed by active cycling.
-3. **Pause / Stop:** Press **B1** again to decelerate and hold position; press again to resume.
-4. **Drivers Off / Emergency:** Long-press **B1** for 1.5 s to immediately disable both driver power stages (ENN high). Short press clears active faults.
+1. **Power Up:** Power the SKR Octopus Pro V1.1 and the 24V motor supply (order does not matter: drivers that do not respond are polled every 0.5 s; `LD2` on `PD15`/`FAN5` blinks at 1 Hz until detected).
+2. **Start Cycle:** Press **Button `B1` (`PG15`/`STOP7`)** (or type `start` in console): Z-axis homes first, then X-axis homes, followed by active cycling.
+3. **Pause / Stop:** Press **`B1`** again to decelerate and hold position; press again to resume.
+4. **Drivers Off / Emergency:** Long-press **`B1`** for 1.5 s to immediately disable both driver power stages (ENN high). Short press clears active faults.
 
-### Onboard Status LED (LD2) Signals
+### Onboard Status LED (`LD2` on `PD15` / `FAN5`) Signals
 | LD2 Pattern | Meaning |
 | :--- | :--- |
 | **1 Hz Blink** | Waiting for TMC2240 power/SPI (VM supply off or disconnected) |
@@ -93,7 +94,7 @@ ctest --test-dir Apps\stallguard_cli\tests\build-host --output-on-failure
 
 ## 5. Console & Telemetry Commands
 
-Connect to `USART2` (`COM9` @ 115200) or open SEGGER RTT Terminal 0:
+Connect to `USART2` (`PD5`/`PD6` on `J26` @ 115200 8N1) or open SEGGER RTT Terminal 0:
 
 | Command | Action |
 | :--- | :--- |
@@ -146,7 +147,7 @@ MotorControls/MotionFirmware/
 │   │   ├── cmd_parse.c/.h       # Tokenizer & command line interpreter
 │   │   └── app.c / app_config.c # Sequencing, B1 button debouncing, telemetry loop
 │   └── tests/                   # Complete host CTest simulation harness
-├── Core/                        # Shared CubeMX initialization (clock, GPIO, SPI2, USART2, I2C, TIM)
+├── Core/                        # Shared CubeMX H723 initialization (clock, GPIO, SPI1, USART2, I2C1/I2C4, TIM2/5)
 └── cmake/                       # Arm toolchain definitions and CubeMX build scripts
 ```
 

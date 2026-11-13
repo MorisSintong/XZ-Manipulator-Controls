@@ -2,9 +2,9 @@
 
 Canonical reusable implementation for the TMC2240, referenced to Analog Devices Rev. 2 (11/23).
 
-The register core is portable. The supplied STM32F4 HAL adapter includes `stm32f4xx_hal.h` and was integrated against the legacy STM32F446RE target.
+The register core is portable, and `tmc2240_hal.h` / `tmc2240_hal.c` support both **STM32H7xx** (`stm32h7xx_hal.h`, used by `MotorControls/MotionFirmware` on the BIGTREETECH SKR Octopus Pro V1.1 / STM32H723ZET6) and **STM32F4xx** (`stm32f4xx_hal.h`, used by the legacy STM32F446RE examples).
 
-**Current physical controller:** BIGTREETECH SKR Octopus Pro V1.1 (STM32H723ZET6); see the [current board wiring](../../../../docs/hardware/wiring.md). This package does **not** include an H723 HAL adapter or SKR-compatible firmware; the F446 adapter/project must not be used on that board.
+**Current physical controller:** BIGTREETECH SKR Octopus Pro V1.1 (STM32H723ZET6); see the [current board wiring](../../../../docs/hardware/wiring.md) and [MotorControls/MotionFirmware](../../../MotionFirmware/README.md). The bundled `examples/` and prebuilt `firmware/` images in `TMC2240-Driver` remain legacy F446-only and must not be flashed to the SKR.
 
 Host simulation does **not** establish electrical, motor, timing, thermal, or mechanical readiness. No hardware qualification or formal MISRA claim is made.
 
@@ -13,7 +13,7 @@ Host simulation does **not** establish electrical, motor, timing, thermal, or me
 Add `driver\inc` to your include paths. Compile these files **once**:
 
 - `src\TMC2240.c` — portable checked register/field access, SPI/UART framing, cache.
-- `src\tmc2240_hal.c` — STM32F4 HAL SPI transport and checked motor helpers.
+- `src\tmc2240_hal.c` — STM32H7/F4 HAL SPI transport and checked motor helpers.
 - `src\CRC.c` and `src\Functions.c` — optional shared CRC/math utilities.
 
 `inc\tmc2240.h` is the STM32 umbrella; **`inc\tmc2240_core.h`** is the portable
@@ -23,8 +23,9 @@ callback declarations. The old duplicate `src\helpers` implementations are gone;
 `inc\helpers` is only a legacy include-path forwarding layer.
 
 C11 is required. Public declarations and field descriptors also compile as C++17.
-Real STM32 HAL/CMSIS and `stm32f4xx_hal_conf.h` are application dependencies, not
-provided by the portable core. `Tests\fake_hal` must **never** be used in firmware.
+Real STM32 HAL/CMSIS (`stm32h7xx_hal.h` or `stm32f4xx_hal.h` and its corresponding
+`stm32*_hal_conf.h`) are application dependencies, not provided by the portable
+core. `Tests\fake_hal` must **never** be used in firmware.
 
 ## Error and ownership contract
 
@@ -151,7 +152,7 @@ Other helper contracts:
 - Fault observation never writes W1C. Fault output uses GSTAT bits 0..4 directly.
   Encoder N-event acknowledgement is likewise a deliberate operation.
 - ADC helpers reject IOIN.ADC_ERR, mask the 13-bit sample (excluding AIN/reserved
-  upper bits), and truncate integer scaling towards zero. Supply is
+  upper half), and truncate integer scaling towards zero. Supply is
   `sample*9732/1000` mV; temperature is `(sample-2038)*100/77` tenths of °C.
   PWM automatic scale and both phase currents are signed nine-bit quantities.
 

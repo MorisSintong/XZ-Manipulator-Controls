@@ -1,6 +1,6 @@
 # Dual-axis motion diagnostics design
 
-**Status:** Software and wire contract for the current `motion_diagnostics` implementation. This document remains a design and bench-acceptance reference; it does not establish physical hardware qualification.
+**Status:** Software and wire contract for the current `motion_diagnostics` implementation (targeting STM32H723ZET6 / BIGTREETECH SKR Octopus Pro V1.1). This document remains a design and bench-acceptance reference; it does not establish physical hardware qualification.
 
 Sources: [datasheet notes](../hardware/diagnostics_datasheet_notes.md), [vision protocol](communication_protocol.md), [wiring](../hardware/wiring.md), [mechanics](../hardware/bom_and_mechanics.md), the [motion diagnostics implementation guide](../../MotorControls/MotionFirmware/Apps/motion_diagnostics/README.md), and the [VisionSystem guide](../../VisionSystem/README.md). This document records the software/wire contract and remaining bench qualification; it is not itself a hardware test report.
 
@@ -15,8 +15,8 @@ flowchart LR
     Q --> M[Nonblocking motion state machine]
     STOP --> M
     M --> TIM[Timer compare ISR: STEP / DIR and edge counts]
-    M --> SPI[Serialized SPI2: two TMC2240s]
-    I2C[I2C1 X / I2C3 Z: periodic RAW samples] --> U[encoder_unwrap per axis]
+    M --> SPI[Serialized SPI1: two TMC2240s]
+    I2C[I2C1 X / I2C4 Z: periodic RAW samples] --> U[encoder_unwrap per axis]
     U --> M
     M --> R[Immutable completion / home / status snapshots]
     R --> TX[Bounded USART2 TX DMA queue]
@@ -42,19 +42,19 @@ Integration tests preserve the deployed Python packet bytes and verify command C
 
 ### STEP generation and evidence
 
-Port reference-branch timer stepping and motion profiling: **TIM2 for Z, TIM5 for X**, retaining the branch's motor/timer ownership, with 1 MHz 32-bit timer deadlines for STEP rising/falling edges and DIR setup/hold. PC1/PC4 remain GPIOs: ISR writes GPIOC BSRR, not pin AF PWM requiring rewiring. Adapt `stepgen_irq_handler()` from the branch's double-edge/update scheme to this qualified **single-rising-edge** contract; use timer compare deadlines or an equivalent measured deterministic edge schedule. Schedule from the previous deadline, not ISR arrival. Only ISR owns pulse state and emitted counters. Sequential X, Z-down, Z-up avoids unnecessary coordinated interpolation; homing uses the same engine.
+Timer stepping and motion profiling use **TIM2 for Z (`MOTOR1`, `PG0` STEP0)** and **TIM5 for X (`MOTOR0`, `PF13` STEP1)** with 1 MHz 32-bit timer deadlines for STEP rising/falling edges and DIR setup/hold. `PF13` (X) and `PG0` (Z) remain GPIOs: the ISR writes `GPIOF`/`GPIOG` `BSRR`, not pin AF PWM requiring rewiring. `stepgen_irq_handler()` / `step_engine` follows the qualified **single-rising-edge** contract using timer compare deadlines. Schedule from the previous deadline, not ISR arrival. Only ISR owns pulse state and emitted counters. Sequential X, Z-down, Z-up avoids unnecessary coordinated interpolation; homing uses the same engine.
 
 ISR work: clear compare flag, check abort latch, write edge, increment signed emitted microsteps and unsigned rising-edge count **only when actually writing a rising edge**, schedule the next edge. No HAL I2C/SPI/UART, formatting, allocation, or delay in ISR. Generate trapezoidal acceleration intervals in foreground with a bounded look-ahead buffer; starvation or excessive lateness stops rather than emitting catch-up bursts. A late falling edge must never be followed by a shortened low pulse. Timer has higher priority than UART/I2C callbacks; measure its worst interrupt latency with a logic analyzer.
 
 Initial application settings: STEP high **5 µs**, DIR setup/hold **20 µs**, single-edge stepping (`DEDGE=0`), 1/16 microsteps (`MRES=4` by repository mapping), and 2,000 steps/s maximum per axis during bring-up (X 25 mm/s, Z 5 mm/s), starting at 500 steps/s. Minimum STEP-low time and lateness margin must be configured/qualified, not inferred. **These are conservative application choices, not verified TMC2240 electrical minima.** Official STEP/DIR limits are UNVERIFIED; do not increase rate or shorten dwell before obtaining the datasheet and bench qualification. ISR timing is less deterministic than direct hardware outputs, so exceeding the measured jitter budget is a release blocker; timer-triggered GPIO DMA is a later alternative.
 
-Current DWT busy-wait pulses are interrupted by SPI reads and blocking UART logs, consume foreground time, and cannot enforce sample deadlines. DWT may remain an instrumentation clock, not the motion executor. Emitted count proves software edges, not driver acceptance or actual mechanical motion.
+DWT busy-wait pulses (used only in the legacy `z_bounce_emulation` profile) are interrupted by SPI reads and blocking UART logs, consume foreground time, and cannot enforce sample deadlines. DWT may remain an instrumentation clock, not the motion executor. Emitted count proves software edges, not driver acceptance or actual mechanical motion.
 
 ### Encoder acquisition
 
 | Item | Contract |
 | --- | --- |
-| Bus / source | X: I2C1 PB8/PB9; Z: I2C3 PA8/PC9; separate devices at 7-bit `0x36`, both buses 400 kHz. Read RAW ANGLE high/low in one two-byte transaction, mask to 12 bits; do not unwrap scaled ANGLE. Thesis lines 3381–3383 assign the opposite buses; task/wiring mapping is authoritative for this build and must be verified physically, not swapped silently. |
+| Bus / source | X: `I2C1` (`PB8` SCL / `PB9` SDA on `J73`); Z: `I2C4` (`PB6` SCL / `PB7` SDA on `J43` `BL_Touch` header, powered from `J73` `3.3V`); separate devices at 7-bit `0x36`, both buses 400 kHz. Read RAW ANGLE high/low in one two-byte transaction, mask to 12 bits; do not unwrap scaled ANGLE. Thesis lines 3381–3383 assign legacy `I2C1`/`I2C3` on Nucleo-F446; the SKR Octopus Pro V1.1 H723 wiring (`wiring.md` §3) assigns `I2C1` / `I2C4` and must be verified physically, not swapped silently. |
 | Profile | Volatile documented CONF fields `0x0300`: normal power, HYST off, SF 2×, FTH off, WD off. Preserve reserved bits, read back, allow ≥1 ms setting propagation and endpoint settling. Never write OTP register `0xFF` or change range to establish zero. |
 | Cadence | **2 ms target per axis**; timestamp each accepted raw read, with conservative acquisition uncertainty. Separate raw polling from health snapshots (STATUS/AGC, nominal 20 ms and fresh at endpoints). Existing synchronous HAL port may be used in foreground with bounded timeout; an async port is optional, not a change to unwrap API. |
 | Wire budget | RAW two-byte read ≈45 SCL clocks =112.5 µs per axis at 400 kHz, or ≥0.225 ms for both serialized, excluding overhead. Full existing `as5600_read_sample` has six transactions, ≈0.6075 ms/axis, 1.215 ms serialized for both; 100 kHz cannot sustain 2 ms full samples. No sensor calls in STEP ISR. |
@@ -164,7 +164,7 @@ reseed/re-home, not silently overwriting the measured CONF with the desired valu
 
 Axis flags: 0 PHASE_BEGUN, 1 PHASE_COMPLETE, 2 START_ENCODER_VALID, 3 END_ENCODER_VALID, 4 UNWRAP_CONTINUOUS, 5 HOME_VALID, 6 START_MSCNT_VALID, 7 END_MSCNT_VALID, 8 CLAMPED, 9 SAMPLE_OVERRUN, 10 MAGNET_FAULT, 11 I2C_ERROR, 12 ENCODER_SIGN_NEGATIVE, 13 MSCNT_AXIS_SIGN_NEGATIVE, 14 CONVERSION_OVERFLOW, 15 reserved. Validity flags, not zero values, distinguish real zero readings from missing data.
 
-Candidate MSCNT model: `expected = (phase_sign × emitted_delta_steps × 16) mod 1024`, `observed = (end − start) mod 1024`, with calibrated phase sign, fixed MRES=4 and DEDGE=0. Use existing `tmc2240_get_microstep_counter`, not a duplicate getter. **Model remains UNVERIFIED against official TMC2240 documentation.** Diagnostic qualification should disable interpolation (`INTPOL=0`), verify readback, then test stationary short moves in both directions. Current main enables INTPOL; arbitrary interpolated reads are not comparable. Mark check=3 until qualified, never PASS by assumption. Reset/mode changes invalidate baseline. Phase agrees every 64 steps at this setting: it cannot prove full displacement or detect shaft slip.
+Candidate MSCNT model: `expected = (phase_sign × emitted_delta_steps × 16) mod 1024`, `observed = (end − start) mod 1024`, with calibrated phase sign, fixed MRES=4 and DEDGE=0. Use existing `tmc2240_get_microstep_counter`, not a duplicate getter. **Model remains UNVERIFIED against official TMC2240 documentation.** Diagnostic qualification should disable interpolation (`INTPOL=0`), verify readback, then test stationary short moves in both directions (`motion_diagnostics` disables interpolation; `z_bounce_emulation` leaves INTPOL enabled, where arbitrary interpolated reads are not comparable). Mark check=3 until qualified, never PASS by assumption. Reset/mode changes invalidate baseline. Phase agrees every 64 steps at this setting: it cannot prove full displacement or detect shaft slip.
 
 For this firmware's enforced **SHAFT=0**, `phase_sign` in that formula is
 **derived from the actually driven DIR polarity (`dir_sign`)**, not an independently
@@ -333,9 +333,9 @@ Two independent SF 2× endpoint noise samples give approximate delta RMS 6.76 µ
 
 Bench procedure, after wiring and user safety checks:
 
-1. Mechanically support Z, isolate actuator/vacuum power, confirm physical stop, grounds and encoder magnet/supply installation. Identify the actual VCOM/J-Link interface; do not assume a converted debug probe still provides ST-Link VCOM.
-2. Build/flash with configured J-Link/probe-rs tooling and start `capture`; RTT is the separate human channel. Verify both TMC connections, MRES/mode readbacks, encoder MD/ML/MH/AGC and CONF. Verify DIR/encoder/phase signs with safe short moves before any automatic endstop approach.
-3. Scope PC1/PC4 and DIR/ENN under worst sampling/serial load. Measure STEP high/low, DIR setup/hold, jitter, counts and abort latency against the **obtained** TMC2240 timing table. Confirm status faults inhibit motion.
+1. Mechanically support Z, isolate actuator/vacuum power, confirm physical stop, grounds and encoder magnet/supply installation. Identify the actual VCOM/UART (`USART2` `PD5/PD6` on `J26`) and J-Link interface; do not assume a converted debug probe still provides ST-Link VCOM.
+2. Build/flash with configured J-Link / `probe-rs` / DFU tooling and start `capture`; RTT is the separate human channel. Verify both TMC connections, MRES/mode readbacks, encoder MD/ML/MH/AGC and CONF. Verify DIR/encoder/phase signs with safe short moves before any automatic endstop approach.
+3. Scope `PF13`/`PG0` (`STEP1`/`STEP0`) and `DIR`/`ENN` under worst sampling/serial load. Measure STEP high/low, DIR setup/hold, jitter, counts and abort latency against the **obtained** TMC2240 timing table. Confirm status faults inhibit motion.
 4. Qualify each SG4 home with bounded travel, appropriate speed/current, backoff and repeat latch. Start with low-energy manually supervised tests and safe Z clearance; capture HOME_RESULT and verify software-only offsets. Run repeated homing to quantify origin variation. Enable usable strokes/depth only after verification.
 5. With interpolation disabled and qualified phase semantics, test ±1, ±2, ±10 and modulo-alias ±64 microsteps; compare MSCNT and encoder evidence. Deliberate encoder fault/turn-gap tests invalidate rather than synthesize feedback. Repeat with intended production interpolation profile, reporting unqualified comparison until validated.
 6. Run sender N=30 / M≥3 safe target poses using a fixed approach, then bidirectional and cross-rehome trials. Retain X, Z-down and Z-up separately. CSV/analyzer must match sent/received counts and reject bad flags.
@@ -344,7 +344,7 @@ Bench procedure, after wiring and user safety checks:
 
 ## 8. Historical Implementation Breakdown (Superseded)
 
-The table below records the proposed porting sequence from the original design work (where `App\...` denoted the single-profile firmware folder prior to reorganization into [`Apps/motion_diagnostics/`](../../MotorControls/MotionFirmware/Apps/motion_diagnostics/) and [`Apps/stallguard_cli/`](../../MotorControls/MotionFirmware/Apps/stallguard_cli/)). It is not a current task list; the software implementation is now present. Use the [`MotionFirmware`](../../MotorControls/MotionFirmware/README.md) and [`motion_diagnostics`](../../MotorControls/MotionFirmware/Apps/motion_diagnostics/README.md) README files plus current source as the implementation reference. The remaining release work is hardware qualification.
+The table below records the proposed porting sequence from the original design work (where `App\...` denoted the single-profile NUCLEO-F446RE folder prior to reorganization into [`Apps/motion_diagnostics/`](../../MotorControls/MotionFirmware/Apps/motion_diagnostics/) and [`Apps/stallguard_cli/`](../../MotorControls/MotionFirmware/Apps/stallguard_cli/) and migration to STM32H723ZET6 / SKR Octopus Pro V1.1). It is not a current task list; the software implementation is now present. Use the [`MotionFirmware`](../../MotorControls/MotionFirmware/README.md) and [`motion_diagnostics`](../../MotorControls/MotionFirmware/Apps/motion_diagnostics/README.md) README files plus current source as the implementation reference. The remaining release work is hardware qualification.
 
 | Order | Files | Responsibility / generation constraint |
 | --- | --- | --- |
@@ -378,5 +378,5 @@ The table below records the proposed porting sequence from the original design w
 | Data protocol approval | Confirm **356-byte three-phase result**, 124-byte home and 116-byte status are acceptable, and human logs move to RTT only. One net-Z measurement cannot satisfy down/up diagnostics. |
 | Rates / synchronization | Initial 2,000 steps/s cap and 2 ms encoder target are bring-up choices, not measured production capability. MCU edge counters must be snapshotted consistently; encoder endpoints are separate acquisitions, not simultaneously latched with STEP. |
 | Hardware sampling | RAW word coherence remains unverified; monitor implausible jumps, timestamps and healthy endpoint stability. Mag installation and nonlinearity dominate theoretical resolution. |
-| References / transport | MCU reset reuses counters; host starts new run. Coordinate frame/home offset must match vision calibration. VCOM availability after J-Link conversion must be checked; never infer board routing from COM number. |
-| Scope of completion | This document is a design deliverable only. Implementation, programmatic verification and hardware qualification remain Worker C/coordinator responsibilities; no firmware-complete claim. |
+| References / transport | MCU reset reuses counters; host starts new run. Coordinate frame/home offset must match vision calibration. Physical `USART2` (`PD5/PD6` on `J26`) and J-Link SWD availability must be checked against board jumpers. |
+| Scope of completion | Firmware (`Apps/motion_diagnostics/`), host package (`packages/motion_diagnostics/`), CLI (`tools/diag/`), and offline software tests are implemented; physical hardware qualification and official TMC2240 datasheet verification remain outstanding before any hardware-complete claim. |

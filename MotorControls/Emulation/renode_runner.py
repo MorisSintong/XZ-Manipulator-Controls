@@ -1,4 +1,4 @@
-"""Renode Emulation Runner & Controller for STM32F446RE UART Testing.
+"""Renode Emulation Runner & Mock Server Controller for STM32 UART Testing.
 
 This module manages the lifecycle of the Renode emulation process and provides
 a reliable TCP client interface to communicate with the emulated USART2 peripheral.
@@ -46,20 +46,21 @@ def _crc16_ccitt(data: bytes, poly: int = 0x1021, init: int = 0xFFFF) -> int:
 
 
 class MockFirmwareServer:
-    """In-process mock STM32F446RE firmware server for automated testing and CI.
+    """In-process mock STM32H723 firmware server for automated testing and CI.
 
     Faithfully emulates the STM32 UART receiver ISR ring buffer and protocol
-    parser implemented in Core/Src/vision_uart_protocol.c.
+    parser implemented in Apps/z_bounce_emulation/Src/vision_uart_protocol.c.
     """
 
     BOOT_BANNER = (
         "\r\n"
         "=================================================================\r\n"
+        "   [PROFILE] z_bounce_emulation (Z-Bounce + Vision UART)         \r\n"
         "   TMC2240 Z-Axis StallGuard4 Sensorless Limit Bouncing Suite    \r\n"
-        "   Target: STM32F446RE Nucleo-64 @ 84 MHz                        \r\n"
-        "   SPI2: PB13(SCK), PB14(MISO), PB15(MOSI)                      \r\n"
-        "   Pins: CS0=PC0, STEP0=PC1, DIR0=PC2, ENN0=PC6                 \r\n"
-        "   Telemetry: SEGGER RTT Terminal 0 + USART2 @ 115200 (COM9)    \r\n"
+        "   Target: STM32H723 SKR Octopus Pro V1.1 @ 400 MHz              \r\n"
+        "   SPI1: PA5(SCK), PA6(MISO), PA7(MOSI)                          \r\n"
+        "   Pins: CS0=PD11, STEP0=PG0, DIR0=PG1, ENN0=PF15                \r\n"
+        "   Telemetry: SEGGER RTT Terminal 0 + USART2 @ 115200 (PD5/PD6)  \r\n"
         "=================================================================\r\n"
         "[INFO] Initializing TMC2240 SPI HAL...\r\n"
         "[INFO] Testing SPI connection to TMC2240 (verifying silicon ID)...\r\n"
@@ -68,7 +69,7 @@ class MockFirmwareServer:
         "[PASS] TMC2240 StallGuard4 Configured & Ready!\r\n"
         "\r\n"
         "=================================================================\r\n"
-        ">>> PRESS BLUE BUTTON (B1 / PC13) TO START Z-AXIS BOUNCING <<<\r\n"
+        ">>> PRESS BLUE BUTTON (B1 / PG15) TO START Z-AXIS BOUNCING <<<\r\n"
         ">>> (Press Button again anytime during motion to STOP)        <<<\r\n"
         "=================================================================\r\n"
     )

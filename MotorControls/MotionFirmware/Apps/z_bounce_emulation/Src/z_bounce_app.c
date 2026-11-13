@@ -165,7 +165,7 @@ void fw_app_init(void) {
   log_printf(
       "=================================================================\r\n");
   log_printf(
-      ">>> PRESS BLUE BUTTON (B1 / PC13) TO START Z-AXIS BOUNCING <<<\r\n");
+      ">>> PRESS BLUE BUTTON (B1 / PG15) TO START Z-AXIS BOUNCING <<<\r\n");
   log_printf(
       ">>> (Press Button again anytime during motion to STOP)        <<<\r\n");
   log_printf("================================================================="
@@ -180,7 +180,7 @@ void fw_app_poll(void) {
   /* Service incoming vision UART protocol packets (non-blocking) */
   VisionUart_Process();
 
-  /* Wait for Blue User Button (PC13) press to START */
+  /* Wait for User Button (PG15 / STOP7) press to START */
   if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) {
     HAL_Delay(50); /* Debounce */
     if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) {

@@ -60,7 +60,7 @@ Provide a regulated 3.3 V supply to each module's `VCC` and `3V3` as required by
 - The board's X (`Driver 0`) and Z (`Driver 1`) endstop inputs are `PG6` (`STOP0`) and `PG9` (`STOP1`), respectively. These are also the corresponding driver `DIAG` signals. Configure sensorless homing or mechanical endstops deliberately; do not connect both to the same input without checking the board jumper arrangement.
 - **E-Stop / User Button (`B1`)**: Mapped to `PG15` (`STOP7` header `J34`). `STOP7` has an on-board 10 kΩ pull-up (`R28`) to 3.3 V and a 100 Ω / 0.1 µF hardware RC filter (`R32`/`C16`), so it idles safely HIGH (`GPIO_PIN_SET`) even with nothing plugged in and triggers `EXTI15_10_IRQn` when shorted to `GND`.
 - **Status / Heartbeat LED (`LD2`)**: Mapped to `PD15` (`FAN5` gate indicator LED `D27`). Note that the board's `PA13` (`WORK_LED`) is intentionally left on `JTMS-SWDIO` so SEGGER J-Link SWD debugging and RTT telemetry are never interrupted.
-- The dedicated `PROBE` connector uses MCU input `PC5`. BTT documents NPN and PNP proximity-switch support on the Octopus Pro.
+- The dedicated `PROBE` connector uses MCU input `PC5`. BTT documents NPN and PNP proximity-switch support on the Octopus Pro (**note:** `PC5` is not yet configured or read in `MotionFirmware`).
 
 ## 5. Host serial connection (`USART2`)
 

@@ -1,17 +1,17 @@
 # Host PC ➔ STM32 Communication Protocol Specification
 
-- **Subsystem:** Vision System (Host PC) to Motion Controller (existing implementation: STM32F446RE; physical target: SKR Octopus Pro V1.1 / STM32H723)
-- **Physical Layer:** Full-Duplex UART via USB-CDC / Hardware Serial
+- **Subsystem:** Vision System (Host PC) to Motion Controller (STM32H723ZET6 on BIGTREETECH SKR Octopus Pro V1.1)
+- **Physical Layer:** Full-Duplex UART via 3.3 V Hardware Serial (`USART2` `PD5` TX / `PD6` RX on `J26` 2x5 Raspberry Pi header)
 - **Baud Rate:** 115200 bps (8-N-1: 8 data bits, no parity, 1 stop bit)
 
 > [!IMPORTANT]
-> This protocol is implemented by the existing NUCLEO-F446RE firmware. The SKR Octopus Pro V1.1 H723 firmware port has not been completed; its UART/USB interface and pins must be configured before connecting the host. Do not assume the Nucleo USART2 or ST-LINK VCOM wiring carries over.
+> This protocol is implemented on the **STM32H723ZET6 (SKR Octopus Pro V1.1)** via `USART2` (`PD5`/`PD6` on `J26` with on-board 120 Ω series protection resistors). Connect a 3.3 V USB-UART adapter or host link with crossed TX/RX and common GND (leave 5 V pins unconnected); do not rely on ST-LINK VCOM or legacy NUCLEO-F446RE wiring.
 
 ---
 
 ## 1. Frame Structure Overview
 
-The deployed command uses a fixed-length 18-byte binary frame with synchronization preambles and CRC16-CCITT validation. The diagnostic runtime is a cooperative foreground state machine with UART DMA and has no RTOS implementation. An RTOS and its queues may be evaluated in a future systems stage if more complex kinematics and real-time coordination warrant task scheduling; neither is a requirement of this build or protocol. USART2 is binary-only; human firmware logs use RTT.
+The deployed command uses a fixed-length 18-byte binary frame with synchronization preambles and CRC16-CCITT validation. The diagnostic runtime is a cooperative foreground state machine with UART DMA and has no RTOS implementation. An RTOS and its queues may be evaluated in a future systems stage if more complex kinematics and real-time coordination warrant task scheduling; neither is a requirement of this build or protocol. USART2 is binary-only in `motion_diagnostics`; human firmware logs use SEGGER RTT.
 
 ```text
  +-------+-------+------+-----------+---------+-----------+-----------+-------------+------------------+---------------+-------------+
@@ -101,7 +101,7 @@ def calculate_crc16(data: bytes) -> int:
 
 ## 4. STM32 Reception & Ring-Buffer State Machine
 
-To prevent CPU overhead, the STM32 USART2 peripheral runs in **DMA Circular Mode**. An incoming stream parser processes bytes via an interrupt-free state machine:
+To prevent CPU overhead, the STM32 USART2 peripheral runs in **DMA Circular Mode** (`DMA1_Stream0` RX / `DMA1_Stream1` TX). An incoming stream parser processes bytes via an interrupt-free state machine:
 
 ```text
  [WAIT_PREAMBLE_1: 0xAA] ➔ [WAIT_PREAMBLE_2: 0x55] ➔ [RECEIVE_PAYLOAD: 12 Bytes]

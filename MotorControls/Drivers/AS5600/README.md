@@ -1,9 +1,12 @@
-# AS5600 driver for STM32F446RE
+# AS5600 driver for STM32 HAL
 
-A portable, allocation-free C99 driver with an STM32CubeF4 polling-I2C port
-and a CMSIS-RTOS2 synchronization adapter for FreeRTOS. The board integration
-targets the **NUCLEO-F446RE**, I2C1 on **PB8 / D15 (SCL)** and
-**PB9 / D14 (SDA)**.
+A portable, allocation-free C99 driver with an STM32 HAL polling-I2C port
+(`ports/stm32_hal/as5600_stm32_hal.h`, supporting both `stm32h7xx_hal.h` and
+`stm32f4xx_hal.h` via `__has_include`) and a CMSIS-RTOS2 synchronization
+adapter for FreeRTOS.
+
+- **Current system controller:** [`MotorControls/MotionFirmware`](../../MotionFirmware/README.md) uses `src/as5600.c` and `ports/stm32_hal/as5600_stm32_hal.c` on the **BIGTREETECH SKR Octopus Pro V1.1 (STM32H723ZET6)** with dual I2C buses (`I2C1` on `PB8`/`PB9` for X and `I2C4` on `PB6`/`PB7` for Z; see [docs/hardware/wiring.md](../../../docs/hardware/wiring.md)).
+- **Standalone examples & vendor compile gate:** The bundled `examples/nucleo_f446re` code, board setup walkthrough below, and `tests/vendor_compile` target default to the standalone **NUCLEO-F446RE** (`STM32F446xx`, `I2C1` on `PB8`/`PB9`).
 
 The implementation follows a MISRA C:2012-oriented coding and verification
 process. It is **not a certified or unconditional MISRA-compliant component**:
@@ -17,9 +20,9 @@ separate from host testing and target compilation; see
 | Location | Purpose |
 | --- | --- |
 | `include\as5600.h`, `src\as5600.c` | Portable sensor protocol and checked API |
-| `ports\stm32_hal` | STM32F4 HAL adapter; synchronous memory transfers |
+| `ports\stm32_hal` | STM32H7/F4 HAL adapter; synchronous memory transfers |
 | `ports\cmsis_rtos2` | Caller-owned mutex, ownership checks, tick conversion |
-| `examples\nucleo_f446re` | Bare-metal and CMSIS-FreeRTOS binding/polling examples |
+| `examples\nucleo_f446re` | Legacy NUCLEO-F446RE bare-metal and CMSIS-FreeRTOS binding/polling examples |
 | `tests` | Exhaustive, fault-injection, threaded, actual FreeRTOS/QEMU and target-compile checks |
 | `tools` | Repeatable static-analysis and coverage checks |
 
@@ -34,7 +37,7 @@ automatic bus-reset sequence, DMA API, or ISR-mode transfer API.** Permanent
 programming needs a separate controlled manufacturing procedure. This is an
 AS5600 driver, not an AS5600L driver.
 
-## Board setup
+## Standalone Board Setup (NUCLEO-F446RE Example)
 
 Use a **3.3 V-compatible AS5600 circuit**, common ground, and external SDA/SCL
 pull-ups to **3.3 V**. Do not assume a breakout powered from 5 V also has
@@ -56,15 +59,15 @@ magnetized on-axis magnet** and check the magnet-status flags and air gap.
 Start with short wiring and 100 kHz; select pull-ups for the actual bus
 capacitance and measure rise time before increasing speed.
 
-In STM32CubeMX:
+In STM32CubeMX (for the standalone F446RE example; for SKR Octopus Pro V1.1 / STM32H723ZET6 configure `I2C1 PB8/PB9` and `I2C4 PB6/PB7` with `STM32H723xx`):
 
 1. Select **NUCLEO-F446RE**, I2C1, PB8/PB9 AF4 open-drain, and **7-bit
    addressing**. Choose 100 kHz initially, or at most **400 kHz** for this
-   classic I2C1 HAL port. The sensor's 1 MHz capability does not change that
+   polling I2C HAL port. The sensor's 1 MHz capability does not change that
    port limit.
 2. Enable the HAL I2C module and its dependencies. Include the normal
-   `STM32F446xx` and `USE_HAL_DRIVER` definitions. Keep HAL's `USE_RTOS`
-   setting at **0**; the external mutex supplies synchronization.
+   `STM32F446xx` (or `STM32H723xx` on H723 targets) and `USE_HAL_DRIVER` definitions. Keep HAL's `USE_RTOS`
+   setting at **0**; if using FreeRTOS, the external mutex supplies synchronization.
 3. For FreeRTOS, select **CMSIS-V2**, enable mutexes and static allocation,
    and use **32-bit kernel ticks**. A 1 kHz kernel tick is a convenient
    starting point, but the adapter converts other supported tick rates.
@@ -78,7 +81,7 @@ The sensor address is **0x36, 7-bit**. The HAL adapter alone shifts it to
 ## Add the source files
 
 For bare metal, add `src\as5600.c` and
-`ports\stm32_hal\as5600_stm32_hal.c` to your CubeIDE project, with their two
+`ports\stm32_hal\as5600_stm32_hal.c` to your firmware project, with their two
 header directories on the include path.
 
 For FreeRTOS, also add
@@ -204,7 +207,9 @@ compilation, and hardware acceptance commands are in
 For an existing CMake firmware build, enable `AS5600_BUILD_STM32_HAL` and,
 if needed, `AS5600_BUILD_CMSIS_RTOS2`; supply the HAL/CMSIS/application
 directories through `AS5600_VENDOR_INCLUDE_DIRS`. The HAL target exports
-`STM32F446xx` by default, selectable through `AS5600_STM32_DEVICE`.
+`STM32F446xx` by default, selectable through `AS5600_STM32_DEVICE` (or build
+`src/as5600.c` and `ports/stm32_hal/as5600_stm32_hal.c` directly under an
+H723 Cube/CMake target as `MotionFirmware` does).
 Link the application with the matching HAL and kernel, not just the driver
 archives.
 

@@ -1,8 +1,7 @@
-# CRITICAL MANDATE: VisionSystem Remediation & Alignment Plan
+# VisionSystem Remediation & Alignment Plan (Completed Baseline)
 
-> **ATTENTION TO ANY AI ASSISTANT / AGENT WORKING ON THIS REPOSITORY:**  
-> You are tasked with remediating the `VisionSystem/` codebase to conform with the official undergraduate thesis engineering specifications in `01_Dokumen_TA/TA_2026_extracted.txt`.  
-> You must execute all items below methodically. **DO NOT mark this task as complete or finish your turn until ALL requirements and verification checks pass programmatically.**
+> [!NOTE]
+> **Status:** All remediation checklist items in Section 4 (`[x]`) have been implemented and verified by [`tests/verify_vision_system.py`](tests/verify_vision_system.py) and [`tests/test_diag_transport.py`](tests/test_diag_transport.py). The motion controller target has since migrated from the initial NUCLEO-F446RE baseline to **STM32H723ZET6 (BIGTREETECH SKR Octopus Pro V1.1)**. This document is retained as the historical remediation record and regression guardrail against `01_Dokumen_TA/TA_2026_extracted.txt`.
 
 ---
 
@@ -12,8 +11,8 @@
   Automated Quality Control (QC) and sorting of electrolytic capacitors on an industrial conveyor using a 2-axis (XZ) Cartesian Manipulator with vacuum suction cup and micro-servo reorientation.
 - **Hardware Integration Target:**
   - **Vision:** Overhead camera $\to$ PC running Ultralytics YOLO + Continuous Angle Estimation $\to$ Camera-to-Conveyor coordinate mapping (pixel to mm; optional homography supported).
-  - **Microcontroller:** **STM32F446RE** with circular-DMA UART. The current `motion_diagnostics` profile uses a cooperative foreground state machine; FreeRTOS integration is not part of the current firmware.
-  - **Motion Controller:** STM32 controls **TMC2240** stepper drivers (SPI / Step-Dir) for X and Z axes, with **AS5600** magnetic encoders (I2C) and vacuum solenoid valve.
+  - **Microcontroller:** **STM32H723ZET6** (`BIGTREETECH SKR Octopus Pro V1.1`, migrated from initial STM32F446RE baseline) with DMA UART (`USART2`). Both the `motion_diagnostics` and `stallguard_cli` firmware profiles use a cooperative foreground state machine; FreeRTOS integration is not part of the current firmware.
+  - **Motion Controller:** STM32 controls **TMC2240** stepper drivers (`SPI1` / Step-Dir) for X and Z axes, with **AS5600** magnetic encoders (`I2C1` / `I2C4`) and vacuum solenoid valve.
   - **Sorting Jig & Conveyor Line:** Coordinated with **OMRON CP2E-N PLC** via Modbus TCP/IP.
 
 ---

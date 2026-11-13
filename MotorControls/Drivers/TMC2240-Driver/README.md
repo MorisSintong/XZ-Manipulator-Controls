@@ -2,9 +2,9 @@
 
 Driver and example package for the **Analog Devices / Trinamic TMC2240**.
 
-**Current physical controller:** BIGTREETECH SKR Octopus Pro V1.1 with STM32H723ZET6 and TMC2240 modules; see the [current board wiring](../../../docs/hardware/wiring.md).
+**Current physical controller:** BIGTREETECH SKR Octopus Pro V1.1 with STM32H723ZET6 and TMC2240 modules; see the [current board wiring](../../../docs/hardware/wiring.md) and active controller firmware in [MotorControls/MotionFirmware](../../MotionFirmware/README.md).
 
-**Software compatibility:** The reusable register core is portable, but the bundled STM32 HAL adapter, CubeIDE project, and firmware images target the legacy NUCLEO-F446RE / STM32F446RE. They are not an H723 port and must not be used as firmware on the SKR. The H723 port remains pending.
+**Software compatibility:** Both the portable register core (`driver/inc/tmc2240_core.h`) and the STM32 HAL adapter (`driver/inc/tmc2240_hal.h` / `driver/src/tmc2240_hal.c`, which select `stm32h7xx_hal.h` or `stm32f4xx_hal.h` via `__has_include`) are actively used by `MotorControls/MotionFirmware` on STM32H723ZET6. However, the bundled `examples/`, CubeIDE project (`examples/STM32CubeIDE_Project/`), and pre-compiled `firmware/` images in this package target the legacy **NUCLEO-F446RE / STM32F446RE** only and **must not be flashed** to the SKR Octopus Pro V1.1.
 
 Host simulations do **not** establish electrical, motor, timing, thermal, or mechanical readiness.
 
@@ -12,7 +12,7 @@ Host simulations do **not** establish electrical, motor, timing, thermal, or mec
 historical claims in this package.** No hardware qualification was performed
 in the current software-only audit.
 
-This package contains a reusable TMC2240 register core, an STM32F4 HAL adapter, legacy F446 demonstrations/projects, and F446 diagnostic images. It does not include SKR/H723 firmware.
+This package contains a reusable TMC2240 register core, an STM32H7/F4 HAL adapter, legacy F446 demonstrations/projects, and F446 diagnostic images. SKR/H723 application firmware lives separately in `MotorControls/MotionFirmware/`.
 
 ---
 
@@ -26,7 +26,7 @@ TMC2240_STM32_Driver_Package/
 │   ├── README.md                       # Driver integration instructions for any project
 │   ├── inc/                            # Complete C headers for include paths (-I driver/inc)
 │   │   ├── tmc2240.h                   # Master umbrella header
-│   │   ├── tmc2240_hal.h               # STM32 HAL SPI & GPIO platform abstraction
+│   │   ├── tmc2240_hal.h               # STM32H7/F4 HAL SPI & GPIO platform abstraction
 │   │   ├── tmc2240_core.h              # Register access, pipelining, and cache
 │   │   ├── TMC2240_HW_Abstraction.h    # Register map & bitfields (verified against Rev 2)
 │   │   ├── API_Header.h                # Trinamic API core header
@@ -71,9 +71,9 @@ TMC2240_STM32_Driver_Package/
 └── docs/                               # Technical documentation
     ├── README.md                       # Documentation index (vendor PDF datasheet is not bundled)
     ├── API_Reference.md                # Comprehensive API and register documentation
-    ├── Hardware_Guide.md               # Pinouts, motor wiring, and power supply notes
+    ├── Hardware_Guide.md               # Legacy F446 example wiring & power supply notes
     ├── Audit_and_Fix_Log.md            # Hardware register verification & audit history
-    └── Dual_Motor_and_Encoder_Config.md# Dual motor + dual AS5600 encoder pinout guide
+    └── Dual_Motor_and_Encoder_Config.md# Legacy F446 dual motor + dual AS5600 encoder pinout
 ```
 
 ---
@@ -81,7 +81,7 @@ TMC2240_STM32_Driver_Package/
 ## ⚡ Quick Start
 
 ### Option 1: Pre-Compiled Diagnostic Firmware (legacy F446 only)
-These regenerated diagnostics-only images target the legacy F446 firmware. They are build-verified but hardware-unverified; **do not flash them to the SKR/H723**. Read `firmware\README.md` before any legacy F446 hardware test.
+These regenerated diagnostics-only images target the legacy F446 firmware. They are build-verified but hardware-unverified; **do not flash them to the SKR/H723**. Read `firmware\README.md` before any legacy F446 hardware test. For active SKR/H723 firmware, build `MotorControls/MotionFirmware`.
 
 ### Option 2: Legacy STM32CubeIDE Project (F446 only)
 1. In STM32CubeIDE, click **File** -> **Import...** -> **Existing Projects into Workspace**.
@@ -90,13 +90,13 @@ These regenerated diagnostics-only images target the legacy F446 firmware. They 
 4. Review the diagnostics-only default and explicit motion opt-in configuration
    in `examples\StallGuard4_Homing_Demo\README.md`. Do not automatically flash.
 
-This project targets NUCLEO-F446RE and is not compatible with the current SKR/H723.
+This CubeIDE project targets NUCLEO-F446RE and is not compatible with the current SKR/H723.
 
 ### Option 3: Integrate Driver Into an Existing Project
-1. Copy `driver/inc/` and `driver/src/` into your project directory.
+1. Copy `driver/inc/` and `driver/src/` into your project directory (or point CMake directly to them as `MotorControls/MotionFirmware` does).
 2. Add `driver/inc/` to your compiler include directories.
 3. Add the `.c` files in `driver/src/` to your build sources.
-4. Include `tmc2240_core.h` for the portable core. `tmc2240.h` is the STM32F4 HAL umbrella; using this driver on the SKR/H723 requires an H723-specific platform adapter.
+4. Include `tmc2240_core.h` for the portable register core only, or `tmc2240.h` for the STM32H7/F4 HAL umbrella (auto-detects `stm32h7xx_hal.h` or `stm32f4xx_hal.h` on your include path).
 
 ---
 

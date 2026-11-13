@@ -1,8 +1,9 @@
 """
-Test Suite for Renode Emulation Harness & USART2 Socket Bridging
-================================================================
-Verifies headless execution, lifecycle management, socket communication,
-and clean process cleanup on Windows.
+Test Suite for Legacy Renode Emulation Harness & USART2 Socket Bridging
+=======================================================================
+Verifies headless Renode execution, lifecycle management, socket communication,
+and clean process cleanup on Windows for the legacy STM32F446RE target
+(`renode/stm32f446_uart.resc` requires a legacy F446RE ELF, not STM32H723).
 """
 
 import socket
@@ -37,7 +38,7 @@ class TestRenodeHarness(unittest.TestCase):
     def test_strip_telnet_utility(self):
         """Test Telnet IAC sequence filtering."""
         # Standard IAC negotiation sequences
-        raw = b"\xff\xfd\x00\xff\xfd\x1f\xff\xfb\x01Hello \xff\xfb\x03World!\xff\xfc\""
+        raw = b'\xff\xfd\x00\xff\xfd\x1f\xff\xfb\x01Hello \xff\xfb\x03World!\xff\xfc"'
         cleaned = RenodeController.strip_telnet(raw)
         self.assertEqual(cleaned, b"Hello World!")
 
@@ -83,7 +84,9 @@ class TestRenodeHarness(unittest.TestCase):
 
         # Confirm termination after context exit
         time.sleep(0.5)
-        self.assertFalse(ctrl.is_running(), "Renode process should be terminated after context exit.")
+        self.assertFalse(
+            ctrl.is_running(), "Renode process should be terminated after context exit."
+        )
 
     def test_custom_port_configuration(self):
         """Verify that configurable $port works as expected."""

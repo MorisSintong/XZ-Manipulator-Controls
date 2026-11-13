@@ -8,7 +8,7 @@ Direktori ini berisi matriks perencanaan, skenario uji, lembar data pengukuran, 
 
 - **[`Perencanaan_Test_Realcase_XZ_Manipulator_Lengkap.xlsx`](Perencanaan_Test_Realcase_XZ_Manipulator_Lengkap.xlsx)**:  
   Workbook pengujian terperinci yang mencakup seluruh skenario validasi fungsional, pengujian presisi, dan uji performa sortasi real-time.
-- Prosedur verifikasi firmware dan rencana uji bangku tersedia pada [bagian 7 desain motion diagnostics](../architecture/motion_diagnostics_design.md#7-verification-and-bench-plan). Tidak ada berkas `test_methodology.md` terpisah di direktori ini.
+- Prosedur verifikasi firmware dan rencana uji bangku tersedia pada [bagian 7 desain motion diagnostics](../architecture/motion_diagnostics_design.md#7-verification-and-bench-plan). Tidak ada berkas `test_methodology.md` terlacak di direktori ini.
 
 ---
 
@@ -42,22 +42,32 @@ Untuk prosedur verifikasi firmware dan rencana uji perangkat keras, lihat [desai
 Sebelum melakukan uji perangkat keras nyata di konveyor, jalankan seluruh rangkaian verifikasi terprogram dari direktori *root* repositori:
 
 ```powershell
-# 1. Host CTest + kompilasi objek ARM Cortex-M4 untuk profil motion_diagnostics (21 pengujian)
+# 1. Host CTest + kompilasi objek ARM Cortex-M7 untuk profil motion_diagnostics (21 pengujian)
 .\MotorControls\MotionFirmware\Apps\motion_diagnostics\Tests\run_tests.ps1
 
-# 2. Pustaka bersama motion_diagnostics & CLI host motion-diag (pytest)
+# 2. Host CTest untuk profil stallguard_cli (3 suite: motion_profile, units, axis_ctrl; mendukung clang atau gcc)
+cmake -S MotorControls\MotionFirmware\Apps\stallguard_cli\tests -B MotorControls\MotionFirmware\Apps\stallguard_cli\tests\build-host -G Ninja -DCMAKE_C_COMPILER=clang
+cmake --build MotorControls\MotionFirmware\Apps\stallguard_cli\tests\build-host
+ctest --test-dir MotorControls\MotionFirmware\Apps\stallguard_cli\tests\build-host --output-on-failure
+
+# 3. Pustaka bersama motion_diagnostics & CLI host motion-diag (pytest)
 uv run --project packages\motion_diagnostics pytest packages\motion_diagnostics\tests
 uv run --project MotorControls\MotionFirmware\tools\diag pytest MotorControls\MotionFirmware\tools\diag\tests
 
-# 3. Verifikasi pipeline VisionSystem (PCA sudut kontinu, CRC16, debounce & transport biner)
+# 4. Verifikasi pipeline VisionSystem (PCA sudut kontinu, CRC16, debounce & transport biner)
 uv run --project VisionSystem python VisionSystem\tests\verify_vision_system.py
-uv run --project VisionSystem pytest
+uv run --project VisionSystem pytest VisionSystem\tests
 
-# 4. Verifikasi protokol UART STM32 & Emulasi Renode / Mock (11 test cases)
-uv run python MotorControls\tests\emulation\run_tests.py
+# 5. Verifikasi protokol UART STM32 & Emulasi Mock (11 test cases)
+uv run --project VisionSystem python MotorControls\tests\emulation\run_tests.py --mode mock
 
-# 5. Verifikasi driver encoder AS5600 (Host CTest)
-cmake -S MotorControls\Drivers\AS5600 -B MotorControls\Drivers\AS5600\build -G Ninja
-cmake --build MotorControls\Drivers\AS5600\build
-ctest --test-dir MotorControls\Drivers\AS5600\build --output-on-failure
+# 6. Verifikasi driver encoder AS5600 (3 suite Host CTest)
+cmake -S MotorControls\Drivers\AS5600 -B MotorControls\Drivers\AS5600\build-host -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+cmake --build MotorControls\Drivers\AS5600\build-host
+ctest --test-dir MotorControls\Drivers\AS5600\build-host --output-on-failure
+
+# 7. Verifikasi driver TMC2240 (13 suite Host CTest)
+cmake -S MotorControls\Drivers\TMC2240-Driver\Tests -B MotorControls\Drivers\TMC2240-Driver\Tests\build-host -G Ninja -DCMAKE_C_COMPILER=clang
+cmake --build MotorControls\Drivers\TMC2240-Driver\Tests\build-host
+ctest --test-dir MotorControls\Drivers\TMC2240-Driver\Tests\build-host --output-on-failure
 ```

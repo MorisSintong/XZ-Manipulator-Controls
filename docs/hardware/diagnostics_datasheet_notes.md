@@ -15,11 +15,11 @@ References below use **printed datasheet pages**, not PDF viewer page numbers. A
 | **R-P** | [UART protocol](../architecture/communication_protocol.md), §§1–3 | Repository protocol specification |
 | **R-A** | `MotorControls\Drivers\AS5600\include\as5600.h`, `src\as5600.c`, `ports\stm32_hal\as5600_stm32_hal.{h,c}`, `docs\integration.md` | Directly inspected driver/API evidence |
 | **R-T** | `MotorControls\Drivers\TMC2240-Driver\driver\inc\{tmc2240_hal.h,tmc2240_core.h,TMC2240_HW_Abstraction.h}`, `driver\src\{tmc2240_hal.c,TMC2240.c}` | Directly inspected driver/API evidence; hardware interpretation remains UNVERIFIED against T |
-| **R-F** | `MotorControls\MotionFirmware\Core\Src\main.c`: `configure_tmc2240_motor`, `probe_until_stall`, `dump_driver_diagnostics`, peripheral initialization | 2026-10-06 single-axis baseline snapshot (since moved to `Apps\z_bounce_emulation\` alongside `Apps\motion_diagnostics\` and `Apps\stallguard_cli\`) |
+| **R-F** | Historical 2026-10-06 `main.c` single-axis baseline snapshot (now `Apps\z_bounce_emulation\`, alongside `Apps\motion_diagnostics\` and `Apps\stallguard_cli\`) | Historical snapshot used in the initial audit; superseded on STM32H723 by `Apps\motion_diagnostics\` and `Apps\stallguard_cli\` |
 
 **Scope boundary:** motor-shaft sensing is not carriage-position sensing. Neither driver evidence nor shaft angle detects belt slip, pulley/coupler slip downstream of the magnet, screw backlash, compliance, or pitch/lead calibration errors.
 
-**Board transition:** `wiring.md` now describes the SKR Octopus Pro V1.1 / STM32H723 physical target. Firmware observations below remain tied to the existing STM32F446RE implementation; its `SPI2`, `I2C1`, and `I2C3` assignments are not SKR pin mappings or evidence that the H723 port is complete.
+**Board transition note:** `wiring.md` and the active `MotionFirmware` target **SKR Octopus Pro V1.1 / STM32H723ZET6** (`SPI1`, `I2C1`, `I2C4`, `TIM2`/`TIM5`, `USART2` `PD5`/`PD6`). Historical `R-F` findings below (from the 2026-10-06 pre-refactor NUCLEO-F446RE single-axis `main.c` snapshot) mention the older `SPI2` and `I2C1`/`I2C3` baselines; those single-axis limitations were later addressed in `Apps/motion_diagnostics/` and `Apps/stallguard_cli/`, while TMC2240 datasheet verification (`T`) and physical hardware qualification remain open.
 
 ## AS5600 measurement registers
 
@@ -207,7 +207,7 @@ Addresses, bit positions and masks below are repository observations **[R-T, `TM
 | GSTAT | `0x01`; reset **0**, drv_err **1**, uv_cp **2**, register_reset **3**, vm_uvlo **4** | Existing read helper is non-acknowledging; clear helper explicitly writes selected bits (W1C policy). Capture faults before any clear. |
 | TSTEP | `0x12`; HAL documentation says **20-bit**, clock periods per **1/256 microstep** regardless of MRES | Counter saturation/standstill value, exact clock-frequency conversion and read update latency UNVERIFIED; do not call it a position counter |
 
-**SPI pipeline:** `TMC2240.c::readTransport` sends **two 5-byte frames** to the same device, discards first frame's data and uses second frame's data. This implements next-transfer read response in the repository. Hardware protocol confirmation against T is **UNVERIFIED**, but callers should use this existing implementation, not decode the first transfer themselves. Serialize the whole operation on shared SPI2, including both frames and CS selection. SPI status-byte access exists separately. [R-T `readTransport`, `tmc2240_hal_getSPIStatus`]
+**SPI pipeline:** `TMC2240.c::readTransport` sends **two 5-byte frames** to the same device, discards first frame's data and uses second frame's data. This implements next-transfer read response in the repository. Hardware protocol confirmation against T is **UNVERIFIED**, but callers should use this existing implementation, not decode the first transfer themselves. Serialize the whole operation on shared SPI1 (`SPI2` in the legacy F446 baseline), including both frames and CS selection. SPI status-byte access exists separately. [R-T `readTransport`, `tmc2240_hal_getSPIStatus`]
 
 ## Repository API mapping and gaps
 
@@ -218,45 +218,48 @@ Header abbreviations:
 - **TH:** `MotorControls\Drivers\TMC2240-Driver\driver\inc\tmc2240_hal.h`
 - **TC:** `MotorControls\Drivers\TMC2240-Driver\driver\inc\tmc2240_core.h`
 
-| Requirement | Exact existing API / header | Remaining gap |
+| Requirement | Exact existing API / header | Historical R-F gap / current H723 status |
 | --- | --- | --- |
-| Raw / scaled angle | `as5600_read_raw_angle`, `as5600_read_angle` — AH | No turns, timestamps, freshness or wrap-loss detection; raw read alone does not validate magnet |
-| STATUS / AGC / magnitude | `as5600_read_diagnostics`, `as5600_magnet_status` — AH | No standalone getters needed: diagnostics struct already exposes all. No periodic health policy. |
+| Raw / scaled angle | `as5600_read_raw_angle`, `as5600_read_angle` — AH | No turns, timestamps, freshness or wrap-loss detection; raw read alone does not validate magnet (`Apps/motion_diagnostics/` implements `encoder_unwrap` & `encoder_sampler`) |
+| STATUS / AGC / magnitude | `as5600_read_diagnostics`, `as5600_magnet_status` — AH | No standalone getters needed: diagnostics struct already exposes all. Health policy implemented in `Apps/motion_diagnostics/` and `Apps/stallguard_cli/` |
 | Checked combined sample | `as5600_read_sample` — AH | Sequential, not simultaneous: STATUS→RAW→ANGLE→AGC→MAGNITUDE→STATUS. Outputs unchanged on error; not fresh on error. No sample timestamp or byte-coherence qualification. |
-| All CONF fields | `as5600_read_config`, `as5600_write_config`, `as5600_default_config` — AH | No diagnostics profile/poll scheduler; default profile is not the proposed fast profile |
+| All CONF fields | `as5600_read_config`, `as5600_write_config`, `as5600_default_config` — AH | `Apps/motion_diagnostics/` explicitly configures `0x0300` |
 | ZPOS/MPOS/MANG/ZMCO | `as5600_read_settings`, `as5600_write_positions`, `as5600_write_max_angle` — AH | No gap for readback. Avoid changing these to establish homing zero. |
-| Angle conversion | `as5600_counts_to_millidegrees` — AH | Single-turn only, rounded millidegrees; lacks signed multi-turn counts and axis displacement conversion |
+| Angle conversion | `as5600_counts_to_millidegrees` — AH | Single-turn only, rounded millidegrees; `Apps/motion_diagnostics/` adds signed multi-turn counts and axis displacement conversion |
 | Supply/magnet specs and timing | No runtime specification accessor required; above tables are reference | Application must qualify magnet installation, deadlines and coherence |
-| I²C transport / binding | `as5600_stm32_hal_init` — AP; `as5600_init` — AH | Two instances and actual I2C1/I2C3 initialization/integration are absent from current R-F; no asynchronous transfer API |
+| I²C transport / binding | `as5600_stm32_hal_init` — AP; `as5600_init` — AH | Absent from historical R-F (`z_bounce_emulation`); integrated on H723 `I2C1`/`I2C4` in `motion_diagnostics` and `stallguard_cli` (synchronous HAL transfer) |
 | OTP | **No burn API** — intentionally absent from AH | Keep absent; no addition needed |
-| MSCNT / MSCURACT | `tmc2240_get_microstep_counter`, `tmc2240_get_microstep_current` — TH | **Accessors already exist.** Add application-level phase baseline/cross-check, not duplicate register getters. |
-| MRES | `tmc2240_hal_setMicrosteps` — TH; readback via `tmc2240_fieldRead` — TC | Need snapshot/verification of configured MRES; check error results |
-| INTPOL / DEDGE / SHAFT / direct/filter bits | `tmc2240_fieldRead`, `tmc2240_fieldWrite`, `tmc2240_updateRegister` — TC, with R-T field descriptors | Generic access sufficient; exact timing/phase qualification still required |
-| DRV_STATUS | `tmc2240_driver_status` — TH; `tmc2240_fieldExtract` — TC | No application-owned timestamped decoded fault snapshot |
-| SG4_RESULT / threshold | `tmc2240_stallguard_read`, `tmc2240_stallguard_set_threshold` — TH | No homing event/reference record; verify mode and calibrated stall policy |
+| MSCNT / MSCURACT | `tmc2240_get_microstep_counter`, `tmc2240_get_microstep_current` — TH | **Accessors already exist.** Application-level phase baseline/cross-check implemented in `driver_evidence.c` (`motion_diagnostics`) |
+| MRES | `tmc2240_hal_setMicrosteps` — TH; readback via `tmc2240_fieldRead` — TC | Snapshot/verification of configured MRES implemented in `driver_evidence.c` |
+| INTPOL / DEDGE / SHAFT / direct/filter bits | `tmc2240_fieldRead`, `tmc2240_fieldWrite`, `tmc2240_updateRegister` — TC, with R-T field descriptors | Generic access sufficient; exact timing/phase qualification against T still required |
+| DRV_STATUS | `tmc2240_driver_status` — TH; `tmc2240_fieldExtract` — TC | Captured in `motion_diagnostics` records |
+| SG4_RESULT / threshold | `tmc2240_stallguard_read`, `tmc2240_stallguard_set_threshold` — TH | Calibrated stall policy & homing records implemented in `homing.c`; hardware verification pending |
 | SG4 filter / offset / indicators | `tmc2240_fieldRead`, `tmc2240_fieldWrite`, `tmc2240_readRegister` — TC | No dedicated SG4_IND convenience getter, but generic access already works |
-| GSTAT / SPI status | `tmc2240_check_faults`, `tmc2240_clear_faults`, `tmc2240_hal_getSPIStatus`, `tmc2240_hal_spiStatus` — TH | Capture-and-report policy, reset invalidation and shared-bus serialization belong to application |
+| GSTAT / SPI status | `tmc2240_check_faults`, `tmc2240_clear_faults`, `tmc2240_hal_getSPIStatus`, `tmc2240_hal_spiStatus` — TH | Capture-and-report policy, reset invalidation and shared-bus serialization implemented in application |
 | TSTEP | `tmc2240_readRegister` — TC, using `TMC2240_TSTEP` | No dedicated getter/conversion helper; generic read suffices |
 | Quadrature XENC | `tmc2240_encoder_read`, `tmc2240_encoder_read_latch` — TH | Not connected to these I²C sensors; not a substitute for AS5600 tracking |
-| STEP timing/count/angle | No driver STEP generator or signed emitted-edge counter | Application must count actual accepted-edge candidates, not just planned distance; preserve planned vs emitted distinction |
-| Linear displacement / host diagnostics | No driver-level API | Software zero/home epoch, per-axis scale/sign, endpoint settling, trial identity and telemetry schema needed |
+| STEP timing/count/angle | No driver STEP generator or signed emitted-edge counter | Implemented in `step_engine.c` (`TIM2`/`TIM5`) in `motion_diagnostics` |
+| Linear displacement / host diagnostics | No driver-level API | Implemented in `Apps/motion_diagnostics/` and `packages/motion_diagnostics/` |
 
-### Observed conflicts and cautions
+### Observed conflicts and cautions (historical 2026-10-06 `R-F` baseline)
+
+> [!NOTE]
+> The `R-F` findings in this table analyze the 2026-10-06 single-axis baseline (`Apps/z_bounce_emulation/`). The active `Apps/motion_diagnostics/` profile resolves those items by implementing dual-axis `TIM2`/`TIM5` stepping, `I2C1`/`I2C4` AS5600 acquisition, `SPI1` serialization, `CONF=0x0300`, `INTPOL=0` (`CHOPCONF=0x04410150`), and circular RX / TX DMA (`USART2` `PD5`/`PD6`). Official TMC2240 datasheet verification (`T`) and physical hardware qualification remain open.
 
 | Location | Finding |
 | --- | --- |
-| R-F `dump_driver_diagnostics`, line 468 | Displays microstep divisor as `1 << mres`; R-T helper uses `256 >> mres`. At MRES **4**, both give **16** coincidentally; other encodings display incorrectly relative to R-T. Official T confirmation remains pending. |
-| R-F lines 471–474 | Comment labels SG4_IND as **`0x74`**, and log labels SG4_RESULT **`0x74`**. R-T has threshold **`0x74`**, result **`0x75`**, indicators **`0x76`**. Actual `tmc2240_stallguard_read` uses R-T result address, so the demonstrated discrepancy is in labels, not that helper's read target. |
-| R-F `configure_tmc2240_motor` | CHOPCONF **`0x14410150`** decodes by R-T as MRES **4**, INTPOL **1**, DEDGE **0**. Do not apply the non-interpolated phase formula blindly. [R-T fields; R-F initializer] |
-| R-F startup and peripheral initialization | HAL initializes **one** TMC device; firmware initializes SPI2/UART2 but no I2C1/I2C3 acquisition or X motion. R-W documents dual-axis intended wiring, not proof it is initialized today. |
+| R-F `dump_driver_diagnostics` | Displays microstep divisor as `1 << mres`; R-T helper uses `256 >> mres`. At MRES **4**, both give **16** coincidentally; other encodings display incorrectly relative to R-T. Official T confirmation remains pending. |
+| R-F `SG4` labels (`z_bounce_app.c`) | Log labels `SG4_RESULT` as `0x74` (whereas R-T has threshold `0x74`, result `0x75`, indicators `0x76`); `tmc2240_stallguard_read` itself reads `0x75`. |
+| R-F `configure_tmc2240_motor` | CHOPCONF **`0x14410150`** decodes by R-T as MRES **4**, INTPOL **1**, DEDGE **0**. Do not apply the non-interpolated phase formula blindly (`motion_diagnostics` uses `0x04410150`, `INTPOL=0`). [R-T fields; R-F initializer] |
+| R-F startup and peripheral initialization | In the 2026-10-06 baseline (`z_bounce_emulation`), HAL initialized **one** Z TMC device without I2C AS5600 acquisition or X motion. Current `motion_diagnostics` and `stallguard_cli` initialize dual axes on H723 (`SPI1`, `I2C1`/`I2C4`, `TIM2`/`TIM5`). |
 | R-F `probe_until_stall` | Blocking STEP dwell/SPI/logging loop cannot guarantee a periodic encoder acquisition deadline. Existing “steps moved” is emitted pulse count, not encoder-proven displacement. |
 | R-M mechanics | **80 steps/mm X** and **400 steps/mm Z** match the stated motor/microstep/lead inputs. No steps/mm conflict found. Verify effective installed lead and microstep readback. |
 | R-A write settling | Driver's **1 ms** propagation wait matches A's register-setting guidance, but does not cover SF **16×** full settling of **2.2 ms**. Do not confuse verified register contents with settled angle. [A pp.7,22; R-A `settle_configuration`] |
-| R-P coordinates | Frame contains **X/Y**, not X/Z. Diagnostic commanded Z must come from the motion operation's own target; retain vision Y separately. Protocol docs describe future RTOS/DMA reception, whereas current R-F is a superloop test. |
+| R-P coordinates | Frame contains **X/Y**, not X/Z. Diagnostic commanded Z must come from the motion operation's own target; retain vision Y separately. `motion_diagnostics` implements non-blocking DMA reception; `z_bounce_emulation` remains a superloop test. |
 
 ## Implementation guidance for diagnostics firmware
 
-These are recommendations for the firmware worker, **not implemented behavior**.
+These notes summarize the original software requirements implemented by `Apps/motion_diagnostics/` and `packages/motion_diagnostics/` (see [motion_diagnostics_design.md](../architecture/motion_diagnostics_design.md)); physical hardware qualification remains pending.
 
 1. **Encoder profile:** use volatile CONF documented-field value **`0x0300`**: PM normal, HYST off, OUTS analog full/default, PWMF default, SF **2×**, FTH off, WD off. Preserve upper factory bits through `as5600_write_config`, then read back. [Derived encoding: A p.19, Fig.22; R-A API] OUT is unused, so its mode is not the measurement source. This profile gives stated response **0.286 ms** and noise **0.043° RMS**. [A p.28, Fig.32] A slower low-noise endpoint profile is optional but must be reported and allowed to settle; do not change profiles silently during a trial.
 2. **Acquisition cadence:** start with a **2 ms** target period per axis at **400 kHz**, subject to measured worst-case execution time and the actual-sample-gap bound above; this is a design choice, not a guaranteed deadline. A full `as5600_read_sample` issues **six** transactions per sensor (**three** one-byte, **three** two-byte reads). Conventional address/pointer/data/ACK framing gives a derived **243 SCL clocks**, approximately **0.6075 ms** per sensor or **1.215 ms** for both serialized at **400 kHz**, before START/STOP gaps, HAL overhead, SPI and logging. At **100 kHz**, the corresponding lower bound is **4.86 ms** for both, so that full-sample strategy cannot meet the proposed period. [R-A `as5600_read_sample`; A pp.10–13 I²C protocol; derived wire budget] Separate scheduled raw-angle acquisition from slower health snapshots if necessary; label health age and faults. Do not issue blocking HAL calls inside STEP timing/ISRs.

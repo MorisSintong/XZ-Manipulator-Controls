@@ -1,13 +1,14 @@
 <#
 .SYNOPSIS
-    Standalone PowerShell launcher for STM32F446RE UART Emulation Automated Test Suite.
+    Standalone PowerShell launcher for STM32H723 UART Emulation Automated Test Suite.
 
 .DESCRIPTION
     Builds the STM32 firmware (if requested or missing) and executes the comprehensive
-    Python test suite against Renode emulation or mock server.
+    Python test suite against the in-process mock server (recommended for H723) or
+    legacy F446 Renode emulation.
 
 .PARAMETER Mode
-    Emulation mode: 'auto' (default), 'renode', or 'mock'.
+    Emulation mode: 'mock' (default for H723), 'auto', or 'renode' (legacy F446 only).
 
 .PARAMETER HostAddress
     Target TCP host address (default: 127.0.0.1).
@@ -19,14 +20,14 @@
     Switch to force re-compilation of MotionFirmware prior to running tests.
 
 .EXAMPLE
-    .\run_emulation_tests.ps1 -Mode auto
     .\run_emulation_tests.ps1 -Mode mock
+    .\run_emulation_tests.ps1 -Mode auto
     .\run_emulation_tests.ps1 -Mode renode -BuildFirmware
 #>
 
 param(
     [ValidateSet("auto", "renode", "mock")]
-    [string]$Mode = "auto",
+    [string]$Mode = "mock",
 
     [string]$HostAddress = "127.0.0.1",
 
@@ -42,7 +43,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $ScriptDir))
 
 Write-Host "=================================================================" -ForegroundColor Cyan
-Write-Host "   STM32F446RE UART EMULATION TEST LAUNCHER                     " -ForegroundColor White
+Write-Host "   STM32H723 UART EMULATION TEST LAUNCHER                        " -ForegroundColor White
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host " Mode        : $Mode" -ForegroundColor Yellow
 Write-Host " Target      : ${HostAddress}:${Port}" -ForegroundColor Yellow
@@ -51,8 +52,8 @@ Write-Host " Report Path : $JsonReport" -ForegroundColor Yellow
 Write-Host "=================================================================" -ForegroundColor Cyan
 
 # 1. Firmware ELF Verification / Build
-$ElfPath = Join-Path $RepoRoot "MotorControls\MotionFirmware\build\Debug\MotionFirmware.elf"
-if ($BuildFirmware -or (-not (Test-Path $ElfPath))) {
+$ElfPath = Join-Path $RepoRoot "MotorControls\MotionFirmware\build\Debug\MotionFirmware_ZBounceEmulation.elf"
+if ($BuildFirmware -or (($Mode -ne "mock") -and (-not (Test-Path $ElfPath)))) {
     Write-Host "[BUILD] Compiling STM32 MotionFirmware..." -ForegroundColor Green
     $BuildDir = Join-Path $RepoRoot "MotorControls\MotionFirmware\build\Debug"
     $SrcDir   = Join-Path $RepoRoot "MotorControls\MotionFirmware"

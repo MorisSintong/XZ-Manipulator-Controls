@@ -50,7 +50,7 @@
     "command": "C:/tools/jlink/JLink.exe",
     "args": [
       "-device",
-      "STM32F446RE",
+      "STM32H723ZE",
       "-if",
       "SWD",
       "-speed",
@@ -67,7 +67,7 @@
     "command": "C:/tools/jlink/JLink.exe",
     "args": [
       "-device",
-      "STM32F446RE",
+      "STM32H723ZE",
       "-if",
       "SWD",
       "-speed",
@@ -84,7 +84,7 @@
     "command": "C:/tools/jlink/JLink.exe",
     "args": [
       "-device",
-      "STM32F446RE",
+      "STM32H723ZE",
       "-if",
       "SWD",
       "-speed",
@@ -101,7 +101,7 @@
     "command": "C:/tools/jlink/JLink.exe",
     "args": [
       "-device",
-      "STM32F446RE",
+      "STM32H723ZE",
       "-if",
       "SWD",
       "-speed",
@@ -118,7 +118,7 @@
     "command": "C:/tools/jlink/JLink.exe",
     "args": [
       "-device",
-      "STM32F446RE",
+      "STM32H723ZE",
       "-if",
       "SWD",
       "-speed",
@@ -137,7 +137,7 @@
       "-select",
       "USB",
       "-device",
-      "STM32F446RE",
+      "STM32H723ZE",
       "-endian",
       "little",
       "-if",

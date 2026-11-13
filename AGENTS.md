@@ -1,25 +1,24 @@
 # AGENTS.md — Global AI Assistant Instructions
 
-## Active Engineering Objective
-The primary active task in this repository is the complete technical overhaul and alignment of the **`VisionSystem/`** module to match the thesis engineering specification documented in [`VisionSystem/01_Dokumen_TA/TA_2026_extracted.txt`](VisionSystem/01_Dokumen_TA/TA_2026_extracted.txt).
+## Engineering Baseline & Guardrails
+The **`VisionSystem/`** technical overhaul and alignment with the thesis specification documented in [`VisionSystem/01_Dokumen_TA/TA_2026_extracted.txt`](VisionSystem/01_Dokumen_TA/TA_2026_extracted.txt) has been implemented and verified. Treat [`VisionSystem/REMEDIATION_PLAN_AI.md`](VisionSystem/REMEDIATION_PLAN_AI.md) as the **completed remediation baseline and regression checklist** whenever modifying the vision pipeline or host-to-STM32 protocol:
 
-Before performing any code modifications or claiming completion, any AI assistant MUST read and strictly adhere to:
 👉 **[`VisionSystem/REMEDIATION_PLAN_AI.md`](VisionSystem/REMEDIATION_PLAN_AI.md)**
 
 ---
 
 ## Critical Directives for AI Agents
 
-1. **Strict Completion Verification:**  
-   You are NOT permitted to stop or declare the task done until all criteria in the checklist within `VisionSystem/REMEDIATION_PLAN_AI.md` are verified via programmatic tests.
-2. **Key Faults That Must Be Resolved:**
-   - **Continuous Angle Calculation:** Fix `VisionSystem/04_Source_Code/utils/angle_calculator.py` to stop quantizing angles into 4 discrete buckets ($0^\circ, 90^\circ, 180^\circ, 270^\circ$). The system must compute continuous physical orientations across $[0^\circ, 360^\circ)$ with $\le \pm 2.5^\circ$ error.
-   - **Telemetry Protocol & (X, Y) Coordinates:** Upgrade UART messages in `4_detect_realtime.py` to include conveyor coordinates $(X, Y)$ in mm, continuous angle, object ID, and CRC16 checksum so the STM32 2-axis Cartesian manipulator can execute motion planning.
-   - **Concurrency & Flooding:** Implement spatial object tracking so moving capacitors are queued once rather than flooding UART on every camera frame.
-   - **Embedded Firmware Safety:** In `firmware_esp32/firmware_esp32.ino`, remove destructive NVS Flash memory writes from the packet reception loop and replace blocking `delay()` with non-blocking timers.
-   - **Portability:** Eliminate all hardcoded laptop paths (`C:\Users\HUSEN\...`) from `.bat` launchers and make them run on any standard Windows Python environment.
+1. **Strict Regression Verification:**  
+   Do not declare any `VisionSystem/` or protocol change complete until all automated checks in `VisionSystem/tests/verify_vision_system.py` and the `VisionSystem/tests` pytest suite pass.
+2. **Preserved Remediation Invariants:**
+   - **Continuous Angle Calculation:** Keep `VisionSystem/04_Source_Code/utils/angle_calculator.py` computing continuous physical orientations across $[0^\circ, 360^\circ)$ with $\le \pm 2.5^\circ$ error (never revert to 4 discrete $0^\circ/90^\circ/180^\circ/270^\circ$ buckets).
+   - **Telemetry Protocol & (X, Y) Coordinates:** Preserve the 18-byte binary `0xAA 0x55` framed UART protocol with conveyor coordinates $(X, Y)$ in mm, continuous angle, object ID, and CRC16-CCITT checksum for the STM32H723 (`SKR Octopus Pro V1.1`) Cartesian manipulator.
+   - **Concurrency & Flooding:** Keep spatial object tracking active so moving capacitors are queued once rather than flooding UART on every camera frame.
+   - **Embedded Firmware Safety:** In `VisionSystem/04_Source_Code/firmware_esp32/firmware_esp32.ino`, never reintroduce NVS Flash memory writes or blocking `delay()` calls in the packet reception loop.
+   - **Portability:** Keep all `.bat` launchers in `VisionSystem/06_Launchers/` and `TEST_OFFLINE.bat` free of hardcoded laptop paths (`C:\Users\HUSEN\...` or fixed `.conda\envs\` paths).
 3. **Automated Test Requirement:**  
-   Provide and run `tests/verify_vision_system.py` asserting continuous angle accuracy, packet framing/CRC, and tracking debounce.
+   Run `VisionSystem/tests/verify_vision_system.py` (and `uv run --project VisionSystem pytest VisionSystem\tests`) after edits affecting vision math, UART framing, tracking, launchers, or ESP32 firmware.
 
 
 # This is the Embedded Developer toolchains and Setups (ignore if you're not developing embedded systems or TinyML/Edge AI firmware or MotorControls).
@@ -32,7 +31,7 @@ Before performing any code modifications or claiming completion, any AI assistan
 - **Secondary Systems Language**: Rust (specifically for modern MCU development using high-level async HALs like Embassy).
 - **Embedded Development Style**: 
   - Uses **vendor HALs and SDKs** (e.g., **STM32Cube HAL/LL**, **CMSIS-DSP/NN**, vendor SDKs) rather than raw register-level bare metal from scratch.
-  - Standard workflow: **STM32CubeMX** with **CMake export**, built with **CMake + Ninja**, and flashed/debugged via **`probe-rs`**.
+  - Standard workflow: **STM32CubeMX** with **CMake export**, built with **CMake + Ninja**, and flashed/debugged via **`probe-rs`** or SEGGER J-Link.
 - **Inactive / Not Used**: Java, .NET / C#, Web frameworks. Do not suggest or install .NET/Java tools.
 - **Primary Editor**: **Zed** (`C:\Users\Moris\AppData\Local\Programs\Zed\bin`). VS Code and PlatformIO are not used.
 
@@ -90,6 +89,6 @@ Before performing any code modifications or claiming completion, any AI assistan
   - **Probe Identification**: Presents to Windows, USB drivers, and debuggers as a **J-Link** probe (not ST-Link).
   - **Tooling Support**: 
     - `probe-rs`: Automatically recognizes it as a J-Link probe for zero-config flashing, DAP debugging, and RTT streaming.
-    - Local Utilities: Located at `C:\tools\stm32-jlink-starter` (in User PATH).
-    - OpenOCD / GDB: Always target `interface/jlink.cfg` or Segger J-Link GDB Server. Never suggest ST-Link specific tools (like `st-flash` or `stlink.cfg`).
+    - Local Utilities: Located at `C:\\tools\\stm32-jlink-starter` (in User PATH) and `C:\\tools\\jlink`.
+    - OpenOCD / GDB: Always target `interface/jlink.cfg` or Segger J-Link GDB Server (`-device STM32H723ZE` for SKR Octopus Pro V1.1). Never suggest ST-Link specific tools (like `st-flash` or `stlink.cfg`).
   - **Telemetry**: Full support for high-speed SEGGER RTT (Real-Time Transfer) without halting the MCU core.
