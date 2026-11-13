@@ -11,4 +11,4 @@ if /i "%~1"=="zbounce"        set "SCRIPT=%~dp0flash_zbounce.jlink"
 if /i "%~1"=="z_bounce_emulation" set "SCRIPT=%~dp0flash_zbounce.jlink"
 
 echo [FLASH] Using J-Link script: %SCRIPT%
-C:\tools\jlink\JLink.exe -device STM32F446RE -if SWD -speed 4000 -autoconnect 1 -CommanderScript "%SCRIPT%"
+C:\tools\jlink\JLink.exe -device STM32H723ZE -if SWD -speed 4000 -autoconnect 1 -CommanderScript "%SCRIPT%"

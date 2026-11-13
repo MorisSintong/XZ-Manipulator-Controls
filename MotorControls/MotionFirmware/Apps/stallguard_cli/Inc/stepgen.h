@@ -16,7 +16,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "stm32f4xx_hal.h"
+#include "stm32h7xx_hal.h"
 
 #ifdef __cplusplus
 extern "C" {

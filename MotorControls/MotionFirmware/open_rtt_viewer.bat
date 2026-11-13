@@ -6,5 +6,5 @@ if not exist %RTT_EXE% (
     exit /b 1
 )
 
-echo [INFO] Launching SEGGER J-Link RTT Viewer for STM32F446RE...
-start "" %RTT_EXE% --device STM32F446RE --interface SWD --speed 4000
+echo [INFO] Launching SEGGER J-Link RTT Viewer for STM32H723ZET6...
+start "" %RTT_EXE% --device STM32H723ZE --interface SWD --speed 4000 --search-ranges "0x24000000 0x10000"

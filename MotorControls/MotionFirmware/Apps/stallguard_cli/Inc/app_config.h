@@ -3,9 +3,10 @@
  * @brief   Application configuration: axis mapping, behaviour switches and
  *          telemetry. Per-axis mechanics/driver/homing values: app_config.c.
  *
- * Hardware mapping (wiring.md):
- *   Axis 0 = Z : TMC2240 #0  CS PC0  STEP PC1  DIR PC2  ENN PC6  TIM2  AS5600 on I2C3 (PA8/PC9)
- *   Axis 1 = X : TMC2240 #1  CS PC3  STEP PC4  DIR PC5  ENN PC7  TIM5  AS5600 on I2C1 (PB8/PB9)
+ * Hardware mapping (SKR Octopus Pro V1.1 / wiring.md):
+ *   Axis 0 = Z     : TMC2240 #0 (Driver 1 / MOTOR1)   CS PD11 STEP PG0  DIR PG1  ENN PF15 TIM2  AS5600 on I2C4 (PB6/PB7)
+ *   Axis 1 = X     : TMC2240 #1 (Driver 0 / MOTOR0)   CS PC4  STEP PF13 DIR PF12 ENN PF14 TIM5  AS5600 on I2C1 (PB8/PB9)
+ *   Motor 2 = Theta: TMC2240 #2 (Driver 2 / MOTOR2_1) CS PC6  STEP PF11 DIR PG3  ENN PG5  (Open-loop rotation axis)
  * If your wiring follows the thesis table instead (motor 0 = X), swap the two
  * entries of g_app_axis_cfg[] and APP_AXIS*_ENCODER_I2C.
  */
@@ -24,7 +25,7 @@ extern "C" {
 #define APP_AXIS_X              1U
 
 /* AS5600 bus per axis (HAL handle names from main.c). */
-#define APP_AXIS0_ENCODER_I2C   hi2c3
+#define APP_AXIS0_ENCODER_I2C   hi2c4
 #define APP_AXIS1_ENCODER_I2C   hi2c1
 
 /* Homing order. Z first lifts the X arm away from the conveyor. */

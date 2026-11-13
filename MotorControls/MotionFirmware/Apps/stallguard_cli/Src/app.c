@@ -30,8 +30,8 @@
 #define FW_VERSION "2.0.0"
 
 extern I2C_HandleTypeDef hi2c1;
-extern I2C_HandleTypeDef hi2c3;
-extern SPI_HandleTypeDef hspi2;
+extern I2C_HandleTypeDef hi2c4;
+extern SPI_HandleTypeDef hspi1;
 extern UART_HandleTypeDef huart2;
 
 typedef enum {
@@ -1027,7 +1027,7 @@ static void banner(void) {
   console_printf(" %s %s - XZ manipulator motion controller\r\n", FW_NAME,
                  FW_VERSION);
   console_printf(
-      " STM32F446RE @ %lu MHz, 2x TMC2240 (SPI2) + 2x AS5600 (I2C)\r\n",
+      " STM32H723 @ %lu MHz (SKR Octopus Pro V1.1), 2x TMC2240 (SPI1) + 2x AS5600 (I2C1, I2C4)\r\n",
       (unsigned long)(SystemCoreClock / 1000000U));
   for (ax = 0U; ax < APP_AXIS_COUNT; ax++) {
     const axis_cfg_t *c = axis_ctrl_cfg(ax);
@@ -1046,8 +1046,8 @@ static void banner(void) {
 
 void app_init(void) {
   static const TMC2240_SPIConfig_t spi_cfgs[APP_AXIS_COUNT] = {
-      {&hspi2, TMC_CS0_GPIO_Port, TMC_CS0_Pin, 10U},
-      {&hspi2, TMC_CS1_GPIO_Port, TMC_CS1_Pin, 10U},
+      {&hspi1, TMC_CS0_GPIO_Port, TMC_CS0_Pin, 10U},
+      {&hspi1, TMC_CS1_GPIO_Port, TMC_CS1_Pin, 10U},
   };
   static const stepgen_hw_t step_hw[APP_AXIS_COUNT] = {
       {TIM2, TIM2_IRQn, TMC_STEP0_GPIO_Port, TMC_STEP0_Pin, TMC_DIR0_GPIO_Port,
@@ -1151,6 +1151,10 @@ void fw_app_tim_irq(uint8_t motor) { stepgen_irq_handler(motor); }
 bool fw_app_usart2_irq(void) { return false; }
 
 void fw_app_error_handler(void) {
-  HAL_GPIO_WritePin(GPIOC, TMC_STEP0_Pin | TMC_STEP1_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(GPIOC, TMC_ENN0_Pin | TMC_ENN1_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(TMC_STEP0_GPIO_Port, TMC_STEP0_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TMC_STEP1_GPIO_Port, TMC_STEP1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TMC_STEP2_GPIO_Port, TMC_STEP2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TMC_ENN0_GPIO_Port, TMC_ENN0_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(TMC_ENN1_GPIO_Port, TMC_ENN1_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(TMC_ENN2_GPIO_Port, TMC_ENN2_Pin, GPIO_PIN_SET);
 }

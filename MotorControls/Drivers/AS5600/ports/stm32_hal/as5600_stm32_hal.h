@@ -2,7 +2,13 @@
 #define AS5600_STM32_HAL_H
 
 #include "as5600.h"
+#if __has_include("stm32h7xx_hal.h")
+#include "stm32h7xx_hal.h"
+#elif __has_include("stm32f4xx_hal.h")
 #include "stm32f4xx_hal.h"
+#else
+#error "Unsupported STM32 HAL header"
+#endif
 
 #ifdef __cplusplus
 extern "C" {

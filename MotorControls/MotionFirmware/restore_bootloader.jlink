@@ -1,0 +1,6 @@
+r
+h
+loadfile tools\btt_bootloader\Octopus-H723-bootloader-128KB.hex
+r
+g
+q

@@ -4,7 +4,7 @@
  * @brief   Common application entry-point contract shared by all firmware
  *          profiles under MotorControls/MotionFirmware/Apps/.
  *
- *          Core/Src/main.c and Core/Src/stm32f4xx_it.c call these hooks
+ *          Core/Src/main.c and Core/Src/stm32h7xx_it.c call these hooks
  *          after CubeMX peripheral initialization so a single shared Core/
  *          can build every firmware application target cleanly.
  ******************************************************************************

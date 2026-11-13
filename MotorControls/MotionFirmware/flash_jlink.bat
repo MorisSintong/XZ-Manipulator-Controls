@@ -6,8 +6,8 @@ if not exist %JLINK_EXE% (
     exit /b 1
 )
 
-echo [INFO] Flashing MotionFirmware.hex to STM32F446RE via J-Link SWD...
-%JLINK_EXE% -device STM32F446RE -if SWD -speed 4000 -autoconnect 1 -CommanderScript flash.jlink
+echo [INFO] Flashing MotionFirmware.hex to STM32H723ZET6 via J-Link SWD...
+%JLINK_EXE% -device STM32H723ZE -if SWD -speed 4000 -autoconnect 1 -CommanderScript flash.jlink
 
 if %ERRORLEVEL% equ 0 (
     echo [SUCCESS] Flashing complete! Target reset and running.

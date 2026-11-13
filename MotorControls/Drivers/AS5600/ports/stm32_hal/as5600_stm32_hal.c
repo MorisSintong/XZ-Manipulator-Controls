@@ -194,8 +194,12 @@ as5600_result_t as5600_stm32_hal_init(
     {
         if ((i2c->Instance != NULL) &&
             (i2c->Init.AddressingMode == I2C_ADDRESSINGMODE_7BIT) &&
+#if defined(I2C_TIMINGR_SCLL)
+            (i2c->Init.Timing != 0U) &&
+#else
             (i2c->Init.ClockSpeed > 0U) &&
             (i2c->Init.ClockSpeed <= UINT32_C(400000)) &&
+#endif
             (i2c->State == HAL_I2C_STATE_READY))
         {
             as5600_t candidate_device = {0};

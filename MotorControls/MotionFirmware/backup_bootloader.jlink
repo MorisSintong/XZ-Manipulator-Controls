@@ -1,0 +1,6 @@
+r
+h
+savebin bootloader_btt_octopus_pro_128k.bin 0x08000000 0x20000
+savebin flash_full_backup_512k.bin 0x08000000 0x80000
+g
+q

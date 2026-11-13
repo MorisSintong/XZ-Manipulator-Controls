@@ -6,7 +6,7 @@
 
 #include "motion_profile.h"
 
-#define STEPGEN_MIN_TICKS 420U /* 5 us at 84 MHz: floor for bad parameters */
+#define STEPGEN_MIN_TICKS 1000U /* 5 us at 200 MHz: floor for bad parameters */
 #define STEPGEN_MAX_TICKS 4000000000U
 
 typedef struct {
@@ -35,16 +35,18 @@ static stepgen_t *axis(uint8_t ax) {
 static uint32_t timer_input_clock(const TIM_TypeDef *tim) {
   RCC_ClkInitTypeDef clk;
   uint32_t latency;
-  bool apb2 = (tim == TIM1) || (tim == TIM8) || (tim == TIM9) ||
-              (tim == TIM10) || (tim == TIM11);
+  bool apb2 = (tim == TIM1) || (tim == TIM8) || (tim == TIM15) ||
+              (tim == TIM16) || (tim == TIM17);
   uint32_t pclk;
   uint32_t div;
+  uint32_t div1;
 
   HAL_RCC_GetClockConfig(&clk, &latency);
   pclk = apb2 ? HAL_RCC_GetPCLK2Freq() : HAL_RCC_GetPCLK1Freq();
   div = apb2 ? clk.APB2CLKDivider : clk.APB1CLKDivider;
+  div1 = apb2 ? RCC_APB2_DIV1 : RCC_APB1_DIV1;
   /* APB timers run at 2x PCLK whenever the APB prescaler is not 1. */
-  return (div == RCC_HCLK_DIV1) ? pclk : 2U * pclk;
+  return (div == div1) ? pclk : 2U * pclk;
 }
 
 static inline void dir_out(const stepgen_t *s, int8_t dir) {

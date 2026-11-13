@@ -27,7 +27,7 @@ typedef struct {
 } enc_t;
 
 /* SCL/SDA pins of the encoder buses, used for the bus-clear sequence. They
- * must match the pin assignment in MotionFirmware.ioc / stm32f4xx_hal_msp.c. */
+ * must match the pin assignment in MotionFirmware.ioc / stm32h7xx_hal_msp.c. */
 typedef struct {
     const I2C_TypeDef *inst;
     GPIO_TypeDef      *scl_port;
@@ -37,8 +37,8 @@ typedef struct {
 } i2c_pins_t;
 
 static const i2c_pins_t k_pins[] = {
-    { I2C1, GPIOB, GPIO_PIN_8, GPIOB, GPIO_PIN_9 }, /* PB8 SCL, PB9 SDA */
-    { I2C3, GPIOA, GPIO_PIN_8, GPIOC, GPIO_PIN_9 }, /* PA8 SCL, PC9 SDA */
+    { I2C1, GPIOB, GPIO_PIN_8, GPIOB, GPIO_PIN_9 }, /* PB8 SCL, PB9 SDA (J73) */
+    { I2C4, GPIOB, GPIO_PIN_6, GPIOB, GPIO_PIN_7 }, /* PB6 SCL, PB7 SDA (J43 BLTouch) */
 };
 
 static enc_t   g_enc[ENCODER_MAX];

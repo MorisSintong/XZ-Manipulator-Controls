@@ -3,9 +3,9 @@
  * @file    z_bounce_app.c
  * @brief   Z-Axis StallGuard4 Sensorless Limit Bouncing + Vision UART Emulation
  *          Application Profile (implements fw_app.h for shared Core/).
- *          Hardware: STM32F446RE Nucleo-64 + MKS TMC2240 (SPI Mode)
+ *          Hardware: BIGTREETECH SKR Octopus Pro V1.1 (STM32H723) + TMC2240 (SPI1)
  *          Z-Axis: Lead Screw (~400 steps/mm @ 1/16 microstep)
- *          Dual Telemetry: SEGGER RTT Terminal 0 + USART2 (COM9 @ 115200)
+ *          Dual Telemetry: SEGGER RTT Terminal 0 + USART2 (PD5/PD6 @ 115200)
  ******************************************************************************
  */
 
@@ -19,12 +19,12 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-extern SPI_HandleTypeDef hspi2;
+extern SPI_HandleTypeDef hspi1;
 extern UART_HandleTypeDef huart2;
 
-/* TMC2240 SPI Configuration: CS on PC0 */
+/* TMC2240 SPI Configuration: Driver 1 (MOTOR1) CS0 on PD11 */
 static const TMC2240_SPIConfig_t tmc_spi_cfgs[] = {
-    {.hspi = &hspi2,
+    {.hspi = &hspi1,
      .cs_port = TMC_CS0_GPIO_Port,
      .cs_pin = TMC_CS0_Pin,
      .spi_timeout_ms = 100U}};
@@ -77,7 +77,7 @@ static void log_printf(const char *fmt, ...) {
 void fw_app_init(void) {
   DWT_Init();
 
-  /* Reconfigure B1 (PC13) as polled input with pull-up for this profile */
+  /* Reconfigure B1 (PG15/STOP7) as polled input with pull-up for this profile */
   HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   GPIO_InitStruct.Pin = B1_Pin;
@@ -92,22 +92,22 @@ void fw_app_init(void) {
   HAL_NVIC_SetPriority(USART2_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(USART2_IRQn);
 
-  /* Log Welcome Banner to SEGGER RTT & USART2 COM9 */
+  /* Log Welcome Banner to SEGGER RTT & USART2 */
   log_printf("\r\n" RTT_CTRL_TEXT_BRIGHT_CYAN);
   log_printf(
       "=================================================================\r\n");
   log_printf(
-      "   [PROFILE] z_bounce_emulation (Z-Bounce + Renode Vision UART) \r\n");
+      "   [PROFILE] z_bounce_emulation (Z-Bounce + Vision UART)         \r\n");
   log_printf(
       "   TMC2240 Z-Axis StallGuard4 Sensorless Limit Bouncing Suite    \r\n");
   log_printf(
-      "   Target: STM32F446RE Nucleo-64 @ 84 MHz                        \r\n");
+      "   Target: STM32H723 SKR Octopus Pro V1.1 @ 400 MHz              \r\n");
   log_printf(
-      "   SPI2: PB13(SCK), PB14(MISO), PB15(MOSI)                      \r\n");
+      "   SPI1: PA5(SCK), PA6(MISO), PA7(MOSI)                          \r\n");
   log_printf(
-      "   Pins: CS0=PC0, STEP0=PC1, DIR0=PC2, ENN0=PC6                 \r\n");
+      "   Pins: CS0=PD11, STEP0=PG0, DIR0=PG1, ENN0=PF15                \r\n");
   log_printf(
-      "   Telemetry: SEGGER RTT Terminal 0 + USART2 @ 115200 (COM9)    \r\n");
+      "   Telemetry: SEGGER RTT Terminal 0 + USART2 @ 115200 (PD5/PD6)  \r\n");
   log_printf("================================================================="
              "\r\n" RTT_CTRL_RESET);
 
@@ -133,7 +133,7 @@ void fw_app_init(void) {
     log_printf(RTT_CTRL_TEXT_YELLOW "  Troubleshooting Tips:\r\n");
     log_printf("  1. Verify 24V (or VMOT) is connected and powered ON.\r\n");
     log_printf(
-        "  2. Check SPI pins: PB13(SCK), PB14(MISO), PB15(MOSI), PC0(CS).\r\n");
+        "  2. Check SPI1 pins: PA5(SCK), PA6(MISO), PA7(MOSI), PD11(CS0).\r\n");
     log_printf("  3. Ensure common GND between STM32 and motor power "
                "supply.\r\n" RTT_CTRL_RESET);
   } else {
@@ -306,7 +306,7 @@ void fw_app_tim_irq(uint8_t motor) { (void)motor; }
 
 bool fw_app_usart2_irq(void) {
   if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_RXNE) != RESET) {
-    uint8_t byte = (uint8_t)(huart2.Instance->DR & 0xFFU);
+    uint8_t byte = (uint8_t)(huart2.Instance->RDR & 0xFFU);
     VisionUart_RxByteCallback(byte);
   }
   if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_ORE) != RESET) {
@@ -316,8 +316,12 @@ bool fw_app_usart2_irq(void) {
 }
 
 void fw_app_error_handler(void) {
-  HAL_GPIO_WritePin(GPIOC, TMC_STEP0_Pin | TMC_STEP1_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(GPIOC, TMC_ENN0_Pin | TMC_ENN1_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(TMC_STEP0_GPIO_Port, TMC_STEP0_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TMC_STEP1_GPIO_Port, TMC_STEP1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TMC_STEP2_GPIO_Port, TMC_STEP2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TMC_ENN0_GPIO_Port, TMC_ENN0_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(TMC_ENN1_GPIO_Port, TMC_ENN1_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(TMC_ENN2_GPIO_Port, TMC_ENN2_Pin, GPIO_PIN_SET);
 }
 
 /* ---------------------------------------------------------------------------*/

@@ -17,7 +17,7 @@
 
 #include "as5600.h"
 #include "axis_hw.h"
-#include "stm32f4xx_hal.h"
+#include "stm32h7xx_hal.h"
 
 #ifdef __cplusplus
 extern "C" {

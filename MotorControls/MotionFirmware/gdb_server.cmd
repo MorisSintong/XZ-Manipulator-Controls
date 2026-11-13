@@ -1,2 +1,2 @@
 @echo off
-C:\tools\jlink\JLinkGDBServerCL.exe -select USB -device STM32F446RE -endian little -if SWD -speed 4000
+C:\tools\jlink\JLinkGDBServerCL.exe -select USB -device STM32H723ZE -endian little -if SWD -speed 4000

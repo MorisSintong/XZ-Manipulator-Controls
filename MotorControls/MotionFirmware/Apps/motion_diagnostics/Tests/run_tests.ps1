@@ -30,7 +30,7 @@ New-Item -ItemType Directory -Force $armBuild | Out-Null
 foreach ($name in $halFreeSources) {
     $source = Get-Item (Join-Path (Join-Path $app "Src") $name)
     $object = Join-Path $armBuild ($source.BaseName + ".o")
-    & $armExe -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard `
+    & $armExe -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard `
         -std=c11 -Wall -Wextra -Werror -Wconversion -Wsign-conversion `
         -I (Join-Path $app "Inc") -I $coreInc -c $source.FullName -o $object
     if ($LASTEXITCODE -ne 0) { throw "ARM compilation failed: $($source.Name)" }

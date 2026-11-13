@@ -8,7 +8,13 @@
 #ifndef TMC2240_HAL_H_
 #define TMC2240_HAL_H_
 
+#if __has_include("stm32h7xx_hal.h")
+#include "stm32h7xx_hal.h"
+#elif __has_include("stm32f4xx_hal.h")
 #include "stm32f4xx_hal.h"
+#else
+#error "Unsupported STM32 HAL header"
+#endif
 #include "tmc2240_core.h"
 
 #ifdef __cplusplus

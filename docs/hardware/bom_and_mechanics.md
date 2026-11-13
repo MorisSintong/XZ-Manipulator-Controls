@@ -60,9 +60,9 @@ The physical sorting manipulator is a 2-Axis Cartesian Robot operating in the ve
 
 | Subsystem | Part Name | Manufacturer / Model | Quantity | Operating Specs |
 | :--- | :--- | :--- | :---: | :--- |
-| **MCU Board** | SKR Octopus Pro V1.1 | BIGTREETECH `SKR Octopus Pro V1.1` with STM32H723 | 1 | Physical controller board; the checked-in firmware still targets NUCLEO-F446RE and requires an H723 port |
-| **Stepper Drivers** | TMC2240 Stepper Driver | BIGTREETECH (BTT) / MKS TMC2240 v1.0 (SPI Mode) | 2 (3rd optional) | Install in SKR driver sockets 0 (X), 2 (Z), optional 3 (theta); shared board SPI1 |
-| **Position Feedback** | Magnetic Rotary Encoders | ams OSRAM `AS5600` Breakout Module | 2 | 12-bit contactless rotary encoder (4096 counts/rev), separate 3.3 V I2C buses (`PE8`/`PE9` and proposed software-I2C `PE7`/`PE10`) |
+| **MCU Board** | SKR Octopus Pro V1.1 | BIGTREETECH `SKR Octopus Pro V1.1` with STM32H723ZET6 | 1 | Physical controller board; `MotionFirmware` targets `STM32H723ZET6` directly |
+| **Stepper Drivers** | TMC2240 Stepper Driver | BIGTREETECH (BTT) / MKS TMC2240 v1.0 (SPI Mode) | 3 | Install in SKR driver sockets `MOTOR0` (X), `MOTOR1` (Z), `MOTOR2_1` (Rotation / $\theta$); shared board `SPI1` |
+| **Position Feedback** | Magnetic Rotary Encoders | ams OSRAM `AS5600` Breakout Module | 2 | 12-bit contactless rotary encoder (4096 counts/rev), dual hardware I2C buses (`I2C1` on `PB8`/`PB9` `J73`, `I2C4` on `PB6`/`PB7` `J43`) |
 | **Proximity Sensor** | 3-Wire Inductive Proximity Sensor | 5V NPN/PNP Inductive Sensor | 1 | Connect through the board's dedicated `PROBE` input (`PC5`); check sensor output type and interface |
 | **Motors** | Bipolar Stepper Motors | NEMA 17 (1.5 A - 1.8 A/phase) | 2 | $1.8^\circ$ step angle (200 full steps/rev) |
 | **Pneumatics** | Vacuum Generator / Ejector | Venturi Vacuum Ejector + Solenoid Valve (12V/24V) | 1 | Fast-response vacuum pull and blow-off release |

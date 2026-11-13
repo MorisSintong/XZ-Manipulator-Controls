@@ -6,8 +6,8 @@
 #include "tmc2240_core.h"
 #include "tmc2240_hal.h"
 
-extern I2C_HandleTypeDef hi2c1, hi2c3;
-extern SPI_HandleTypeDef hspi2;
+extern I2C_HandleTypeDef hi2c1, hi2c4;
+extern SPI_HandleTypeDef hspi1;
 extern TIM_HandleTypeDef htim2, htim5;
 extern UART_HandleTypeDef huart2;
 extern DMA_HandleTypeDef hdma_usart2_rx;
@@ -57,13 +57,15 @@ static bool safe_inputs(void *context) {
 static TIM_TypeDef *timer(uint8_t axis) { return axis == AXIS_Z ? TIM2 : TIM5; }
 static void step_out(void *context, uint8_t axis, bool high) {
   (void)context;
+  GPIO_TypeDef *port = axis == AXIS_Z ? TMC_STEP0_GPIO_Port : TMC_STEP1_GPIO_Port;
   const uint32_t pin = axis == AXIS_Z ? TMC_STEP0_Pin : TMC_STEP1_Pin;
-  GPIOC->BSRR = high ? pin : pin << 16U;
+  port->BSRR = high ? pin : pin << 16U;
 }
 static void dir_out(void *context, uint8_t axis, int8_t direction) {
   (void)context;
+  GPIO_TypeDef *port = axis == AXIS_Z ? TMC_DIR0_GPIO_Port : TMC_DIR1_GPIO_Port;
   const uint32_t pin = axis == AXIS_Z ? TMC_DIR0_Pin : TMC_DIR1_Pin;
-  GPIOC->BSRR = direction > 0 ? pin : pin << 16U;
+  port->BSRR = direction > 0 ? pin : pin << 16U;
 }
 static void schedule(void *context, uint8_t axis, uint32_t deadline,
                      bool enable) {
@@ -113,7 +115,7 @@ static bool health_read(void *context, uint8_t axis, uint8_t *status,
 static bool conf_read(void *context, uint8_t axis, uint16_t *conf) {
   (void)context;
   uint8_t bytes[2];
-  I2C_HandleTypeDef *bus = axis == AXIS_X ? &hi2c1 : &hi2c3;
+  I2C_HandleTypeDef *bus = axis == AXIS_X ? &hi2c1 : &hi2c4;
   /* Foreground-only, serialized with the AS5600 driver on each physical bus.
    * Retain the complete high-byte-first word, including factory/reserved bits.
    */
@@ -148,12 +150,12 @@ static bool tx_start(void *context, const uint8_t *bytes, uint16_t size) {
   (void)context;
   /* The vendor shared DMA-error callback ends both UART directions. Bind
    * source-specific callbacks before permitting this stream's interrupt. */
-  HAL_NVIC_DisableIRQ(DMA1_Stream6_IRQn);
+  HAL_NVIC_DisableIRQ(DMA1_Stream1_IRQn);
   const bool started = HAL_UART_Transmit_DMA(&huart2, bytes, size) == HAL_OK;
   if (started) {
     huart2.hdmatx->XferErrorCallback = tx_dma_error;
   }
-  HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
+  HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
   /* Error/completion can preempt startup. A completed slot is already freed
    * by its callback; an aborted start must leave the frame queued for retry. */
   return started && huart2.gState == HAL_UART_STATE_BUSY_TX;
@@ -198,18 +200,18 @@ static bool start_rx(void *context) {
   (void)context;
   rx_base = uart.producer;
   rx_laps = 0U;
-  HAL_NVIC_DisableIRQ(DMA1_Stream5_IRQn);
+  HAL_NVIC_DisableIRQ(DMA1_Stream0_IRQn);
   const bool started =
       HAL_UARTEx_ReceiveToIdle_DMA(&huart2, uart.rx, UART_RX_SIZE) == HAL_OK;
   if (started) {
     huart2.hdmarx->XferErrorCallback = rx_dma_error;
   }
-  HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+  HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
   return started;
 }
 static bool abort_rx(void *context) {
   (void)context;
-  HAL_NVIC_DisableIRQ(DMA1_Stream5_IRQn);
+  HAL_NVIC_DisableIRQ(DMA1_Stream0_IRQn);
   const bool wrap =
       __HAL_DMA_GET_FLAG(&hdma_usart2_rx,
                          __HAL_DMA_GET_TC_FLAG_INDEX(&hdma_usart2_rx)) != RESET;
@@ -217,7 +219,7 @@ static bool abort_rx(void *context) {
   if (stopped && wrap) {
     ++rx_laps;
   }
-  HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+  HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
   return stopped;
 }
 static bool abort_tx(void *context) {
@@ -272,7 +274,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *h) {
 void HAL_GPIO_EXTI_Callback(uint16_t pin) {
   if (initialized && pin == B1_Pin) {
     step_engine_abort(&steps);
-    console_printf("[ABORT] B1 (PC13) pressed -> step engine aborted\n");
+    console_printf("[ABORT] B1 (PG15/STOP7) pressed -> step engine aborted\n");
   }
 }
 
@@ -317,15 +319,17 @@ static bool configure_motor(uint8_t axis) {
       tmc2240_hal_activateMotor(motor, 3U) != TMC2240_OK) {
     return false;
   }
-  HAL_GPIO_WritePin(GPIOC, axis == AXIS_Z ? TMC_ENN0_Pin : TMC_ENN1_Pin,
+  HAL_GPIO_WritePin(axis == AXIS_Z ? TMC_ENN0_GPIO_Port : TMC_ENN1_GPIO_Port,
+                    axis == AXIS_Z ? TMC_ENN0_Pin : TMC_ENN1_Pin,
                     GPIO_PIN_RESET);
   return true;
 }
 
 static void recover_bus(I2C_HandleTypeDef *bus, uint8_t axis) {
-  GPIO_TypeDef *scl = axis == AXIS_X ? GPIOB : GPIOA;
-  GPIO_TypeDef *sda = axis == AXIS_X ? GPIOB : GPIOC;
-  const uint16_t scl_pin = GPIO_PIN_8, sda_pin = GPIO_PIN_9;
+  GPIO_TypeDef *scl = GPIOB;
+  GPIO_TypeDef *sda = GPIOB;
+  const uint16_t scl_pin = axis == AXIS_X ? GPIO_PIN_8 : GPIO_PIN_6;
+  const uint16_t sda_pin = axis == AXIS_X ? GPIO_PIN_9 : GPIO_PIN_7;
   (void)HAL_I2C_DeInit(bus);
   HAL_GPIO_WritePin(scl, scl_pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(sda, sda_pin, GPIO_PIN_SET);
@@ -400,7 +404,7 @@ static void monitor_diagnostics(void) {
               "(check magnet/I2C%s)\n",
               name, (long)enc_delta, (long)net_steps,
               abs64(other_delta) > expected_mag / 2
-                  ? " -> OTHER AXIS ENCODER TURNED! Swap I2C1/I2C3 cables"
+                  ? " -> OTHER AXIS ENCODER TURNED! Swap I2C1/I2C4 cables"
                   : "");
         } else if ((net_steps < 0 && signed_enc > 0) ||
                    (net_steps > 0 && signed_enc < 0)) {
@@ -483,11 +487,12 @@ void motion_board_init(void) {
   motion_executor_init(&executor, &motion_default_config, &steps, &encoders,
                        &drivers, &uart);
   executor.safe_inputs = safe_inputs;
-  const TMC2240_SPIConfig_t motor_cfg[2] = {{&hspi2, GPIOC, TMC_CS0_Pin, 1U},
-                                            {&hspi2, GPIOC, TMC_CS1_Pin, 1U}};
+  const TMC2240_SPIConfig_t motor_cfg[2] = {
+      {&hspi1, TMC_CS0_GPIO_Port, TMC_CS0_Pin, 1U},
+      {&hspi1, TMC_CS1_GPIO_Port, TMC_CS1_Pin, 1U}};
   const bool bus_ok = tmc2240_hal_init(motor_cfg, 2U) == TMC2240_OK;
   HAL_Delay(10U);
-  I2C_HandleTypeDef *const buses[2] = {&hi2c1, &hi2c3};
+  I2C_HandleTypeDef *const buses[2] = {&hi2c1, &hi2c4};
   for (uint8_t i = 0U; i < 2U; ++i) {
     recover_bus(buses[i], i);
     as5600_config_t profile, readback;
@@ -553,5 +558,10 @@ void fw_app_tim_irq(uint8_t motor) { motion_board_timer_irq(motor); }
 bool fw_app_usart2_irq(void) { return false; }
 
 void fw_app_error_handler(void) {
-  HAL_GPIO_WritePin(GPIOC, TMC_STEP0_Pin | TMC_STEP1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TMC_STEP0_GPIO_Port, TMC_STEP0_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TMC_STEP1_GPIO_Port, TMC_STEP1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TMC_STEP2_GPIO_Port, TMC_STEP2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TMC_ENN0_GPIO_Port, TMC_ENN0_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(TMC_ENN1_GPIO_Port, TMC_ENN1_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(TMC_ENN2_GPIO_Port, TMC_ENN2_Pin, GPIO_PIN_SET);
 }
