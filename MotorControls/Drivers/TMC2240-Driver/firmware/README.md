@@ -1,9 +1,12 @@
 # Firmware Artifacts
 
-**The `Test-TMC2240.bin`, `.hex`, and `.elf` files have been regenerated from the
-audited, synchronized STM32F446RE Release source.** They are diagnostics-only:
+**The `Test-TMC2240.bin`, `.hex`, and `.elf` files were built from legacy
+STM32F446RE Release source.** They are diagnostics-only:
 `TMC2240_DEMO_ENABLE_MOTION=0`. Motor preparation/configuration/activation
 symbols are absent from this garbage-collected default image.
+
+> [!WARNING]
+> The current physical controller is the SKR Octopus Pro V1.1 (STM32H723ZET6). These F446 images are incompatible and must not be flashed to the SKR. H723 firmware porting remains pending.
 
 These are **build-verified, hardware-unverified** artifacts, not unconditional
 release qualification. `build-provenance.json` records the compiler, architecture

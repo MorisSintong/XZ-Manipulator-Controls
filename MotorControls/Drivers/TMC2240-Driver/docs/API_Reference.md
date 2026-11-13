@@ -14,9 +14,12 @@ error indicators. Always inspect the returned status before using data.
 
 ## Scope and Ownership
 
-The software target is STM32F446RE using SPI. Portable UART framing is tested,
-but the supplied STM32 UART transport remains unsupported. No hardware,
-electrical, thermal, mechanical, or real-time qualification is implied.
+The current physical controller is the BIGTREETECH SKR Octopus Pro V1.1
+(STM32H723ZET6). This package's supplied STM32 adapter and example application
+remain specific to the legacy STM32F446RE / STM32F4 HAL; they are not H723
+software and are not compatible with the current board as-is. Portable UART
+framing is tested, but the supplied STM32 UART transport remains unsupported.
+No hardware, electrical, thermal, mechanical, or real-time qualification is implied.
 
 The application must serialize complete public operations, including both
 frames of a pipelined read and complete read-modify-write/configuration

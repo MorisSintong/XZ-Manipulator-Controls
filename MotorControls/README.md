@@ -34,6 +34,7 @@ MotorControls/
   - Smart stepper driver operating over high-speed SPI (`SPI2`, Mode 3).
   - Features StealthChop2, SpreadCycle, and StallGuard4 (sensorless mechanical homing and stall detection).
   - Modular hardware abstraction layer for STM32 HAL.
+- **[`SEGGER_RTT/`](Drivers/SEGGER_RTT/README.md):** Minimal RTT debug channel with fixed up/down buffers for J-Link host logs and optional polled input.
 
 ### B. Motion Firmware & Host Diagnostics (`MotionFirmware/`)
 - Built for the **STM32F446RE Nucleo-64** board from a shared CubeMX HAL base (`MotionFirmware.ioc`) with **three selectable application profiles** under [`MotionFirmware/Apps/`](MotionFirmware/Apps/):

@@ -1,14 +1,18 @@
 # TMC2240 Stepper Motor Driver & Example Program for STM32
 
 Driver and example package for the **Analog Devices / Trinamic TMC2240**.
-The software integration target is **STM32F446RE**. Other MCU families and
-physical hardware behavior are not qualified by the host test suite.
+
+**Current physical controller:** BIGTREETECH SKR Octopus Pro V1.1 with STM32H723ZET6 and TMC2240 modules; see the [current board wiring](../../../docs/hardware/wiring.md).
+
+**Software compatibility:** The reusable register core is portable, but the bundled STM32 HAL adapter, CubeIDE project, and firmware images target the legacy NUCLEO-F446RE / STM32F446RE. They are not an H723 port and must not be used as firmware on the SKR. The H723 port remains pending.
+
+Host simulations do **not** establish electrical, motor, timing, thermal, or mechanical readiness.
 
 **Release readiness must be established from the validation gates, not the
 historical claims in this package.** No hardware qualification was performed
 in the current software-only audit.
 
-This package includes a standalone, modular C driver, an advanced StallGuard4 sensorless homing demonstration program, pre-compiled binaries, and a complete out-of-the-box STM32CubeIDE project.
+This package contains a reusable TMC2240 register core, an STM32F4 HAL adapter, legacy F446 demonstrations/projects, and F446 diagnostic images. It does not include SKR/H723 firmware.
 
 ---
 
@@ -42,12 +46,12 @@ TMC2240_STM32_Driver_Package/
 │       └── Functions.c                 # Utility helper functions; compile once
 │
 ├── examples/
-│   ├── StallGuard4_Homing_Demo/        # Standalone demo code & documentation
+│   ├── StallGuard4_Homing_Demo/        # Legacy STM32F446RE demo code & documentation
 │   │   ├── README.md                   # State machine explanation, UART logs, tuning
 │   │   ├── main.c                      # Complete demonstration application
 │   │   └── main.h                      # Pin definitions & hardware configurations
 │   │
-│   └── STM32CubeIDE_Project/           # Complete, ready-to-import STM32CubeIDE project
+│   └── STM32CubeIDE_Project/           # Legacy STM32F446RE CubeIDE project
 │       ├── README.md                   # Step-by-step import and build guide
 │       ├── .cproject                   # Eclipse CDT project configuration
 │       ├── .project                    # Eclipse project descriptor
@@ -58,7 +62,7 @@ TMC2240_STM32_Driver_Package/
 │       ├── Core/                       # Application & driver source code
 │       └── Drivers/                    # STMicroelectronics HAL & CMSIS libraries
 │
-├── firmware/                           # Pre-compiled binaries for NUCLEO-F446RE
+├── firmware/                           # Legacy diagnostic images for NUCLEO-F446RE only
 │   ├── README.md                       # Flashing instructions
 │   ├── Test-TMC2240.bin                # Raw binary image (direct drag-to-drive)
 │   ├── Test-TMC2240.hex                # Intel HEX image (STM32CubeProgrammer)
@@ -76,31 +80,30 @@ TMC2240_STM32_Driver_Package/
 
 ## ⚡ Quick Start
 
-### Option 1: Pre-Compiled Diagnostic Firmware
-The files in `firmware` are regenerated diagnostics-only Release builds with
-source/binary provenance. They are build-verified but hardware-unverified,
-not an unconditional release qualification. Old auto-motion images are not
-distributed. Read `firmware\README.md` before considering a hardware test.
+### Option 1: Pre-Compiled Diagnostic Firmware (legacy F446 only)
+These regenerated diagnostics-only images target the legacy F446 firmware. They are build-verified but hardware-unverified; **do not flash them to the SKR/H723**. Read `firmware\README.md` before any legacy F446 hardware test.
 
-### Option 2: Open in STM32CubeIDE
+### Option 2: Legacy STM32CubeIDE Project (F446 only)
 1. In STM32CubeIDE, click **File** -> **Import...** -> **Existing Projects into Workspace**.
 2. Select the `examples/STM32CubeIDE_Project` folder.
 3. Build both Debug and Release; do not rely on old build-result claims.
 4. Review the diagnostics-only default and explicit motion opt-in configuration
    in `examples\StallGuard4_Homing_Demo\README.md`. Do not automatically flash.
 
+This project targets NUCLEO-F446RE and is not compatible with the current SKR/H723.
+
 ### Option 3: Integrate Driver Into an Existing Project
 1. Copy `driver/inc/` and `driver/src/` into your project directory.
 2. Add `driver/inc/` to your compiler include directories.
 3. Add the `.c` files in `driver/src/` to your build sources.
-4. Include `tmc2240.h` in your code and follow the examples in `driver/README.md`.
+4. Include `tmc2240_core.h` for the portable core. `tmc2240.h` is the STM32F4 HAL umbrella; using this driver on the SKR/H723 requires an H723-specific platform adapter.
 
 ---
 
-## 🔌 Standalone Example Pinout (NUCLEO-F446RE to Single MKS TMC2240)
+## Legacy Standalone Example Pinout (NUCLEO-F446RE to Single MKS TMC2240)
 
 > [!IMPORTANT]
-> The table below applies **only** to the standalone single-motor `Test-TMC2240` example inside `examples/STM32CubeIDE_Project/`. For the **XZ-Manipulator gantry** (`MotionFirmware`), use the master ST Morpho pinout in [`docs/hardware/wiring.md`](../../../docs/hardware/wiring.md) (`SPI2` on `PB13`/`PB14`/`PB15`; Motor 0/1 controls on `PC0..PC7`).
+> The table below applies **only** to the legacy single-motor `Test-TMC2240` example. The current XZ gantry uses the SKR Octopus Pro V1.1 / STM32H723ZET6; use the [current SKR wiring guide](../../../docs/hardware/wiring.md). The F446 pinout and firmware are not applicable to that board.
 
 | STM32 Nucleo Pin | MKS TMC2240 Pin | Signal | Description |
 |:----------------:|:---------------:|:------:|:------------|

@@ -1,8 +1,10 @@
 # Complete STM32CubeIDE Project
 
-This folder contains the STM32CubeIDE project for the **STM32F446RE Nucleo-64**
-board and **MKS TMC2240** driver. Hardware qualification is pending; importing
-or compiling the project is not evidence of electrical or motor readiness.
+This folder contains a legacy STM32CubeIDE project for the **STM32F446RE Nucleo-64**
+board and **MKS TMC2240** driver. It does not target the current SKR Octopus Pro V1.1 / STM32H723ZET6.
+
+> [!WARNING]
+> Do not flash or use this F446 project on the SKR. The H723 firmware port is pending. Hardware qualification is also pending; importing or compiling this project does not establish electrical or motor readiness.
 
 ## How to Import & Build
 

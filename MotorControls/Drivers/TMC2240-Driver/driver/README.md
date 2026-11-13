@@ -1,9 +1,12 @@
 # TMC2240 checked C driver
 
-Canonical reusable implementation for the TMC2240, referenced to Analog Devices
-**Rev. 2 (11/23)**. The STM32 adapter's software integration target is STM32F446RE.
-Host simulation does **not** establish electrical, motor, timing, thermal, or
-mechanical readiness. No hardware qualification or formal MISRA claim is made.
+Canonical reusable implementation for the TMC2240, referenced to Analog Devices Rev. 2 (11/23).
+
+The register core is portable. The supplied STM32F4 HAL adapter includes `stm32f4xx_hal.h` and was integrated against the legacy STM32F446RE target.
+
+**Current physical controller:** BIGTREETECH SKR Octopus Pro V1.1 (STM32H723ZET6); see the [current board wiring](../../../../docs/hardware/wiring.md). This package does **not** include an H723 HAL adapter or SKR-compatible firmware; the F446 adapter/project must not be used on that board.
+
+Host simulation does **not** establish electrical, motor, timing, thermal, or mechanical readiness. No hardware qualification or formal MISRA claim is made.
 
 ## Build and headers
 

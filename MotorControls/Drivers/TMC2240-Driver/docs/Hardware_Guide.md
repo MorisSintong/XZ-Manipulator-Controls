@@ -1,6 +1,9 @@
 # TMC2240 Hardware & Wiring Guide
 
-This guide details the hardware wiring between the STM32F446RE Nucleo-64 board, the MKS TMC2240 module, and bipolar stepper motors.
+This guide contains **legacy NUCLEO-F446RE example wiring only**. It does not describe the current controller or board pinout.
+
+> [!IMPORTANT]
+> The current physical controller is the BIGTREETECH SKR Octopus Pro V1.1 (STM32H723ZET6). Use the [current SKR wiring guide](../../../../docs/hardware/wiring.md). The bundled F446 firmware and pin assignments must not be used on the SKR; the H723 firmware port is pending.
 
 ## 1. Single Motor Pinout (Demo Setup)
 

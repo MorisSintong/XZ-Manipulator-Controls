@@ -1,8 +1,9 @@
-# Dual Motor & Dual Encoder Configuration — STM32F446RE
+# Legacy Dual Motor & Dual Encoder Configuration — NUCLEO-F446RE
 
-This document provides the optimized, **physically contiguous** pinout configuration for running **two BIGTREETECH (BTT) / MKS TMC2240 v1.0** stepper driver modules, **two AS5600** magnetic encoder modules, and a **5V 3-wire inductive proximity sensor** on a single STM32F446RE Nucleo-64 (`MB1136`) board.
+This pinout is an older configuration for two BIGTREETECH (BTT) / MKS TMC2240 v1.0 modules, two AS5600 encoders, and a proximity sensor on a NUCLEO-F446RE (`MB1136`). It is **not** the current SKR wiring.
 
-For the complete system wiring specification and power rules, see **[`docs/hardware/wiring.md`](../../../../docs/hardware/wiring.md)**.
+> [!IMPORTANT]
+> The current physical controller is the BIGTREETECH SKR Octopus Pro V1.1 (STM32H723ZET6). Use the [current system wiring](../../../../docs/hardware/wiring.md); the Nucleo pin assignments below do not apply. H723 firmware integration remains pending.
 
 ## TMC2240 (Stepper Drivers)
 

@@ -4,6 +4,9 @@ This example demonstrates sensorless StallGuard4 homing and bouncing using the
 STM32 HAL and TMC2240 driver. **The default build does not enable motion.**
 Motor configuration and motion require explicit application settings.
 
+> [!WARNING]
+> This is a legacy STM32F446RE / Nucleo demo. The current physical controller is the SKR Octopus Pro V1.1 (STM32H723ZET6); the F446 demo firmware and pinout are not compatible. Use the [current SKR wiring guide](../../../../../docs/hardware/wiring.md) and wait for an H723 firmware port before hardware operation.
+
 Hardware qualification is pending. Software position counts commanded steps,
 not measured motion; a StallGuard threshold crossing is not proof of a physical
 endpoint. Provide an independent stop/inhibit appropriate to the mechanism.
