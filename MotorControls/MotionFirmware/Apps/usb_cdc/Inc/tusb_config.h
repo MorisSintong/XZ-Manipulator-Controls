@@ -79,7 +79,7 @@ extern "C" {
 
 /* CDC FIFO & Endpoint Buffer Sizes (Full-Speed Bulk max packet = 64 bytes) */
 #define CFG_TUD_CDC_RX_BUFSIZE 512
-#define CFG_TUD_CDC_TX_BUFSIZE 1024
+#define CFG_TUD_CDC_TX_BUFSIZE 4096
 #define CFG_TUD_CDC_EP_BUFSIZE 64
 
 #ifdef __cplusplus

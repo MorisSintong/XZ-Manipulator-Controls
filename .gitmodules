@@ -1,3 +1,6 @@
 [submodule "Hardware/BIGTREETECH-OCTOPUS-Pro"]
 	path = Hardware/BIGTREETECH-OCTOPUS-Pro
 	url = https://github.com/bigtreetech/BIGTREETECH-OCTOPUS-Pro.git
+[submodule "Hardware/BIGTREETECH-Stepper-Motor-Driver"]
+	path = Hardware/BIGTREETECH-Stepper-Motor-Driver
+	url = https://github.com/bigtreetech/BIGTREETECH-Stepper-Motor-Driver.git

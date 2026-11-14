@@ -8,6 +8,8 @@ Direktori ini berisi matriks perencanaan, skenario uji, lembar data pengukuran, 
 
 - **[`Perencanaan_Test_Realcase_XZ_Manipulator_Lengkap.xlsx`](Perencanaan_Test_Realcase_XZ_Manipulator_Lengkap.xlsx)**:  
   Workbook pengujian terperinci yang mencakup seluruh skenario validasi fungsional, pengujian presisi, dan uji performa sortasi real-time.
+- **[`records/stage1_stallguard_bringup_20261114/README.md`](records/stage1_stallguard_bringup_20261114/README.md)**:  
+  Rekaman empiris Stage 1 (`stallguard_cli`: homing repeatability 2x, validasi soft-limit, `mode soft` cycle, plot perbandingan Z `ema_shift`, serta replay Rerun `.rrd`).
 - Prosedur verifikasi firmware dan rencana uji bangku tersedia pada [bagian 7 desain motion diagnostics](../architecture/motion_diagnostics_design.md#7-verification-and-bench-plan). Tidak ada berkas `test_methodology.md` terlacak di direktori ini.
 
 ---

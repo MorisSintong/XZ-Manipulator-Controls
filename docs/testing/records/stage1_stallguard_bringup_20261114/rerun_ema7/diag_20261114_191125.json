@@ -1,0 +1,347 @@
+{
+  "timestamp": "20261114_191125",
+  "port": "COM11",
+  "log_path": "C:\\Users\\Moris\\.gemini\\antigravity-acp\\brain\\6ac9ea34-fbac-4b1f-babe-1530922d886f\\scratch\\diag_20261114_191125.log",
+  "initial_get": [
+    "  Z: speed=20 accel=200 margin=5 dwell=250 hspeed=12 haccel=100 retract=3 sg=80 sgratio=0.72 sgmin=40 blank=100 confirm=2 current=1000 hcurrent=600",
+    "  X: speed=150 accel=1500 margin=10 dwell=250 hspeed=60 haccel=500 retract=5 sg=80 sgratio=0.72 sgmin=40 blank=100 confirm=2 current=800 hcurrent=500"
+  ],
+  "initial_diag": [
+    "--- axis Z: IDLE, fault 'none', homed 0, travel 0.00 mm, soft 0.00..0.00 mm",
+    "    StallGuard4: SG4 0, baseline 0, SG4_THRS 80, last stall none; encoder ratio 1.2800 (not used), peak err 0.000 mm; bounce dev 0.000/max 0.000 mm",
+    "  TMC2240 #0: configured, profile RUN, last error: ok",
+    "    GCONF        (0x00) = 0x0000009C",
+    "    GSTAT        (0x01) = 0x00000000",
+    "    IOIN         (0x04) = 0x4001303C",
+    "    DRV_CONF     (0x0A) = 0x00000021",
+    "    GLOBALSCALER (0x0B) = 0x000000B5",
+    "    IHOLD_IRUN   (0x10) = 0x04061F0F",
+    "    TPOWERDOWN   (0x11) = 0x0000000A",
+    "    TSTEP        (0x12) = 0x000FFFFF",
+    "    TPWMTHRS     (0x13) = 0x00000000",
+    "    TCOOLTHRS    (0x14) = 0x00000000",
+    "    THIGH        (0x15) = 0x00000000",
+    "    MSCNT        (0x6A) = 0x00000388",
+    "    CHOPCONF     (0x6C) = 0x34410153",
+    "    COOLCONF     (0x6D) = 0x00000000",
+    "    DRV_STATUS   (0x6F) = 0x800040BA",
+    "    PWMCONF      (0x70) = 0xC40C001D",
+    "    PWM_SCALE    (0x71) = 0x00000004",
+    "    PWM_AUTO     (0x72) = 0x00270034",
+    "    SG4_THRS     (0x74) = 0x00000350",
+    "    SG4_RESULT   (0x75) = 0x000000BA",
+    "    SG4_IND      (0x76) = 0x7030597B",
+    "    current: range 1, GS 181, IRUN 31 (1000 mA), IHOLD 15 (500 mA), home CS 18 (594 mA)",
+    "    DRV_STATUS: SG 186, CS_ACTUAL 0, StealthChop standstill ",
+    "    chip 36.2 C, VM 23785 mV, GSTAT at init 0x00",
+    "  AS5600 Z: NOT healthy, last I2C timeout, raw 0, counts 0, STATUS 0x00 (NO magnet), AGC 0, magnitude 0, errors 0, recoveries 49, epoch 0",
+    "--- axis X: IDLE, fault 'none', homed 0, travel 0.00 mm, soft 0.00..0.00 mm",
+    "    StallGuard4: SG4 0, baseline 0, SG4_THRS 80, last stall none; encoder ratio 1.2800 (not used), peak err 0.000 mm; bounce dev 0.000/max 0.000 mm",
+    "  TMC2240 #1: configured, profile RUN, last error: ok",
+    "    GCONF        (0x00) = 0x0000009C",
+    "    GSTAT        (0x01) = 0x00000000",
+    "    IOIN         (0x04) = 0x4001303C",
+    "    DRV_CONF     (0x0A) = 0x00000021",
+    "    GLOBALSCALER (0x0B) = 0x00000091",
+    "    IHOLD_IRUN   (0x10) = 0x04061F0F",
+    "    TPOWERDOWN   (0x11) = 0x0000000A",
+    "    TSTEP        (0x12) = 0x000FFFFF",
+    "    TPWMTHRS     (0x13) = 0x00000000",
+    "    TCOOLTHRS    (0x14) = 0x00000000",
+    "    THIGH        (0x15) = 0x00000000",
+    "    MSCNT        (0x6A) = 0x00000028",
+    "    CHOPCONF     (0x6C) = 0x34410153",
+    "    COOLCONF     (0x6D) = 0x00000000",
+    "    DRV_STATUS   (0x6F) = 0x800040DC",
+    "    PWMCONF      (0x70) = 0xC40C001D",
+    "    PWM_SCALE    (0x71) = 0x00000004",
+    "    PWM_AUTO     (0x72) = 0x001A0023",
+    "    SG4_THRS     (0x74) = 0x00000350",
+    "    SG4_RESULT   (0x75) = 0x000000DC",
+    "    SG4_IND      (0x76) = 0x6E884C76",
+    "    current: range 1, GS 145, IRUN 31 (801 mA), IHOLD 15 (401 mA), home CS 19 (501 mA)",
+    "    DRV_STATUS: SG 220, CS_ACTUAL 0, StealthChop standstill ",
+    "    chip 35.7 C, VM 23872 mV, GSTAT at init 0x00",
+    "  AS5600 X: NOT healthy, last I2C timeout, raw 0, counts 0, STATUS 0x00 (NO magnet), AGC 0, magnitude 0, errors 0, recoveries 49, epoch 0",
+    "  console dropped 0 bytes, usb connected, step timer 200000000 Hz"
+  ],
+  "home_runs": [
+    {
+      "run": "run1",
+      "axis": "Z",
+      "status": "OK",
+      "travel_mm": 115.51,
+      "soft_min_mm": 5.0,
+      "soft_max_mm": 110.51,
+      "end_pos_mm": 3.0,
+      "stalls": [
+        "[   69.222] [HOME] Z: stall at MAX end, 57.67 mm (sg4-drop, SG4 228, baseline 318, SG4_THRS 123)",
+        "[   79.174] [HOME] Z: stall at MIN end, -57.84 mm (sg4-drop, SG4 243, baseline 347, SG4_THRS 125)"
+      ],
+      "seek_segments": [
+        {
+          "count": 25,
+          "locked_count": 12,
+          "free_min": 342,
+          "free_max": 353,
+          "free_avg": 347.9,
+          "baseline_final": 346,
+          "hw_sg4_thrs": 127,
+          "min_sg_seen": 270
+        },
+        {
+          "count": 264,
+          "locked_count": 251,
+          "free_min": 287,
+          "free_max": 346,
+          "free_avg": 338.5,
+          "baseline_final": 321,
+          "hw_sg4_thrs": 123,
+          "min_sg_seen": 234
+        },
+        {
+          "count": 472,
+          "locked_count": 460,
+          "free_min": 346,
+          "free_max": 358,
+          "free_avg": 351.7,
+          "baseline_final": 347,
+          "hw_sg4_thrs": 125,
+          "min_sg_seen": 261
+        }
+      ]
+    },
+    {
+      "run": "run1",
+      "axis": "X",
+      "status": "OK",
+      "travel_mm": 223.89,
+      "soft_min_mm": 10.0,
+      "soft_max_mm": 213.89,
+      "end_pos_mm": 218.89,
+      "stalls": [
+        "[   82.841] [HOME] X: stall at MIN end, -112.09 mm (sg4-drop, SG4 217, baseline 336, SG4_THRS 122)",
+        "[   86.899] [HOME] X: stall at MAX end, 111.80 mm (sg4-drop, SG4 245, baseline 341, SG4_THRS 125)"
+      ],
+      "seek_segments": [
+        {
+          "count": 14,
+          "locked_count": 2,
+          "free_min": 184,
+          "free_max": 211,
+          "free_avg": 197.5,
+          "baseline_final": 233,
+          "hw_sg4_thrs": 89,
+          "min_sg_seen": 184
+        },
+        {
+          "count": 105,
+          "locked_count": 92,
+          "free_min": 328,
+          "free_max": 348,
+          "free_avg": 340.8,
+          "baseline_final": 343,
+          "hw_sg4_thrs": 122,
+          "min_sg_seen": 323
+        },
+        {
+          "count": 185,
+          "locked_count": 173,
+          "free_min": 337,
+          "free_max": 355,
+          "free_avg": 345.5,
+          "baseline_final": 344,
+          "hw_sg4_thrs": 125,
+          "min_sg_seen": 336
+        }
+      ]
+    },
+    {
+      "run": "run2",
+      "axis": "Z",
+      "status": "OK",
+      "travel_mm": 115.78,
+      "soft_min_mm": 5.0,
+      "soft_max_mm": 110.78,
+      "end_pos_mm": 3.0,
+      "stalls": [
+        "[   98.058] [HOME] Z: stall at MAX end, 115.75 mm (sg4-drop, SG4 222, baseline 311, SG4_THRS 122)",
+        "[  108.032] [HOME] Z: stall at MIN end, -0.03 mm (sg4-drop, SG4 247, baseline 344, SG4_THRS 125)"
+      ],
+      "seek_segments": [
+        {
+          "count": 15,
+          "locked_count": 3,
+          "free_min": 343,
+          "free_max": 346,
+          "free_avg": 344.3,
+          "baseline_final": 347,
+          "hw_sg4_thrs": 125,
+          "min_sg_seen": 343
+        },
+        {
+          "count": 486,
+          "locked_count": 473,
+          "free_min": 260,
+          "free_max": 346,
+          "free_avg": 337.0,
+          "baseline_final": 313,
+          "hw_sg4_thrs": 122,
+          "min_sg_seen": 232
+        },
+        {
+          "count": 473,
+          "locked_count": 461,
+          "free_min": 342,
+          "free_max": 356,
+          "free_avg": 348.6,
+          "baseline_final": 344,
+          "hw_sg4_thrs": 125,
+          "min_sg_seen": 247
+        }
+      ]
+    },
+    {
+      "run": "run2",
+      "axis": "X",
+      "status": "OK",
+      "travel_mm": 224.12,
+      "soft_min_mm": 10.0,
+      "soft_max_mm": 214.12,
+      "end_pos_mm": 219.12,
+      "stalls": [
+        "[  113.352] [HOME] X: stall at MIN end, 3.62 mm (sg4-drop, SG4 215, baseline 339, SG4_THRS 125)",
+        "[  117.414] [HOME] X: stall at MAX end, 227.75 mm (sg4-drop, SG4 181, baseline 339, SG4_THRS 125)"
+      ],
+      "seek_segments": [
+        {
+          "count": 200,
+          "locked_count": 177,
+          "free_min": 334,
+          "free_max": 350,
+          "free_avg": 341.2,
+          "baseline_final": 345,
+          "hw_sg4_thrs": 125,
+          "min_sg_seen": 334
+        },
+        {
+          "count": 186,
+          "locked_count": 173,
+          "free_min": 339,
+          "free_max": 355,
+          "free_avg": 346.7,
+          "baseline_final": 339,
+          "hw_sg4_thrs": 125,
+          "min_sg_seen": 217
+        }
+      ]
+    }
+  ],
+  "moves": [
+    {
+      "axis": "Z",
+      "target_mm": 5.0,
+      "status": "OK",
+      "actual_pos_mm": 5.0
+    },
+    {
+      "axis": "Z",
+      "target_mm": 110.78,
+      "status": "OK",
+      "actual_pos_mm": 110.78
+    },
+    {
+      "axis": "Z",
+      "target_mm": 57.89,
+      "status": "OK",
+      "actual_pos_mm": 57.89
+    },
+    {
+      "axis": "X",
+      "target_mm": 10.0,
+      "status": "OK",
+      "actual_pos_mm": 10.0
+    },
+    {
+      "axis": "X",
+      "target_mm": 214.12,
+      "status": "OK",
+      "actual_pos_mm": 214.12
+    },
+    {
+      "axis": "X",
+      "target_mm": 112.06,
+      "status": "OK",
+      "actual_pos_mm": 112.06
+    }
+  ],
+  "soft_cycle": {
+    "status": "OK",
+    "duration_s": 12.0,
+    "z_cycles": 1,
+    "x_cycles": 4
+  },
+  "final_diag": [
+    "--- axis Z: READY, fault 'none', homed 1, travel 115.78 mm, soft 5.00..110.78 mm",
+    "    StallGuard4: SG4 247, baseline 344, SG4_THRS 80, last stall sg4-drop; encoder ratio 1.2800 (not used), peak err 0.000 mm; bounce dev 0.000/max 0.000 mm",
+    "  TMC2240 #0: configured, profile RUN, last error: ok",
+    "    GCONF        (0x00) = 0x0000009C",
+    "    GSTAT        (0x01) = 0x00000000",
+    "    IOIN         (0x04) = 0x40013C2C",
+    "    DRV_CONF     (0x0A) = 0x00000021",
+    "    GLOBALSCALER (0x0B) = 0x000000B5",
+    "    IHOLD_IRUN   (0x10) = 0x04061F0F",
+    "    TPOWERDOWN   (0x11) = 0x0000000A",
+    "    TSTEP        (0x12) = 0x000FFFFF",
+    "    TPWMTHRS     (0x13) = 0x00000000",
+    "    TCOOLTHRS    (0x14) = 0x00000000",
+    "    THIGH        (0x15) = 0x00000000",
+    "    MSCNT        (0x6A) = 0x00000308",
+    "    CHOPCONF     (0x6C) = 0x34410153",
+    "    COOLCONF     (0x6D) = 0x00000000",
+    "    DRV_STATUS   (0x6F) = 0x800F40D5",
+    "    PWMCONF      (0x70) = 0xC40C001D",
+    "    PWM_SCALE    (0x71) = 0x00000064",
+    "    PWM_AUTO     (0x72) = 0x00280032",
+    "    SG4_THRS     (0x74) = 0x00000350",
+    "    SG4_RESULT   (0x75) = 0x000000D5",
+    "    SG4_IND      (0x76) = 0x7A4C667F",
+    "    current: range 1, GS 181, IRUN 31 (1000 mA), IHOLD 15 (500 mA), home CS 18 (594 mA)",
+    "    DRV_STATUS: SG 213, CS_ACTUAL 15, StealthChop standstill ",
+    "    chip 49.8 C, VM 23775 mV, GSTAT at init 0x00",
+    "  AS5600 Z: NOT healthy, last I2C timeout, raw 0, counts 0, STATUS 0x00 (NO magnet), AGC 0, magnitude 0, errors 0, recoveries 142, epoch 0",
+    "--- axis X: READY, fault 'none', homed 1, travel 224.12 mm, soft 10.00..214.12 mm",
+    "    StallGuard4: SG4 181, baseline 339, SG4_THRS 80, last stall sg4-drop; encoder ratio 1.2800 (not used), peak err 0.000 mm; bounce dev 0.000/max 0.000 mm",
+    "  TMC2240 #1: configured, profile RUN, last error: ok",
+    "    GCONF        (0x00) = 0x0000009C",
+    "    GSTAT        (0x01) = 0x00000000",
+    "    IOIN         (0x04) = 0x4001302E",
+    "    DRV_CONF     (0x0A) = 0x00000021",
+    "    GLOBALSCALER (0x0B) = 0x00000091",
+    "    IHOLD_IRUN   (0x10) = 0x04061F0F",
+    "    TPOWERDOWN   (0x11) = 0x0000000A",
+    "    TSTEP        (0x12) = 0x000FFFFF",
+    "    TPWMTHRS     (0x13) = 0x00000000",
+    "    TCOOLTHRS    (0x14) = 0x00000000",
+    "    THIGH        (0x15) = 0x00000000",
+    "    MSCNT        (0x6A) = 0x00000308",
+    "    CHOPCONF     (0x6C) = 0x34410153",
+    "    COOLCONF     (0x6D) = 0x00000000",
+    "    DRV_STATUS   (0x6F) = 0x800F40A2",
+    "    PWMCONF      (0x70) = 0xC40C001D",
+    "    PWM_SCALE    (0x71) = 0x00000040",
+    "    PWM_AUTO     (0x72) = 0x00190021",
+    "    SG4_THRS     (0x74) = 0x00000350",
+    "    SG4_RESULT   (0x75) = 0x000000A2",
+    "    SG4_IND      (0x76) = 0x80540869",
+    "    current: range 1, GS 145, IRUN 31 (801 mA), IHOLD 15 (401 mA), home CS 19 (501 mA)",
+    "    DRV_STATUS: SG 162, CS_ACTUAL 15, StealthChop standstill ",
+    "    chip 45.7 C, VM 23872 mV, GSTAT at init 0x00",
+    "  AS5600 X: NOT healthy, last I2C timeout, raw 0, counts 0, STATUS 0x00 (NO magnet), AGC 0, magnitude 0, errors 0, recoveries 142, epoch 0",
+    "  console dropped 0 bytes, usb connected, step timer 200000000 Hz"
+  ],
+  "off": [
+    "[  178.262] [SYS] drivers disabled (ENN high) - axes must be re-homed",
+    "[  178.262] [SYS] IDLE"
+  ]
+}

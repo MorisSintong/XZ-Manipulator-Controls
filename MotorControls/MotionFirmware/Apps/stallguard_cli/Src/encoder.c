@@ -12,10 +12,11 @@
 
 #define ENC_READ_TIMEOUT_MS 5U
 #define ENC_DIAG_TIMEOUT_MS 10U
-#define ENC_CONF_TIMEOUT_MS 20U
-#define ENC_FRESH_MS        20U
-#define ENC_ERROR_LIMIT     3U
-#define ENC_RETRY_MS        500U
+#define ENC_PROBE_TIMEOUT_MS 2U
+#define ENC_CONF_TIMEOUT_MS  20U
+#define ENC_FRESH_MS         20U
+#define ENC_ERROR_LIMIT      3U
+#define ENC_RETRY_MS         1000U
 
 typedef struct {
     I2C_HandleTypeDef *i2c;
@@ -46,7 +47,8 @@ static uint8_t g_enc_count;
 
 static void dwt_enable(void)
 {
-    if ((DWT->CTRL & DWT_CTRL_CYCCNTENA_Msk) == 0U) {
+    if (((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) == 0U) ||
+        ((DWT->CTRL & DWT_CTRL_CYCCNTENA_Msk) == 0U)) {
         CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
         DWT->CYCCNT = 0U;
         DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
@@ -55,10 +57,16 @@ static void dwt_enable(void)
 
 static void delay_us(uint32_t us)
 {
-    const uint32_t start = DWT->CYCCNT;
-    const uint32_t ticks = us * (SystemCoreClock / 1000000U);
+    uint32_t t0;
+    uint32_t ticks;
+    uint32_t guard;
 
-    while ((DWT->CYCCNT - start) < ticks) {
+    dwt_enable();
+    t0 = DWT->CYCCNT;
+    ticks = us * (SystemCoreClock / 1000000U);
+    guard = ticks + 1000U;
+    while (((DWT->CYCCNT - t0) < ticks) && (guard > 0U)) {
+        guard--;
     }
 }
 
@@ -156,6 +164,25 @@ static void start(enc_t *e)
         mark_failed(e, r);
         return;
     }
+    {
+        const HAL_StatusTypeDef ready = HAL_I2C_IsDeviceReady(
+            e->i2c, (uint16_t)((uint32_t)AS5600_I2C_ADDRESS << 1U), 1U,
+            ENC_PROBE_TIMEOUT_MS);
+        if (ready != HAL_OK) {
+            if (ready == HAL_BUSY) {
+                r = AS5600_ERROR_BUSY;
+            } else if ((ready == HAL_TIMEOUT) ||
+                       ((e->i2c->ErrorCode & HAL_I2C_ERROR_TIMEOUT) != 0U)) {
+                r = AS5600_ERROR_TIMEOUT;
+            } else if ((e->i2c->ErrorCode & HAL_I2C_ERROR_AF) != 0U) {
+                r = AS5600_ERROR_NACK;
+            } else {
+                r = AS5600_ERROR_IO;
+            }
+            mark_failed(e, r);
+            return;
+        }
+    }
     /* Slow filter 8x for low noise at standstill, fast filter (6 LSB) for a
      * short lag while the motor turns. Volatile write: OTP is not touched. */
     (void)as5600_default_config(&cfg);
@@ -241,7 +268,10 @@ void encoder_poll_diag(void)
         if (!e->info.bound || !e->info.healthy) {
             if ((HAL_GetTick() - e->t_retry) >= ENC_RETRY_MS) {
                 e->info.recoveries++;
-                bus_recover(e->i2c);
+                if ((e->info.last_result == AS5600_ERROR_BUSY) ||
+                    __HAL_I2C_GET_FLAG(e->i2c, I2C_FLAG_BUSY)) {
+                    bus_recover(e->i2c);
+                }
                 start(e);
             }
             continue;

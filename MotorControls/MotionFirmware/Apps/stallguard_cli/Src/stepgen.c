@@ -6,7 +6,8 @@
 
 #include "motion_profile.h"
 
-#define STEPGEN_MIN_TICKS 1000U /* 5 us at 200 MHz: floor for bad parameters */
+#define STEPGEN_MIN_TICKS 1000U /* 5 us at 200 MHz: floor for bad parameters   \
+                                 */
 #define STEPGEN_MAX_TICKS 4000000000U
 
 typedef struct {
@@ -304,6 +305,7 @@ bool stepgen_take_limit_hit(uint8_t ax) {
   hit = s->core.limit_hit;
   s->core.limit_hit = false;
   unlock_irq(p);
+  return hit;
 }
 
 uint32_t stepgen_timer_hz(uint8_t ax) {

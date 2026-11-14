@@ -50,8 +50,10 @@ static sys_state_t g_sys;
 static axis_cycle_mode_t g_mode = APP_DEFAULT_CYCLE_MODE;
 static uint8_t g_log_level = APP_LOG_LEVEL_DEFAULT;
 static bool g_cycle_after_home;
+static bool g_home_single;
 static bool g_home_pending[APP_AXIS_COUNT];
 static bool g_autostart_done;
+static bool g_usb_was_connected;
 static cmd_linebuf_t g_line;
 static const uint8_t k_home_order[APP_AXIS_COUNT] = APP_HOME_ORDER;
 
@@ -123,7 +125,8 @@ static void print_axis_status(uint8_t ax) {
   const float spm = cfg->steps_per_mm;
   const bool seeking =
       (st->state == AX_ST_HOME_BACKOFF) || (st->state == AX_ST_HOME_SEEK1) ||
-      (st->state == AX_ST_HOME_SEEK2) || (st->state == AX_ST_BOUNCE_SEEK);
+      (st->state == AX_ST_HOME_SEEK2) || (st->state == AX_ST_BOUNCE_SEEK) ||
+      (st->state == AX_ST_JOG);
   char enc[48];
   char drv[48];
   char temp[12];
@@ -206,6 +209,7 @@ static void action_start(void) {
       need_home = true;
     }
   }
+  g_home_single = false;
   g_cycle_after_home = true;
   if (need_home) {
     set_sys(SYS_HOMING);
@@ -228,8 +232,9 @@ static void action_stop(void) {
   }
 }
 
-static void action_home(void) {
+static void action_home(int only_ax, bool single_end) {
   uint8_t ax;
+  bool any = false;
 
   if ((g_sys == SYS_FAULT) || (g_sys == SYS_WAIT_DRIVERS)) {
     LOG("[SYS] cannot home in state %s", k_sys_names[g_sys]);
@@ -239,9 +244,20 @@ static void action_home(void) {
     LOG("[SYS] stop first");
     return;
   }
-  for (ax = 0U; ax < APP_AXIS_COUNT; ax++) {
-    g_home_pending[ax] = axis_present(ax);
+  if ((only_ax >= 0) && !axis_present((uint8_t)only_ax)) {
+    LOG("[SYS] %c driver not ready yet", axis_name((uint8_t)only_ax));
+    return;
   }
+  for (ax = 0U; ax < APP_AXIS_COUNT; ax++) {
+    g_home_pending[ax] =
+        axis_present(ax) && ((only_ax < 0) || ((int)ax == only_ax));
+    any = any || g_home_pending[ax];
+  }
+  if (!any) {
+    LOG("[SYS] no driver ready to home");
+    return;
+  }
+  g_home_single = single_end;
   g_cycle_after_home = false;
   set_sys(SYS_HOMING);
 }
@@ -305,10 +321,25 @@ static void cmd_stop(int argc, char *argv[]) {
   action_stop();
 }
 
+static void cmd_home_common(int argc, char *argv[], bool single_end) {
+  int ax = -1;
+
+  if (argc >= 2) {
+    ax = parse_axis(argv[1]);
+    if (ax < 0) {
+      console_printf("usage: %s [z|x]\r\n", argv[0]);
+      return;
+    }
+  }
+  action_home(ax, single_end);
+}
+
 static void cmd_home(int argc, char *argv[]) {
-  (void)argc;
-  (void)argv;
-  action_home();
+  cmd_home_common(argc, argv, false);
+}
+
+static void cmd_home1(int argc, char *argv[]) {
+  cmd_home_common(argc, argv, true);
 }
 
 static void cmd_off(int argc, char *argv[]) {
@@ -366,6 +397,28 @@ static void cmd_move(int argc, char *argv[]) {
     return;
   }
   set_sys(SYS_PAUSED);
+}
+
+static void cmd_jog(int argc, char *argv[]) {
+  int ax;
+  float delta_mm;
+
+  if (!axis_value(argc, argv, -500.0f, 500.0f, &ax, &delta_mm)) {
+    return;
+  }
+  if ((g_sys == SYS_FAULT) || (g_sys == SYS_WAIT_DRIVERS)) {
+    console_printf("cannot jog in state %s\r\n", k_sys_names[g_sys]);
+    return;
+  }
+  if ((g_sys == SYS_RUNNING) || (g_sys == SYS_HOMING)) {
+    console_printf("stop homing/cycling first\r\n");
+    return;
+  }
+  if (!axis_ctrl_jog_mm((uint8_t)ax, delta_mm)) {
+    console_printf("%c: driver not ready or busy\r\n", axis_name((uint8_t)ax));
+    return;
+  }
+  LOG("[JOG] %c: relative %+.2f mm", axis_name((uint8_t)ax), (double)delta_mm);
 }
 
 /* Tunable parameters for "set <axis> <param> <value>" / "get [axis]". */
@@ -635,8 +688,11 @@ static void cmd_diag(int argc, char *argv[]) {
     tmc_axis_dump(ax, console_printf);
     print_encoder(ax);
   }
-  console_printf("  console dropped %lu bytes, step timer %lu Hz\r\n",
+  console_printf("  console dropped %lu bytes, usb %s, step timer %lu Hz\r\n",
                  (unsigned long)console_dropped_bytes(),
+                 console_usb_connected()
+                     ? "connected"
+                     : (console_usb_mounted() ? "mounted" : "unplugged"),
                  (unsigned long)stepgen_timer_hz(0U));
 }
 
@@ -655,7 +711,12 @@ static const cmd_t k_cmds[] = {
     {"status", "", "state of all axes", cmd_status},
     {"start", "", "home (if needed), then cycle all axes", cmd_start},
     {"stop", "", "decelerate and hold position", cmd_stop},
-    {"home", "", "(re)home all axes with StallGuard4", cmd_home},
+    {"home", "[axis]", "2-end StallGuard4 home (Z then X, or 1 axis)",
+     cmd_home},
+    {"home1", "[axis]", "1-end StallGuard4 home (Z UP / X MIN, or 1 axis)",
+     cmd_home1},
+    {"jog", "<axis> <delta>", "relative move in mm (works before homing)",
+     cmd_jog},
     {"off", "", "disable the drivers (motors free)", cmd_off},
     {"clear", "", "clear faults (drivers re-initialise)", cmd_clear},
     {"mode", "soft|bounce", "cycle between soft limits / stop to stop",
@@ -873,7 +934,7 @@ static void sequence(void) {
   case SYS_WAIT_DRIVERS:
     if (any_present) {
       set_sys(SYS_IDLE);
-      LOG("[SYS] press B1 or type 'start' to home and cycle ('help' for "
+      LOG("[SYS] press B1 or type 'home' / 'home1' / 'jog' ('help' for "
           "commands)");
     }
     break;
@@ -894,8 +955,10 @@ static void sequence(void) {
         return; /* one axis at a time */
       }
       if (g_home_pending[ax]) {
+        const bool ok =
+            g_home_single ? axis_ctrl_home_single(ax) : axis_ctrl_home(ax);
         g_home_pending[ax] = false;
-        if (!axis_ctrl_home(ax)) {
+        if (!ok) {
           LOG("[SYS] %c: cannot start homing in state %s", axis_name(ax),
               axis_ctrl_state_name(axis_ctrl_status(ax)->state));
         }
@@ -905,7 +968,13 @@ static void sequence(void) {
     if (g_cycle_after_home) {
       start_cycles();
     } else {
-      set_sys(SYS_PAUSED);
+      bool all_homed = true;
+      for (ax = 0U; ax < APP_AXIS_COUNT; ax++) {
+        if (axis_present(ax) && !axis_ctrl_status(ax)->homed) {
+          all_homed = false;
+        }
+      }
+      set_sys(all_homed ? SYS_PAUSED : SYS_IDLE);
     }
     break;
   case SYS_RUNNING:
@@ -946,7 +1015,7 @@ static void telemetry(uint32_t now) {
       const axis_status_t *st = axis_ctrl_status(ax);
       if ((st->state == AX_ST_HOME_BACKOFF) ||
           (st->state == AX_ST_HOME_SEEK1) || (st->state == AX_ST_HOME_SEEK2) ||
-          (st->state == AX_ST_BOUNCE_SEEK)) {
+          (st->state == AX_ST_BOUNCE_SEEK) || (st->state == AX_ST_JOG)) {
         console_printf("sg,%c,%lu,%.2f,%u,%.0f,%u,%d\r\n", axis_name(ax),
                        (unsigned long)now,
                        (double)axis_ctrl_steps_to_mm(ax, st->pos_steps),
@@ -1023,12 +1092,12 @@ static void banner(void) {
   console_printf(
       "\r\n==============================================================\r\n");
   console_printf(
-      " [PROFILE] stallguard_cli (Interactive ASCII CLI @ 115200 8N1)\r\n");
+      " [PROFILE] stallguard_cli (Interactive XZ Homing & SG4 CLI)\r\n");
   console_printf(" %s %s - XZ manipulator motion controller\r\n", FW_NAME,
                  FW_VERSION);
-  console_printf(
-      " STM32H723 @ %lu MHz (SKR Octopus Pro V1.1), 2x TMC2240 (SPI1) + 2x AS5600 (I2C1, I2C4)\r\n",
-      (unsigned long)(SystemCoreClock / 1000000U));
+  console_printf(" STM32H723 @ %lu MHz (SKR Octopus Pro V1.1), 2x TMC2240 "
+                 "(SPI1) + 2x AS5600 (I2C1, I2C4)\r\n",
+                 (unsigned long)(SystemCoreClock / 1000000U));
   for (ax = 0U; ax < APP_AXIS_COUNT; ax++) {
     const axis_cfg_t *c = axis_ctrl_cfg(ax);
     console_printf(
@@ -1038,8 +1107,8 @@ static void banner(void) {
         (double)c->home_speed_mm_s, (double)c->cycle_speed_mm_s,
         (unsigned)c->tmc.run_current_ma, (unsigned)c->tmc.home_current_ma);
   }
-  console_printf(
-      " console: USART2 115200 8N1 or RTT terminal 0 - type 'help'\r\n");
+  console_printf(" console: USB-C CDC (XZ-MotionControls), USART2 115200, or "
+                 "RTT terminal 0 - type 'help'\r\n");
   console_printf(
       "==============================================================\r\n");
 }
@@ -1063,18 +1132,18 @@ void app_init(void) {
   for (ax = 0U; ax < APP_AXIS_COUNT; ax++) {
     axis_hw_driver_enable(ax, false);
   }
-  console_init(&huart2);
   cmd_linebuf_init(&g_line);
-  banner();
-
   for (ax = 0U; ax < APP_AXIS_COUNT; ax++) {
     stepgen_init(ax, &step_hw[ax]);
     axis_ctrl_init(ax, &g_app_axis_cfg[ax]);
   }
+  encoder_init(APP_AXIS_COUNT, enc_buses);
+  console_init(&huart2);
+  banner();
+
   if (!tmc_axis_bus_init(spi_cfgs, APP_AXIS_COUNT)) {
     LOG("[TMC] SPI transport initialisation failed");
   }
-  encoder_init(APP_AXIS_COUNT, enc_buses);
   watch_encoders();
   for (ax = 0U; ax < APP_AXIS_COUNT; ax++) {
     const encoder_info_t *ei = encoder_info(ax);
@@ -1086,16 +1155,23 @@ void app_init(void) {
     }
   }
   g_sys = SYS_WAIT_DRIVERS;
+  g_usb_was_connected = console_usb_connected();
   g_last_tick = HAL_GetTick();
   g_t_probe = g_last_tick - APP_DRIVER_PROBE_MS; /* probe immediately */
 }
 
 void app_run(void) {
   const uint32_t now = HAL_GetTick();
+  const bool usb_conn = console_usb_connected();
   uint8_t ax;
   int c;
 
   console_poll();
+  if (usb_conn && !g_usb_was_connected) {
+    banner();
+    print_status();
+  }
+  g_usb_was_connected = usb_conn;
   while ((c = console_getc()) >= 0) {
     if (cmd_linebuf_push(&g_line, (char)c)) {
       execute(g_line.buf);

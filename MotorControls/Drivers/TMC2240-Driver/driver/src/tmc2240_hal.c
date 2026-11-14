@@ -40,6 +40,21 @@ static uint32_t peripheralClock(const SPI_HandleTypeDef *spi)
     return apb2 ? HAL_RCC_GetPCLK2Freq() : HAL_RCC_GetPCLK1Freq();
 }
 
+static uint32_t baudrateDivisor(uint32_t prescaler)
+{
+    switch (prescaler) {
+    case SPI_BAUDRATEPRESCALER_2:   return 2U;
+    case SPI_BAUDRATEPRESCALER_4:   return 4U;
+    case SPI_BAUDRATEPRESCALER_8:   return 8U;
+    case SPI_BAUDRATEPRESCALER_16:  return 16U;
+    case SPI_BAUDRATEPRESCALER_32:  return 32U;
+    case SPI_BAUDRATEPRESCALER_64:  return 64U;
+    case SPI_BAUDRATEPRESCALER_128: return 128U;
+    case SPI_BAUDRATEPRESCALER_256: return 256U;
+    default:                        return 2U;
+    }
+}
+
 static TMC2240Status validConfig(const TMC2240_SPIConfig_t *config)
 {
     uint32_t divisor;
@@ -71,7 +86,7 @@ static TMC2240Status validConfig(const TMC2240_SPIConfig_t *config)
     if (spi->State != HAL_SPI_STATE_READY) {
         return TMC2240_ERROR_BUSY;
     }
-    divisor = 2U << (spi->Init.BaudRatePrescaler >> 3U);
+    divisor = baudrateDivisor(spi->Init.BaudRatePrescaler);
     pclk = peripheralClock(spi);
     if ((SystemCoreClock < 1000000U) || (SystemCoreClock > 1000000000U) ||
         (pclk < 1000000U) || (pclk > divisor * 10000000U)) {
@@ -86,7 +101,7 @@ static TMC2240Status validConfig(const TMC2240_SPIConfig_t *config)
  */
 static void spiGuard(const TMC2240_SPIConfig_t *config)
 {
-    uint32_t divisor = 2U << (config->hspi->Init.BaudRatePrescaler >> 3U);
+    uint32_t divisor = baudrateDivisor(config->hspi->Init.BaudRatePrescaler);
     uint32_t sck = peripheralClock(config->hspi) / divisor;
     uint32_t cycles = SystemCoreClock / sck + 1U;
     uint32_t oneUs = SystemCoreClock / 1000000U + 1U;
