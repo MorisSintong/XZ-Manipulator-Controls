@@ -25,7 +25,7 @@ This project uses a **single shared CubeMX `Core/` and `Drivers/` layer** ([Moti
 | **Vision / Console UART** | `USART2` (`115200 8N1`, `DMA1_Stream0` RX / `DMA1_Stream1` TX) | `PD5` (TX), `PD6` (RX) | **`J26` (`UART2`)** 2x5 Raspberry Pi header |
 | **E-Stop / Button** | `B1` (`EXTI15_10_IRQn`, active-low, on-board 10k pull-up) | `PG15` | **`J34` (`STOP7`)** endstop header |
 | **Status / Heartbeat LED** | `LD2` | `PD15` | **`FAN5`** indicator LED `D27` |
-| **SWD + SEGGER RTT** | `SYS_JTMS-SWDIO` / `SYS_JTCK-SWCLK` | `PA13` (SWDIO), `PA14` (SWCLK) | **`J45` (`SWD`)** header |
+| **SWD + SEGGER RTT** | `SYS_JTMS-SWDIO` / `SYS_JTCK-SWCLK` | `PA13` (SWDIO), `PA14` (SWCLK) | **`J72` (`SWD`)** 5-pin header (`3V3`, `SWDIO`, `GND`, `SWCLK`, `RST`) |
 
 > [!NOTE]
 > The Octopus Pro `PROBE` input (`PC5`) described in [`docs/hardware/wiring.md`](../../docs/hardware/wiring.md) is **not** configured or read in `MotionFirmware` yet. `TMC_*2` (`MOTOR2_1`) is configured at reset with `ENN2` (`PG5`) and `CS2` (`PC6`) HIGH (disabled) and no active motion profile.
@@ -82,7 +82,7 @@ The firmware links directly at `0x08000000` for zero-offset SWD flashing and SEG
 ```
 
 > [!NOTE]
-> `flash.cmd`, `rtt.cmd`, `reset.cmd`, `erase.cmd`, `gdb_server.cmd`, `backup_bootloader.cmd`, and `restore_bootloader.cmd` invoke `C:\tools\jlink\` targeting `-device STM32H723ZE`, or you can flash/stream RTT from any `.elf` directly with `probe-rs run --chip STM32H723ZETx build\Debug\MotionFirmware.elf`.
+> `flash.cmd`, `rtt.cmd`, `reset.cmd`, `erase.cmd`, `gdb_server.cmd`, `backup_bootloader.cmd`, and `restore_bootloader.cmd` invoke `C:\tools\jlink\` targeting `-device STM32H723ZE`, or you can flash/stream RTT from any `.elf` directly with `probe-rs run --chip STM32H723ZETx build\Debug\MotionFirmware.elf`. See [`docs/hardware/wiring.md` Section 6](../../docs/hardware/wiring.md#6-swd-debug-probe-connection-j72) for wiring a NUCLEO-F446RE (`CN2`/`CN4`) J-Link OB probe to Octopus Pro `J72` (`SWD`).
 
 ---
 
@@ -106,3 +106,21 @@ uv run --project packages\motion_diagnostics pytest packages\motion_diagnostics\
 uv run --project MotorControls\MotionFirmware\tools\diag pytest MotorControls\MotionFirmware\tools\diag\tests
 uv run --project VisionSystem pytest VisionSystem\tests\test_diag_transport.py
 ```
+
+---
+
+## 5. Planned Upgrade: Native USB-C CDC Transport via TinyUSB (`USB_OTG_HS`)
+
+Currently, all firmware profiles communicate over physical `USART2` (`PD5`/`PD6` on `J26`), and USB-C (`PA11`/`PA12`) is unused at runtime. To support direct USB-C virtual COM port (`CDC`) communication without an external 3.3 V USB-UART adapter on `J26`, the planned firmware integration uses **TinyUSB** (`dwc2` device controller driver) in cooperative polling mode:
+
+1. **Peripheral & GPIO (`USB_OTG_HS` Full-Speed PHY):**
+   - Enable `PA11` (`USB_OTG_HS_DM`) and `PA12` (`USB_OTG_HS_DP`) as `AF10_OTG1_HS`, plus `OTG_HS_IRQn` (base `0x40040000`, `CFG_TUSB_MCU = OPT_MCU_STM32H7`).
+2. **48 MHz USB Clock & Power Detector:**
+   - Update `SystemClock_Config()` (`MotionFirmware.ioc` currently routes 100 MHz `PLL1Q` to the USB clock domain) to enable **HSI48 + CRS** (`RCC_USBCLKSOURCE_HSI48`, 48 MHz) without altering the 400 MHz `SYSCLK` / `TIM2` / `TIM5` timers, and call `HAL_PWREx_EnableUSBVoltageDetector()`.
+3. **Disable VBUS Sensing (`PA9` Hardware Conflict):**
+   - On SKR Octopus Pro V1.1, `PA9` is wired to `USART1_TX` on `J70` (`TFT`) rather than USB VBUS. VBUS sensing must be disabled in firmware (`BVALOEN`/`BVALOVAL` override / `CFG_TUD_VBUS_SENSING = 0`) so USB attaches reliably whether powered from USB-C (`J68`) or 24 V `MAIN POWER`.
+4. **Cooperative Loop & Interrupt Priority Safety:**
+   - Call `tud_task()` inside `fw_app_poll()` and `dcd_int_handler(...)` in `OTG_HS_IRQHandler`.
+   - Keep `OTG_HS_IRQn` at NVIC priority `5` (never preempting `TIM2`/`TIM5` step interrupts at priority `0`), and never block `fw_app_poll()` waiting for `tud_cdc_connected()`.
+5. **Transport Integration:**
+   - Bridge `tud_cdc_*` non-blocking RX/TX buffers into [`Apps/motion_diagnostics/Src/uart_transport.c`](Apps/motion_diagnostics/Src/uart_transport.c) and the `console` modules (`stallguard_cli`, `z_bounce_emulation`), either replacing `USART2` or selecting `USART2` vs. USB CDC cleanly via build/runtime transport hooks.

@@ -9,7 +9,7 @@
 
 ## 1. Board and motor-driver assignment
 
-Use the board's silkscreened driver sockets and matching motor output terminals. The assignments below follow the BTT Octopus Pro V1.1 schematic (`Hardware/BIGTREETECH-OCTOPUS-Pro/Hardware (V1.1)/BIGTREETECH Octopus Pro V1.1-sch.pdf`).
+Use the board's silkscreened driver sockets and matching motor output terminals. The assignments below follow the BTT Octopus Pro V1.1 schematic (`Hardware/BIGTREETECH-OCTOPUS-Pro/Hardware/BIGTREETECH Octopus Pro V1.1-sch.pdf`).
 
 | Axis | Firmware Motor Index | Driver socket / motor output | STEP | DIR | Enable (active low) | SPI CS | DIAG / endstop |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -62,15 +62,79 @@ Provide a regulated 3.3 V supply to each module's `VCC` and `3V3` as required by
 - **Status / Heartbeat LED (`LD2`)**: Mapped to `PD15` (`FAN5` gate indicator LED `D27`). Note that the board's `PA13` (`WORK_LED`) is intentionally left on `JTMS-SWDIO` so SEGGER J-Link SWD debugging and RTT telemetry are never interrupted.
 - The dedicated `PROBE` connector uses MCU input `PC5`. BTT documents NPN and PNP proximity-switch support on the Octopus Pro (**note:** `PC5` is not yet configured or read in `MotionFirmware`).
 
-## 5. Host serial connection (`USART2`)
+## 5. Host serial connection (`USART2` / planned USB-C CDC)
 
-The board provides a 2x5 Raspberry Pi `UART2` header (`J26`) wired to `PD5` (`USART2_TX`) and `PD6` (`USART2_RX`), with on-board 120 Ω series protection resistors (`R22`/`R23`). For a 3.3 V USB-UART adapter (or ESP32/host vision link at `115200 8N1`), cross TX/RX (`PD5` -> host RX, `PD6` <- host TX) and connect `GND`; leave the 5 V pins unconnected.
+- **Current hardware interface (`USART2`):** The board provides a 2x5 Raspberry Pi `UART2` header (`J26`) wired to `PD5` (`USART2_TX`) and `PD6` (`USART2_RX`), with on-board 120 Ω series protection resistors (`R22`/`R23`). For a 3.3 V USB-UART adapter (or ESP32/host vision link at `115200 8N1`), cross TX/RX (`PD5` -> host RX, `PD6` <- host TX) and connect `GND`; leave the 5 V pins unconnected.
+- **Native USB-C port (`PA11`/`PA12`):** `USB_OTG_HS` is not enabled in the current `MotionFirmware` builds (so the USB-C port provides `5V` logic power via `J68` only, with no COM port). See [Section 5 of `MotionFirmware/README.md`](../../MotorControls/MotionFirmware/README.md#5-planned-upgrade-native-usb-c-cdc-transport-via-tinyusb-usb_otg_hs) for the planned TinyUSB `USB_OTG_HS` CDC migration notes.
 
-## 6. Vacuum valve and auxiliary loads
+## 6. SWD debug probe connection (`J72`)
+
+For flashing, GDB debugging, and high-speed SEGGER RTT telemetry via a SEGGER J-Link (or ST-LINK converted to J-Link) probe, connect to the 5-pin 2.54 mm single-row header **`J72`** (silkscreened **`SWD`**).
+
+- **PCB Location & Orientation:** Located immediately below the bottom-right corner of the `STM32H723ZET6` package, between the `STATUS` LED (`D39`) and the white `BIGTREETECH Octopus Pro` silkscreen logo. Looking at the board with the motor driver sockets at the top, pins run left-to-right from **Pin 1** (marked by a **square solder pad** closest to `STATUS`/`D39`) to **Pin 5**.
+- **Color Pinout Diagram Omission:** `J72` (`SWD`) is omitted from the colored callout diagram (`BIGTREETECH Octopus Pro V1.1-Pin.jpg`). Use `BIGTREETECH Octopus Pro - PIN.pdf` (`J72(SWD)`) and `BIGTREETECH Octopus Pro V1.1-sch.pdf` (Sheet 5) as the authoritative reference.
+
+| Pin | Silkscreen / Net | Probe Signal | MCU Pin (`STM32H723ZET6`) | On-board Circuit & Sharing Notes |
+| :---: | :---: | :--- | :--- | :--- |
+| **1** | `3V3` (`VCC_3V3`) | `VTref` | `VDD` (3.3 V) | Target reference voltage sense for J-Link/ST-LINK (do **not** back-power the board from the probe) |
+| **2** | `SWDIO` | `SWDIO` | Pin 105 (`PA13` / `JTMS-SWDIO`) | On-board 10 kΩ pull-up `R167` to `VCC_3V3`; shared with `WORK_LED` (`D39`) |
+| **3** | `GND` | `GND` | `VSS` | Common debug ground |
+| **4** | `SWCLK` | `SWCLK` | Pin 109 (`PA14` / `JTCK-SWCLK`) | On-board 10 kΩ pull-up `R168` to `VCC_3V3`; shared with `DRIVER7_DIR` |
+| **5** | `RST` | `NRST` | Pin 25 (`NRST`) | Hardware reset (active low) |
+
+- **Firmware Configuration:** `MotorControls/MotionFirmware/MotionFirmware.ioc` enables `DEBUG` in `Serial_Wire` mode (`PA13` -> `TMS`, `PA14` -> `TCK`), leaving both pins in their default `AF0` SWD function.
+- **Pin Conflict Warnings:**
+  - Do **not** install a stepper driver in socket **`MOTOR7` (`DRIVER7`)** when using SWD—`PA14` (`SWCLK`) also drives `DRIVER7_DIR` through the on-board buffer stage.
+  - Do **not** drive `PA13` (`WORK_LED`) as a general-purpose LED output in firmware (use `LD2` on `PD15` instead).
+  - `SWO` (`PB3`) is not broken out on `J72`; use **SEGGER RTT** over `SWDIO`/`SWCLK` with `probe-rs` or J-Link (`-device STM32H723ZE`).
+
+### Using a NUCLEO-F446RE (`MB1136`) On-Board ST-LINK (Converted to J-Link OB)
+
+If you use the ST-LINK/V2-1 section of a **NUCLEO-F446RE (`MB1136`)** reflashed with SEGGER J-Link OB firmware (`STLinkReflash`) to flash and debug the SKR Octopus Pro V1.1:
+
+1. **Disconnect both `CN2` jumpers on the Nucleo (`ST-LINK` mode selection):**
+   - Pull **both black jumpers off header `CN2`** (located beside the `CN4` `SWD` header on the ST-LINK half of the Nucleo).
+   - Removing `CN2` disconnects the J-Link OB `SWCLK` and `SWDIO` lines from the Nucleo's on-board `STM32F446RE` and routes them out to **`CN4`** for an external target.
+   - *(Tip: park the two removed jumpers sideways on single pins of `CN11`/`CN12` or store them safely so they can be restored if you ever debug the Nucleo again.)*
+2. **Optional reset isolation (`SB12`) for `NRST`:**
+   - Removing `CN2` isolates `SWDIO` and `SWCLK`, **not** `NRST`. Solder bridge **`SB12`** (on the bottom of the Nucleo PCB) still ties `CN4` Pin 5 (`NRST`) to the Nucleo's on-board `STM32F446RE`.
+   - For standard flashing and RTT, **leave `CN4` Pin 5 (`NRST`) disconnected** (4-wire connection: `3V3`, `SWDIO`, `GND`, `SWCLK`) unless you have opened/desoldered `SB12`. Only wire `CN4` Pin 5 to `J72` Pin 5 (`RST`) when `SB12` is **OFF** (needed for connect-under-reset recovery).
+3. **Power both boards properly:**
+   - Plug the Nucleo's Mini-B USB port (**`CN1`**) into the PC—Windows enumerates it as a **J-Link** device.
+   - Power the SKR Octopus Pro V1.1 separately so its `3.3 V` LED (`D51`) lights up and `J72` Pin 1 (`3V3`) is live (`CN4` Pin 1 `VDD_TARGET` only *senses* 3.3 V and does not power the Octopus Pro):
+     - For **USB-only bench flashing** (no motors): install the **`J68` (`V_BUS`)** jumper and plug USB-C into the Octopus Pro.
+     - For **24 V operation**: supply `MAIN POWER` (`24 V`) and remove **`J68` (`V_BUS`)** per BTT's manual so USB-C stays data-only.
+4. **Wire `Nucleo CN4 (SWD)` to `SKR Octopus Pro J72 (SWD)`:**
+   - On the Nucleo `CN4` 6-pin single-row header, **Pin 1** is the pin closest to the Mini-B USB connector `CN1` (marked with a dot on the silkscreen).
+   - **Caution — NOT a 1-to-1 cable:** `SWDIO` and `SWCLK` are **swapped** between Pin 2 and Pin 4 on `CN4` vs. `J72`:
+
+| Nucleo `CN4` Pin | Nucleo `CN4` Signal | Wire | SKR `J72` Pin | SKR `J72` Signal | Notes |
+| :---: | :--- | :---: | :---: | :--- | :--- |
+| **1** | `VDD_TARGET` | ──> | **1** | `3V3` | Target 3.3 V sense (`VTref`) — **required** for J-Link OB level sensing |
+| **2** | `SWCLK` | ──> | **4** | `SWCLK` (`PA14`) | Crossed over (Pin 2 -> Pin 4) |
+| **3** | `GND` | ──> | **3** | `GND` | Common ground reference |
+| **4** | `SWDIO` | ──> | **2** | `SWDIO` (`PA13`) | Crossed over (Pin 4 -> Pin 2) |
+| **5** | `NRST` *(optional)* | ──> | **5** | `RST` (`NRST`) | Connect **only** if `SB12` is opened/desoldered; otherwise leave disconnected |
+| **6** | `SWO` | — | — | *(Not connected)* | Leave unconnected (`J72` has no `SWO` pin; use SEGGER RTT instead) |
+
+5. **Flash and view RTT logs from `MotorControls\MotionFirmware`:**
+   ```powershell
+   # Run from MotorControls\MotionFirmware (flash.jlink uses relative build\Debug\ paths)
+   cd MotorControls\MotionFirmware
+   .\flash.cmd diagnostics   # Or omit arg for MotionFirmware.hex, or pass stallguard | zbounce
+
+   # Or flash / run / stream RTT via probe-rs (works from repo root or firmware dir; recognizes J-Link OB)
+   probe-rs download --chip STM32H723ZETx build\Debug\MotionFirmware_Diagnostics.elf
+   probe-rs reset --chip STM32H723ZETx
+   probe-rs attach --chip STM32H723ZETx build\Debug\MotionFirmware_Diagnostics.elf
+   ```
+   *(Never use ST-LINK tools such as `st-flash` or `openocd -f interface/stlink.cfg` while J-Link OB firmware is installed on the Nucleo probe.)*
+
+## 7. Vacuum valve and auxiliary loads
 
 Keep the 12/24 V vacuum valve on a suitably rated external MOSFET or relay driver with the required flyback protection and a safe default-off state. Do not connect it to a heater or fan output based only on connector similarity.
 
-## 7. Board references
+## 8. Board references
 
 - [BIGTREETECH Octopus Pro repository](https://github.com/bigtreetech/BIGTREETECH-OCTOPUS-Pro) - V1.1 pinout, schematic, manual, power-selection notes, and revision differences.
 - [Klipper Octopus Pro V1.1 pin configuration](https://github.com/Klipper3d/klipper/blob/master/config/generic-bigtreetech-octopus-pro-v1.1.cfg) - H723 motor, endstop, SPI, and expansion-header mappings.
