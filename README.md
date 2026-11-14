@@ -33,7 +33,7 @@ All core engineering specifications, protocols, wiring diagrams, and test guides
 ```text
 docs/
 ├── architecture/
-│   ├── system_overview.md            # Block diagrams, subsystem roles & target sorting lifecycle
+│   ├── system_overview.md            # Block diagrams, development roadmap, diagnostics & visualization goals
 │   ├── communication_protocol.md     # 18-byte Host->STM32 UART frame & CRC16-CCITT specification
 │   └── motion_diagnostics_design.md  # Dual-axis STM32->Host binary records, state machine & metrology
 ├── hardware/
@@ -64,9 +64,9 @@ XZ-Manipulator-Controls/
 | **[`Hardware/BIGTREETECH-OCTOPUS-Pro/`](Hardware/BIGTREETECH-OCTOPUS-Pro/)** | Official BTT Octopus Pro V1.1 schematics, pinouts & hardware manual (git submodule) | [`docs/hardware/wiring.md`](docs/hardware/wiring.md) |
 | **[`Hardware/XZ-Controller/`](Hardware/XZ-Controller/)** | Legacy KiCad 10 `NUCLEO-F446RE` schematic/PCB, symbols/footprints, STEP models & `Optocoupler-io.kicad_sch` | [`docs/hardware/wiring.md`](docs/hardware/wiring.md) |
 | **[`MotorControls/`](MotorControls/)** | Embedded STM32 subsystem (multi-profile H723 firmware, drivers, emulation & host CLI) | [`MotorControls/README.md`](MotorControls/README.md) |
-| ├── **[`MotionFirmware/`](MotorControls/MotionFirmware/)** | STM32H723ZET6 CMake/Ninja suite (`motion_diagnostics`, `stallguard_cli`, `z_bounce_emulation`), flash/DFU scripts & BTT bootloader (`tools/btt_bootloader/`) | [`MotionFirmware/README.md`](MotorControls/MotionFirmware/README.md) |
+| ├── **[`MotionFirmware/`](MotorControls/MotionFirmware/)** | STM32H723ZET6 CMake/Ninja suite (`motion_diagnostics`, `stallguard_cli`, `z_bounce_emulation`, `usb_cdc`), flash/DFU scripts & BTT bootloader (`tools/btt_bootloader/`) | [`MotionFirmware/README.md`](MotorControls/MotionFirmware/README.md), [`Apps/usb_cdc/README.md`](MotorControls/MotionFirmware/Apps/usb_cdc/README.md) |
 | ├── **[`MotionFirmware/tools/diag/`](MotorControls/MotionFirmware/tools/diag/)** | Host Python bench CLI (`motion-diag`) for capture, sequences, heartbeats & reports | [`tools/diag/README.md`](MotorControls/MotionFirmware/tools/diag/README.md) |
-| ├── **[`Drivers/`](MotorControls/Drivers/)** | Modular, host-tested C drivers for TMC2240 (SPI) and AS5600 (I2C) encoders | [`AS5600/README.md`](MotorControls/Drivers/AS5600/README.md), [`TMC2240-Driver/README.md`](MotorControls/Drivers/TMC2240-Driver/README.md) |
+| ├── **[`Drivers/`](MotorControls/Drivers/)** | Modular, host-tested C drivers for TMC2240 (SPI), AS5600 (I2C), and TinyUSB (`USB_OTG_HS`) | [`AS5600/README.md`](MotorControls/Drivers/AS5600/README.md), [`TMC2240-Driver/README.md`](MotorControls/Drivers/TMC2240-Driver/README.md) |
 | ├── **[`Emulation/`](MotorControls/Emulation/)** | Python `MockFirmwareServer` + legacy Renode STM32F4 `.resc` USART2 TCP socket bridge | [`Emulation/README.md`](MotorControls/Emulation/README.md) |
 | └── **[`tests/emulation/`](MotorControls/tests/emulation/)** | Automated STM32 UART protocol verification test suite | [`run_tests.py`](MotorControls/tests/emulation/run_tests.py) |
 | **[`packages/motion_diagnostics/`](packages/motion_diagnostics/)** | Shared Python wire decoder, CRC16, correlation registry, long-form CSV & metrology | [`packages/motion_diagnostics/README.md`](packages/motion_diagnostics/README.md), [`motion_diagnostics_design.md`](docs/architecture/motion_diagnostics_design.md) |
@@ -97,7 +97,7 @@ uv run --project VisionSystem pytest
 ### B. Motion Firmware & Emulation (STM32H723ZET6 / SKR Octopus Pro V1.1)
 Requires Arm GNU Toolchain (`arm-none-eabi-gcc`), CMake, and Ninja:
 ```powershell
-# 1. Build all three STM32H723 firmware profiles (default MotionFirmware.* = motion_diagnostics)
+# 1. Build all STM32H723 firmware profiles (default MotionFirmware.* = motion_diagnostics)
 Push-Location MotorControls\MotionFirmware
 cmake --preset Debug
 cmake --build --preset Debug
@@ -109,7 +109,7 @@ Pop-Location
 # 3. Run STM32 UART protocol emulation suite (Mock / legacy Renode F4 .resc bridge)
 uv run python MotorControls\tests\emulation\run_tests.py --mode mock
 
-# 4. Flash a profile to SKR Octopus Pro V1.1 via SEGGER J-Link SWD (diagnostics | stallguard | zbounce) or USB-C DFU
+# 4. Flash a profile to SKR Octopus Pro V1.1 via SEGGER J-Link SWD (diagnostics | stallguard | zbounce | usb_cdc) or USB-C DFU
 Push-Location MotorControls\MotionFirmware
 .\flash.cmd diagnostics
 # Or via USB-C DFU (default MotionFirmware.bin with BOOT0 jumper fitted):
