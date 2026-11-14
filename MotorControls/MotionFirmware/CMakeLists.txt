@@ -11,11 +11,11 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Select which firmware profile is built as the primary "MotionFirmware" (.elf/.hex/.bin)
-# Options: "motion_diagnostics" | "stallguard_cli" | "z_bounce_emulation"
+# Options: "motion_diagnostics" | "stallguard_cli" | "z_bounce_emulation" | "usb_cdc"
 set(FIRMWARE_APP "motion_diagnostics" CACHE STRING
     "Default firmware app profile for MotionFirmware.{elf,hex,bin}")
 set_property(CACHE FIRMWARE_APP PROPERTY STRINGS
-    "motion_diagnostics" "stallguard_cli" "z_bounce_emulation")
+    "motion_diagnostics" "stallguard_cli" "z_bounce_emulation" "usb_cdc")
 
 # Target-side configuration parameters for motion_diagnostics profile
 option(MOTION_DIAG_BOUNDS_CONFIRMED
@@ -128,6 +128,15 @@ set(ZB_SOURCES
     ${ZB_DIR}/Src/vision_uart_protocol.c
 )
 
+# ---------------------------------------------------------------------------
+# App Profile 4 & Portable Module: usb_cdc (TinyUSB USB_OTG_HS CDC Transport)
+# ---------------------------------------------------------------------------
+include(${CMAKE_CURRENT_SOURCE_DIR}/Apps/usb_cdc/usb_cdc_module.cmake)
+set(USB_CDC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Apps/usb_cdc)
+set(USB_CDC_DEMO_SOURCES
+    ${USB_CDC_DIR}/Src/usb_cdc_app.c
+)
+
 # Helper function to configure any firmware executable target
 function(configure_firmware_target target_name app_profile)
     if(NOT TARGET ${target_name})
@@ -159,6 +168,10 @@ function(configure_firmware_target target_name app_profile)
         set(app_srcs ${ZB_SOURCES})
         set(app_inc  ${ZB_DIR}/Inc)
         target_link_options(${target_name} PRIVATE -u _printf_float)
+    elseif(app_profile STREQUAL "usb_cdc")
+        set(app_srcs ${USB_CDC_DEMO_SOURCES})
+        set(app_inc  ${USB_CDC_DIR}/Inc)
+        add_usb_cdc_module(${target_name})
     else()
         message(FATAL_ERROR "Unknown FIRMWARE_APP profile: ${app_profile}")
     endif()
@@ -184,7 +197,8 @@ endfunction()
 # 1. Configure default target MotionFirmware according to FIRMWARE_APP
 configure_firmware_target(${CMAKE_PROJECT_NAME} ${FIRMWARE_APP})
 
-# 2. Always build dedicated named targets for all three profiles side-by-side
+# 2. Always build dedicated named targets for all profiles side-by-side
 configure_firmware_target(MotionFirmware_Diagnostics "motion_diagnostics")
 configure_firmware_target(MotionFirmware_StallGuardCLI "stallguard_cli")
 configure_firmware_target(MotionFirmware_ZBounceEmulation "z_bounce_emulation")
+configure_firmware_target(MotionFirmware_UsbCdc "usb_cdc")

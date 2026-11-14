@@ -5,7 +5,7 @@
 - **Supply:** 24 V DC
 
 > [!NOTE]
-> `MotorControls/MotionFirmware/` (`MotionFirmware.ioc`, `Core/`, `Drivers/STM32H7xx_HAL_Driver/`, and all three application profiles) is configured directly for the **BIGTREETECH SKR Octopus Pro V1.1 (STM32H723ZET6)** pinout below.
+> `MotorControls/MotionFirmware/` (`MotionFirmware.ioc`, `Core/`, `Drivers/STM32H7xx_HAL_Driver/`, and all application profiles) is configured directly for the **BIGTREETECH SKR Octopus Pro V1.1 (STM32H723ZET6)** pinout below.
 
 ## 1. Board and motor-driver assignment
 
@@ -62,10 +62,10 @@ Provide a regulated 3.3 V supply to each module's `VCC` and `3V3` as required by
 - **Status / Heartbeat LED (`LD2`)**: Mapped to `PD15` (`FAN5` gate indicator LED `D27`). Note that the board's `PA13` (`WORK_LED`) is intentionally left on `JTMS-SWDIO` so SEGGER J-Link SWD debugging and RTT telemetry are never interrupted.
 - The dedicated `PROBE` connector uses MCU input `PC5`. BTT documents NPN and PNP proximity-switch support on the Octopus Pro (**note:** `PC5` is not yet configured or read in `MotionFirmware`).
 
-## 5. Host serial connection (`USART2` / planned USB-C CDC)
+## 5. Host serial connection (`USART2` / Native USB-C CDC)
 
-- **Current hardware interface (`USART2`):** The board provides a 2x5 Raspberry Pi `UART2` header (`J26`) wired to `PD5` (`USART2_TX`) and `PD6` (`USART2_RX`), with on-board 120 Ω series protection resistors (`R22`/`R23`). For a 3.3 V USB-UART adapter (or ESP32/host vision link at `115200 8N1`), cross TX/RX (`PD5` -> host RX, `PD6` <- host TX) and connect `GND`; leave the 5 V pins unconnected.
-- **Native USB-C port (`PA11`/`PA12`):** `USB_OTG_HS` is not enabled in the current `MotionFirmware` builds (so the USB-C port provides `5V` logic power via `J68` only, with no COM port). See [Section 5 of `MotionFirmware/README.md`](../../MotorControls/MotionFirmware/README.md#5-planned-upgrade-native-usb-c-cdc-transport-via-tinyusb-usb_otg_hs) for the planned TinyUSB `USB_OTG_HS` CDC migration notes.
+- **Default motion-profile interface (`USART2`):** The board provides a 2x5 Raspberry Pi `UART2` header (`J26`) wired to `PD5` (`USART2_TX`) and `PD6` (`USART2_RX`), with on-board 120 Ω series protection resistors (`R22`/`R23`). For a 3.3 V USB-UART adapter (or ESP32/host vision link at `115200 8N1`), cross TX/RX (`PD5` -> host RX, `PD6` <- host TX) and connect `GND`; leave the 5 V pins unconnected.
+- **Native USB-C Virtual COM module (`PA11`/`PA12`):** A portable **TinyUSB `USB_OTG_HS` CDC** module is implemented and hardware-verified in [`MotorControls/MotionFirmware/Apps/usb_cdc/`](../../MotorControls/MotionFirmware/Apps/usb_cdc/README.md) (`MotionFirmware_UsbCdc.*` standalone test profile + `add_usb_cdc_module()` CMake helper). It bypasses `PA9` VBUS sensing (`PA9` is `USART1_TX` on `J70`), so USB-C Virtual COM works both under USB bench power (`J68` fitted) and 24 V operation (`J68` removed). See [`Apps/usb_cdc/README.md`](../../MotorControls/MotionFirmware/Apps/usb_cdc/README.md) to drop it into any motion firmware profile.
 
 ## 6. SWD debug probe connection (`J72`)
 
@@ -75,7 +75,7 @@ For flashing, GDB debugging, and high-speed SEGGER RTT telemetry via a SEGGER J-
 - **Color Pinout Diagram Omission:** `J72` (`SWD`) is omitted from the colored callout diagram (`BIGTREETECH Octopus Pro V1.1-Pin.jpg`). Use `BIGTREETECH Octopus Pro - PIN.pdf` (`J72(SWD)`) and `BIGTREETECH Octopus Pro V1.1-sch.pdf` (Sheet 5) as the authoritative reference.
 
 | Pin | Silkscreen / Net | Probe Signal | MCU Pin (`STM32H723ZET6`) | On-board Circuit & Sharing Notes |
-| :---: | :---: | :--- | :--- | :--- |
+| :---: | :--- | :--- | :--- | :--- |
 | **1** | `3V3` (`VCC_3V3`) | `VTref` | `VDD` (3.3 V) | Target reference voltage sense for J-Link/ST-LINK (do **not** back-power the board from the probe) |
 | **2** | `SWDIO` | `SWDIO` | Pin 105 (`PA13` / `JTMS-SWDIO`) | On-board 10 kΩ pull-up `R167` to `VCC_3V3`; shared with `WORK_LED` (`D39`) |
 | **3** | `GND` | `GND` | `VSS` | Common debug ground |
@@ -121,7 +121,7 @@ If you use the ST-LINK/V2-1 section of a **NUCLEO-F446RE (`MB1136`)** reflashed 
    ```powershell
    # Run from MotorControls\MotionFirmware (flash.jlink uses relative build\Debug\ paths)
    cd MotorControls\MotionFirmware
-   .\flash.cmd diagnostics   # Or omit arg for MotionFirmware.hex, or pass stallguard | zbounce
+   .\flash.cmd diagnostics   # Or omit arg for MotionFirmware.hex, or pass stallguard | zbounce | usb_cdc
 
    # Or flash / run / stream RTT via probe-rs (works from repo root or firmware dir; recognizes J-Link OB)
    probe-rs download --chip STM32H723ZETx build\Debug\MotionFirmware_Diagnostics.elf

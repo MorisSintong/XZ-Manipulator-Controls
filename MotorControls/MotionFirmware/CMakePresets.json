@@ -48,6 +48,14 @@
                 "CMAKE_BUILD_TYPE": "Debug",
                 "FIRMWARE_APP": "z_bounce_emulation"
             }
+        },
+        {
+            "name": "Debug-UsbCdc",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "FIRMWARE_APP": "usb_cdc"
+            }
         }
     ],
     "buildPresets": [
@@ -70,6 +78,10 @@
         {
             "name": "Debug-ZBounce",
             "configurePreset": "Debug-ZBounce"
+        },
+        {
+            "name": "Debug-UsbCdc",
+            "configurePreset": "Debug-UsbCdc"
         }
     ]
 }

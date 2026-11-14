@@ -1,0 +1,3 @@
+TinyUSB v0.18.0 (commit 86ad6e56c1700e85f1c5678607a762cfe3aa2f47)
+Source: https://github.com/hathach/tinyusb
+Vendored minimal src/ + LICENSE for STM32H723 USB_OTG_HS CDC.
