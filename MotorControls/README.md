@@ -11,8 +11,7 @@ MotorControls/
 ├── Drivers/
 │   ├── AS5600/                      # MISRA C-oriented 12-bit magnetic rotary encoder driver
 │   ├── SEGGER_RTT/                  # SEGGER Real-Time Transfer telemetry library
-│   ├── TMC2240-Driver/              # Trinamic TMC2240 SPI stepper driver package
-│   └── tmc2209_stm32_driver_v1.0.0/ # Legacy / unused TMC2209 UART driver package
+│   └── TMC2240-Driver/              # Trinamic TMC2240 SPI stepper driver package
 ├── Emulation/                       # Python MockFirmwareServer + legacy Renode STM32F4 .resc bridge
 ├── MotionFirmware/                  # STM32CubeMX + CMake multi-profile H723 firmware suite
 │   ├── Apps/                        # motion_diagnostics, stallguard_cli & z_bounce_emulation
@@ -33,7 +32,7 @@ MotorControls/
 - **[`TMC2240-Driver/`](Drivers/TMC2240-Driver/README.md):**
   - Smart stepper driver operating over high-speed SPI (`SPI1` Mode 3 at 3.125 MHz on SKR Octopus Pro V1.1).
   - Features StealthChop2, SpreadCycle, and StallGuard4 (sensorless mechanical homing and stall detection).
-  - Shared `tmc2240_hal.h` supports both `stm32h7xx_hal.h` and `stm32f4xx_hal.h` (legacy standalone examples remain NUCLEO-F446RE).
+  - Shared `tmc2240_hal.h` supports both `stm32h7xx_hal.h` and `stm32f4xx_hal.h` (legacy NUCLEO-F446RE examples archived under `legacy/TMC2240-Driver/`).
 - **[`SEGGER_RTT/`](Drivers/SEGGER_RTT/README.md):** Minimal RTT debug channel with fixed up/down buffers for J-Link host logs and optional polled input.
 
 ### B. Motion Firmware & Host Diagnostics (`MotionFirmware/`)

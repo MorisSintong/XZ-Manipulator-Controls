@@ -10,7 +10,7 @@ Direktori ini berisi matriks perencanaan, skenario uji, lembar data pengukuran, 
   Workbook pengujian terperinci yang mencakup seluruh skenario validasi fungsional, pengujian presisi, dan uji performa sortasi real-time.
 - **[`records/stage1_stallguard_bringup_20261114/README.md`](records/stage1_stallguard_bringup_20261114/README.md)**:  
   Rekaman empiris Stage 1 (`stallguard_cli`: homing repeatability 2x, validasi soft-limit, `mode soft` cycle, plot perbandingan Z `ema_shift`, serta replay Rerun `.rrd`).
-- Prosedur verifikasi firmware dan rencana uji bangku tersedia pada [bagian 7 desain motion diagnostics](../architecture/motion_diagnostics_design.md#7-verification-and-bench-plan). Tidak ada berkas `test_methodology.md` terlacak di direktori ini.
+- **[`test_methodology.md`](test_methodology.md)**: Hierarki pengujian V-model (Level 1–4) serta perintah verifikasi otomatis; prosedur verifikasi firmware dan rencana uji bangku juga dirangkum pada [bagian 7 desain motion diagnostics](../architecture/motion_diagnostics_design.md#7-verification-and-bench-plan).
 
 ---
 

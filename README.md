@@ -52,17 +52,18 @@ docs/
 ```text
 XZ-Manipulator-Controls/
 ├── docs/                  # Architecture, wire contracts, hardware wiring/notes & testing guides
-├── Hardware/              # BTT Octopus Pro V1.1 submodule & legacy KiCad 10 schematic (XZ-Controller)
+├── Hardware/              # BTT Octopus Pro V1.1 submodule
 ├── MotorControls/         # Embedded STM32 firmware profiles, C drivers, emulation & CLI tools
 ├── packages/              # Shared Python libraries (motion_diagnostics framing, CSV & metrics)
 ├── Program_Ladder/        # OMRON PLC conveyor ladder logic (CX-Programmer)
 └── VisionSystem/          # Host PC Python / YOLO computer vision & UART telemetry pipeline
+├── legacy/                # Archived legacy NUCLEO-STM32F446RE hardware & firmware artifacts
 ```
 
 | Subsystem / Directory | Primary Role | Documentation |
 | :--- | :--- | :--- |
 | **[`Hardware/BIGTREETECH-OCTOPUS-Pro/`](Hardware/BIGTREETECH-OCTOPUS-Pro/)** | Official BTT Octopus Pro V1.1 schematics, pinouts & hardware manual (git submodule) | [`docs/hardware/wiring.md`](docs/hardware/wiring.md) |
-| **[`Hardware/XZ-Controller/`](Hardware/XZ-Controller/)** | Legacy KiCad 10 `NUCLEO-F446RE` schematic/PCB, symbols/footprints, STEP models & `Optocoupler-io.kicad_sch` | [`docs/hardware/wiring.md`](docs/hardware/wiring.md) |
+| **[`legacy/`](legacy/README.md)** | Archived `NUCLEO-F446RE` schematics/PCB (`XZ-Controller`), datasheets, and F446 TMC2240 examples | [`legacy/README.md`](legacy/README.md) |
 | **[`MotorControls/`](MotorControls/)** | Embedded STM32 subsystem (multi-profile H723 firmware, drivers, emulation & host CLI) | [`MotorControls/README.md`](MotorControls/README.md) |
 | ├── **[`MotionFirmware/`](MotorControls/MotionFirmware/)** | STM32H723ZET6 CMake/Ninja suite (`motion_diagnostics`, `stallguard_cli`, `z_bounce_emulation`, `usb_cdc`), flash/DFU scripts & BTT bootloader (`tools/btt_bootloader/`) | [`MotionFirmware/README.md`](MotorControls/MotionFirmware/README.md), [`Apps/usb_cdc/README.md`](MotorControls/MotionFirmware/Apps/usb_cdc/README.md) |
 | ├── **[`MotionFirmware/tools/diag/`](MotorControls/MotionFirmware/tools/diag/)** | Host Python bench CLI (`motion-diag`) for capture, sequences, heartbeats & reports | [`tools/diag/README.md`](MotorControls/MotionFirmware/tools/diag/README.md) |

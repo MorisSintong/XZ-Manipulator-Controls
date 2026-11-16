@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "Symbols")(type "KiCad")(uri "${KIPRJMOD}/Custom-Lib/Symbols.kicad_sym")(options "")(descr "Project custom symbols (NUCLEO-F446RE, TMC2240, AS5600)"))
+)

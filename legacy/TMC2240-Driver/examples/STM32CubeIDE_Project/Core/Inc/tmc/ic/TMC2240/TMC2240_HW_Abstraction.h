@@ -1,0 +1,649 @@
+/*******************************************************************************
+ * Copyright © 2019 TRINAMIC Motion Control GmbH & Co. KG
+ * (now owned by Analog Devices, Inc.),
+ *
+ * Copyright © 2024 Analog Devices, Inc.
+ * Copyright © 2024 Extended with convenience constants for STM32 HAL
+ *            integration. Register map verified against TMC2240 datasheet
+ *            Rev. 2 — no internal ramp generator (STEP/DIR driver only).
+ *******************************************************************************/
+
+#ifndef TMC_IC_TMC2240_HW_ABSTRACTION_H_
+#define TMC_IC_TMC2240_HW_ABSTRACTION_H_
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include "tmc2240_status.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* =========================================================================
+ * Chip Constants
+ * ========================================================================= */
+
+#define TMC2240_REGISTER_COUNT    128U
+#define TMC2240_MOTORS            1U
+#define TMC2240_WRITE_BIT         0x80U
+#define TMC2240_ADDRESS_MASK      0x7FU
+
+/* =========================================================================
+ * Bus Type Enumeration
+ * ========================================================================= */
+
+typedef enum {
+    IC_BUS_SPI  = 0,
+    IC_BUS_UART = 1,
+    IC_BUS_WLAN = 2 /* Unsupported, retained to report an explicit error. */
+} TMC2240BusType;
+
+/* =========================================================================
+ * Callback Signatures (user must implement these)
+ * ========================================================================= */
+
+extern TMC2240Status tmc2240_readWriteSPI(uint16_t icID, uint8_t *data,
+                                       size_t dataLength);
+extern TMC2240Status tmc2240_readWriteUART(uint16_t icID, uint8_t *data,
+                                        size_t writeLength, size_t readLength);
+extern TMC2240Status tmc2240_getBusType(uint16_t icID, TMC2240BusType *bus);
+extern TMC2240Status tmc2240_getNodeAddress(uint16_t icID, uint8_t *node);
+
+/* =========================================================================
+ * Register Address Map (all 128 addresses, TMC2240-specific)
+ * ========================================================================= */
+
+/* ---- Global Configuration ---- */
+#define TMC2240_GCONF           0x00U
+#define TMC2240_GSTAT           0x01U
+#define TMC2240_IFCNT           0x02U
+#define TMC2240_NODECONF        0x03U
+#define TMC2240_SLAVECONF       TMC2240_NODECONF /* Legacy spelling. */
+#define TMC2240_IOIN            0x04U
+#define TMC2240_DRV_CONF        0x0AU
+#define TMC2240_GLOBAL_SCALER   0x0BU
+
+/* ---- Current Control ---- */
+#define TMC2240_IHOLD_IRUN      0x10U
+#define TMC2240_TPOWERDOWN      0x11U
+#define TMC2240_TSTEP           0x12U
+#define TMC2240_TPWMTHRS        0x13U
+#define TMC2240_TCOOLTHRS       0x14U
+#define TMC2240_THIGH           0x15U
+
+/* ---- Direct Mode (0x2D) ---- */
+#define TMC2240_DIRECT_MODE     0x2DU
+
+/* ---- Encoder Interface ---- */
+#define TMC2240_ENCMODE         0x38U
+#define TMC2240_XENC            0x39U
+#define TMC2240_ENC_CONST       0x3AU
+#define TMC2240_ENC_STATUS      0x3BU
+#define TMC2240_ENC_LATCH       0x3CU
+
+/* ---- ADC / Monitoring ---- */
+#define TMC2240_ADC_VSUPPLY_AIN 0x50U
+#define TMC2240_ADC_TEMP        0x51U
+#define TMC2240_OTW_OV_VTH      0x52U
+
+/* ---- Microstep Lookup Tables ---- */
+#define TMC2240_MSLUT0          0x60U
+#define TMC2240_MSLUT1          0x61U
+#define TMC2240_MSLUT2          0x62U
+#define TMC2240_MSLUT3          0x63U
+#define TMC2240_MSLUT4          0x64U
+#define TMC2240_MSLUT5          0x65U
+#define TMC2240_MSLUT6          0x66U
+#define TMC2240_MSLUT7          0x67U
+#define TMC2240_MSLUTSEL        0x68U
+#define TMC2240_MSLUTSTART      0x69U
+#define TMC2240_MSCNT           0x6AU
+#define TMC2240_MSCURACT        0x6BU
+
+/* ---- Chopper / Driver ---- */
+#define TMC2240_CHOPCONF        0x6CU
+#define TMC2240_COOLCONF        0x6DU
+#define TMC2240_DRVSTATUS       0x6FU
+
+/* ---- PWM / StealthChop2 ---- */
+#define TMC2240_PWMCONF         0x70U
+#define TMC2240_PWM_SCALE       0x71U
+#define TMC2240_PWM_AUTO        0x72U
+
+/* ---- StallGuard4 ---- */
+#define TMC2240_SG4_THRS        0x74U
+#define TMC2240_SG4_RESULT      0x75U
+#define TMC2240_SG4_IND         0x76U
+
+/* =========================================================================
+ * Encoder Mode Bits (Register TMC2240_ENCMODE)
+ * ========================================================================= */
+
+#define TMC2240_EM_DECIMAL      0x0400U
+#define TMC2240_EM_CLR_XENC     0x0100U
+#define TMC2240_EM_NEG_EDGE     0x0080U
+#define TMC2240_EM_POS_EDGE     0x0040U
+#define TMC2240_EM_CLR_ONCE     0x0020U
+#define TMC2240_EM_CLR_CONT     0x0010U
+#define TMC2240_EM_IGNORE_AB    0x0008U
+#define TMC2240_EM_POL_N        0x0004U
+#define TMC2240_EM_POL_B        0x0002U
+#define TMC2240_EM_POL_A        0x0001U
+
+/* =========================================================================
+ * RegisterField Structure and Helper Functions
+ * Used for type-safe per-field register access.
+ * ========================================================================= */
+
+typedef struct {
+    uint32_t mask;
+    uint8_t  shift;
+    uint8_t  address;
+    bool     isSigned;
+} RegisterField;
+
+/* Checked field access is declared in tmc2240_core.h. */
+#ifdef __cplusplus
+#define TMC2240_FIELD(mask, shift, address, sign) (RegisterField{mask, shift, address, sign})
+#else
+#define TMC2240_FIELD(mask, shift, address, sign) ((RegisterField){mask, shift, address, sign})
+#endif
+
+/* =========================================================================
+ * Register Field Definitions
+ *
+ * Each field is defined as a compound literal:
+ *   TMC2240_<FIELD>_MASK   - bit mask
+ *   TMC2240_<FIELD>_SHIFT  - bit position (LSB)
+ *   TMC2240_<FIELD>_FIELD  - combined RegisterField descriptor
+ * ========================================================================= */
+
+/* ---- GCONF (0x00) ---- */
+#define TMC2240_FAST_STANDSTILL_MASK         0x00000002UL
+#define TMC2240_FAST_STANDSTILL_SHIFT        1U
+#define TMC2240_FAST_STANDSTILL_FIELD        TMC2240_FIELD(TMC2240_FAST_STANDSTILL_MASK, TMC2240_FAST_STANDSTILL_SHIFT, TMC2240_GCONF, false)
+
+#define TMC2240_EN_PWM_MODE_MASK             0x00000004UL
+#define TMC2240_EN_PWM_MODE_SHIFT            2U
+#define TMC2240_EN_PWM_MODE_FIELD            TMC2240_FIELD(TMC2240_EN_PWM_MODE_MASK, TMC2240_EN_PWM_MODE_SHIFT, TMC2240_GCONF, false)
+
+#define TMC2240_MULTISTEP_FILT_MASK          0x00000008UL
+#define TMC2240_MULTISTEP_FILT_SHIFT         3U
+#define TMC2240_MULTISTEP_FILT_FIELD         TMC2240_FIELD(TMC2240_MULTISTEP_FILT_MASK, TMC2240_MULTISTEP_FILT_SHIFT, TMC2240_GCONF, false)
+
+#define TMC2240_SHAFT_MASK                   0x00000010UL
+#define TMC2240_SHAFT_SHIFT                  4U
+#define TMC2240_SHAFT_FIELD                  TMC2240_FIELD(TMC2240_SHAFT_MASK, TMC2240_SHAFT_SHIFT, TMC2240_GCONF, false)
+
+#define TMC2240_DIAG0_ERROR_MASK             0x00000020UL
+#define TMC2240_DIAG0_ERROR_SHIFT            5U
+#define TMC2240_DIAG0_ERROR_FIELD            TMC2240_FIELD(TMC2240_DIAG0_ERROR_MASK, TMC2240_DIAG0_ERROR_SHIFT, TMC2240_GCONF, false)
+
+#define TMC2240_DIAG0_OTPW_MASK              0x00000040UL
+#define TMC2240_DIAG0_OTPW_SHIFT             6U
+#define TMC2240_DIAG0_OTPW_FIELD             TMC2240_FIELD(TMC2240_DIAG0_OTPW_MASK, TMC2240_DIAG0_OTPW_SHIFT, TMC2240_GCONF, false)
+
+#define TMC2240_DIAG0_STALL_MASK             0x00000080UL
+#define TMC2240_DIAG0_STALL_SHIFT            7U
+#define TMC2240_DIAG0_STALL_FIELD            TMC2240_FIELD(TMC2240_DIAG0_STALL_MASK, TMC2240_DIAG0_STALL_SHIFT, TMC2240_GCONF, false)
+
+#define TMC2240_DIAG1_STALL_MASK             0x00000100UL
+#define TMC2240_DIAG1_STALL_SHIFT            8U
+#define TMC2240_DIAG1_STALL_FIELD            TMC2240_FIELD(TMC2240_DIAG1_STALL_MASK, TMC2240_DIAG1_STALL_SHIFT, TMC2240_GCONF, false)
+
+#define TMC2240_DIAG1_INDEX_MASK             0x00000200UL
+#define TMC2240_DIAG1_INDEX_SHIFT            9U
+#define TMC2240_DIAG1_INDEX_FIELD            TMC2240_FIELD(TMC2240_DIAG1_INDEX_MASK, TMC2240_DIAG1_INDEX_SHIFT, TMC2240_GCONF, false)
+
+#define TMC2240_DIAG1_ONSTATE_MASK           0x00000400UL
+#define TMC2240_DIAG1_ONSTATE_SHIFT          10U
+#define TMC2240_DIAG1_ONSTATE_FIELD          TMC2240_FIELD(TMC2240_DIAG1_ONSTATE_MASK, TMC2240_DIAG1_ONSTATE_SHIFT, TMC2240_GCONF, false)
+
+#define TMC2240_DIAG0_PUSHPULL_MASK          0x00001000UL
+#define TMC2240_DIAG0_PUSHPULL_SHIFT         12U
+#define TMC2240_DIAG0_PUSHPULL_FIELD         TMC2240_FIELD(TMC2240_DIAG0_PUSHPULL_MASK, TMC2240_DIAG0_PUSHPULL_SHIFT, TMC2240_GCONF, false)
+
+#define TMC2240_DIAG1_PUSHPULL_MASK          0x00002000UL
+#define TMC2240_DIAG1_PUSHPULL_SHIFT         13U
+#define TMC2240_DIAG1_PUSHPULL_FIELD         TMC2240_FIELD(TMC2240_DIAG1_PUSHPULL_MASK, TMC2240_DIAG1_PUSHPULL_SHIFT, TMC2240_GCONF, false)
+
+#define TMC2240_SMALL_HYSTERESIS_MASK        0x00004000UL
+#define TMC2240_SMALL_HYSTERESIS_SHIFT       14U
+#define TMC2240_SMALL_HYSTERESIS_FIELD       TMC2240_FIELD(TMC2240_SMALL_HYSTERESIS_MASK, TMC2240_SMALL_HYSTERESIS_SHIFT, TMC2240_GCONF, false)
+
+#define TMC2240_STOP_ENABLE_MASK             0x00008000UL
+#define TMC2240_STOP_ENABLE_SHIFT            15U
+#define TMC2240_STOP_ENABLE_FIELD            TMC2240_FIELD(TMC2240_STOP_ENABLE_MASK, TMC2240_STOP_ENABLE_SHIFT, TMC2240_GCONF, false)
+
+#define TMC2240_DIRECT_MODE_MASK             0x00010000UL
+#define TMC2240_DIRECT_MODE_SHIFT            16U
+#define TMC2240_DIRECT_MODE_FIELD            TMC2240_FIELD(TMC2240_DIRECT_MODE_MASK, TMC2240_DIRECT_MODE_SHIFT, TMC2240_GCONF, false)
+
+/* ---- GSTAT (0x01) ---- */
+#define TMC2240_RESET_MASK                   0x00000001UL
+#define TMC2240_RESET_SHIFT                  0U
+#define TMC2240_RESET_FIELD                  TMC2240_FIELD(TMC2240_RESET_MASK, TMC2240_RESET_SHIFT, TMC2240_GSTAT, false)
+
+#define TMC2240_DRV_ERR_MASK                 0x00000002UL
+#define TMC2240_DRV_ERR_SHIFT                1U
+#define TMC2240_DRV_ERR_FIELD                TMC2240_FIELD(TMC2240_DRV_ERR_MASK, TMC2240_DRV_ERR_SHIFT, TMC2240_GSTAT, false)
+
+#define TMC2240_UV_CP_MASK                   0x00000004UL
+#define TMC2240_UV_CP_SHIFT                  2U
+#define TMC2240_UV_CP_FIELD                  TMC2240_FIELD(TMC2240_UV_CP_MASK, TMC2240_UV_CP_SHIFT, TMC2240_GSTAT, false)
+
+#define TMC2240_REGISTER_RESET_MASK          0x00000008UL
+#define TMC2240_REGISTER_RESET_SHIFT         3U
+#define TMC2240_REGISTER_RESET_FIELD         TMC2240_FIELD(TMC2240_REGISTER_RESET_MASK, TMC2240_REGISTER_RESET_SHIFT, TMC2240_GSTAT, false)
+
+#define TMC2240_VM_UVLO_MASK                 0x00000010UL
+#define TMC2240_VM_UVLO_SHIFT                4U
+#define TMC2240_VM_UVLO_FIELD                TMC2240_FIELD(TMC2240_VM_UVLO_MASK, TMC2240_VM_UVLO_SHIFT, TMC2240_GSTAT, false)
+
+/* ---- IOIN (0x04) ---- */
+#define TMC2240_STEP_MASK                    0x00000001UL
+#define TMC2240_STEP_SHIFT                   0U
+#define TMC2240_STEP_FIELD                   TMC2240_FIELD(TMC2240_STEP_MASK, TMC2240_STEP_SHIFT, TMC2240_IOIN, false)
+
+#define TMC2240_DIR_MASK                     0x00000002UL
+#define TMC2240_DIR_SHIFT                    1U
+#define TMC2240_DIR_FIELD                    TMC2240_FIELD(TMC2240_DIR_MASK, TMC2240_DIR_SHIFT, TMC2240_IOIN, false)
+
+#define TMC2240_ENCB_MASK                    0x00000004UL
+#define TMC2240_ENCB_SHIFT                   2U
+#define TMC2240_ENCB_FIELD                   TMC2240_FIELD(TMC2240_ENCB_MASK, TMC2240_ENCB_SHIFT, TMC2240_IOIN, false)
+
+#define TMC2240_ENCA_MASK                    0x00000008UL
+#define TMC2240_ENCA_SHIFT                   3U
+#define TMC2240_ENCA_FIELD                   TMC2240_FIELD(TMC2240_ENCA_MASK, TMC2240_ENCA_SHIFT, TMC2240_IOIN, false)
+
+#define TMC2240_DRV_ENN_MASK                 0x00000010UL
+#define TMC2240_DRV_ENN_SHIFT                4U
+#define TMC2240_DRV_ENN_FIELD                TMC2240_FIELD(TMC2240_DRV_ENN_MASK, TMC2240_DRV_ENN_SHIFT, TMC2240_IOIN, false)
+
+#define TMC2240_ENCN_MASK                    0x00000020UL
+#define TMC2240_ENCN_SHIFT                   5U
+#define TMC2240_ENCN_FIELD                   TMC2240_FIELD(TMC2240_ENCN_MASK, TMC2240_ENCN_SHIFT, TMC2240_IOIN, false)
+
+#define TMC2240_VERSION_MASK                 0xFF000000UL
+#define TMC2240_VERSION_SHIFT                24U
+#define TMC2240_VERSION_FIELD                TMC2240_FIELD(TMC2240_VERSION_MASK, TMC2240_VERSION_SHIFT, TMC2240_IOIN, false)
+
+/* ---- DRV_CONF (0x0A) ---- */
+#define TMC2240_CURRENT_RANGE_MASK           0x00000003UL
+#define TMC2240_CURRENT_RANGE_SHIFT          0U
+#define TMC2240_CURRENT_RANGE_FIELD          TMC2240_FIELD(TMC2240_CURRENT_RANGE_MASK, TMC2240_CURRENT_RANGE_SHIFT, TMC2240_DRV_CONF, false)
+
+#define TMC2240_SLOPE_CONTROL_MASK           0x00000030UL
+#define TMC2240_SLOPE_CONTROL_SHIFT          4U
+#define TMC2240_SLOPE_CONTROL_FIELD          TMC2240_FIELD(TMC2240_SLOPE_CONTROL_MASK, TMC2240_SLOPE_CONTROL_SHIFT, TMC2240_DRV_CONF, false)
+
+/* ---- GLOBAL_SCALER (0x0B) ---- */
+#define TMC2240_GLOBAL_SCALER_MASK           0x000000FFUL
+#define TMC2240_GLOBAL_SCALER_SHIFT          0U
+#define TMC2240_GLOBAL_SCALER_FIELD          TMC2240_FIELD(TMC2240_GLOBAL_SCALER_MASK, TMC2240_GLOBAL_SCALER_SHIFT, TMC2240_GLOBAL_SCALER, false)
+
+/* ---- IHOLD_IRUN (0x10) ---- */
+#define TMC2240_IHOLD_MASK                   0x0000001FUL
+#define TMC2240_IHOLD_SHIFT                  0U
+#define TMC2240_IHOLD_FIELD                  TMC2240_FIELD(TMC2240_IHOLD_MASK, TMC2240_IHOLD_SHIFT, TMC2240_IHOLD_IRUN, false)
+
+#define TMC2240_IRUN_MASK                    0x00001F00UL
+#define TMC2240_IRUN_SHIFT                   8U
+#define TMC2240_IRUN_FIELD                   TMC2240_FIELD(TMC2240_IRUN_MASK, TMC2240_IRUN_SHIFT, TMC2240_IHOLD_IRUN, false)
+
+#define TMC2240_IHOLDDELAY_MASK              0x000F0000UL
+#define TMC2240_IHOLDDELAY_SHIFT             16U
+#define TMC2240_IHOLDDELAY_FIELD             TMC2240_FIELD(TMC2240_IHOLDDELAY_MASK, TMC2240_IHOLDDELAY_SHIFT, TMC2240_IHOLD_IRUN, false)
+
+#define TMC2240_IRUNDELAY_MASK               0x0F000000UL
+#define TMC2240_IRUNDELAY_SHIFT              24U
+#define TMC2240_IRUNDELAY_FIELD              TMC2240_FIELD(TMC2240_IRUNDELAY_MASK, TMC2240_IRUNDELAY_SHIFT, TMC2240_IHOLD_IRUN, false)
+
+/* ---- TPOWERDOWN (0x11) ---- */
+#define TMC2240_TPOWERDOWN_MASK              0x000000FFUL
+#define TMC2240_TPOWERDOWN_SHIFT             0U
+#define TMC2240_TPOWERDOWN_FIELD             TMC2240_FIELD(TMC2240_TPOWERDOWN_MASK, TMC2240_TPOWERDOWN_SHIFT, TMC2240_TPOWERDOWN, false)
+
+/* ---- TPWMTHRS (0x13) ---- */
+#define TMC2240_TPWMTHRS_MASK                0x000FFFFFUL
+#define TMC2240_TPWMTHRS_SHIFT               0U
+#define TMC2240_TPWMTHRS_FIELD               TMC2240_FIELD(TMC2240_TPWMTHRS_MASK, TMC2240_TPWMTHRS_SHIFT, TMC2240_TPWMTHRS, false)
+
+/* ---- TCOOLTHRS (0x14) ---- */
+#define TMC2240_TCOOLTHRS_MASK               0x000FFFFFUL
+#define TMC2240_TCOOLTHRS_SHIFT              0U
+#define TMC2240_TCOOLTHRS_FIELD              TMC2240_FIELD(TMC2240_TCOOLTHRS_MASK, TMC2240_TCOOLTHRS_SHIFT, TMC2240_TCOOLTHRS, false)
+
+/* ---- THIGH (0x15) ---- */
+#define TMC2240_THIGH_MASK                   0x000FFFFFUL
+#define TMC2240_THIGH_SHIFT                  0U
+#define TMC2240_THIGH_FIELD                 TMC2240_FIELD(TMC2240_THIGH_MASK, TMC2240_THIGH_SHIFT, TMC2240_THIGH, false)
+
+/* ---- DIRECT_MODE (0x2D) ---- */
+#define TMC2240_DIRECT_A_MASK                0x000001FFUL
+#define TMC2240_DIRECT_A_SHIFT               0U
+#define TMC2240_DIRECT_A_FIELD               TMC2240_FIELD(TMC2240_DIRECT_A_MASK, TMC2240_DIRECT_A_SHIFT, TMC2240_DIRECT_MODE, true)
+
+#define TMC2240_DIRECT_B_MASK                0x01FF0000UL
+#define TMC2240_DIRECT_B_SHIFT               16U
+#define TMC2240_DIRECT_B_FIELD               TMC2240_FIELD(TMC2240_DIRECT_B_MASK, TMC2240_DIRECT_B_SHIFT, TMC2240_DIRECT_MODE, true)
+
+/* ---- ENCMODE (0x38) ---- */
+#define TMC2240_POL_A_MASK                   0x00000001UL
+#define TMC2240_POL_A_SHIFT                  0U
+#define TMC2240_POL_A_FIELD                  TMC2240_FIELD(TMC2240_POL_A_MASK, TMC2240_POL_A_SHIFT, TMC2240_ENCMODE, false)
+
+#define TMC2240_POL_B_MASK                   0x00000002UL
+#define TMC2240_POL_B_SHIFT                  1U
+#define TMC2240_POL_B_FIELD                  TMC2240_FIELD(TMC2240_POL_B_MASK, TMC2240_POL_B_SHIFT, TMC2240_ENCMODE, false)
+
+#define TMC2240_POL_N_MASK                   0x00000004UL
+#define TMC2240_POL_N_SHIFT                  2U
+#define TMC2240_POL_N_FIELD                  TMC2240_FIELD(TMC2240_POL_N_MASK, TMC2240_POL_N_SHIFT, TMC2240_ENCMODE, false)
+
+#define TMC2240_IGNORE_AB_MASK               0x00000008UL
+#define TMC2240_IGNORE_AB_SHIFT              3U
+#define TMC2240_IGNORE_AB_FIELD              TMC2240_FIELD(TMC2240_IGNORE_AB_MASK, TMC2240_IGNORE_AB_SHIFT, TMC2240_ENCMODE, false)
+
+#define TMC2240_CLR_CONT_MASK                0x00000010UL
+#define TMC2240_CLR_CONT_SHIFT               4U
+#define TMC2240_CLR_CONT_FIELD               TMC2240_FIELD(TMC2240_CLR_CONT_MASK, TMC2240_CLR_CONT_SHIFT, TMC2240_ENCMODE, false)
+
+#define TMC2240_CLR_ONCE_MASK                0x00000020UL
+#define TMC2240_CLR_ONCE_SHIFT               5U
+#define TMC2240_CLR_ONCE_FIELD               TMC2240_FIELD(TMC2240_CLR_ONCE_MASK, TMC2240_CLR_ONCE_SHIFT, TMC2240_ENCMODE, false)
+
+#define TMC2240_POS_NEG_EDGE_MASK            0x000000C0UL
+#define TMC2240_POS_NEG_EDGE_SHIFT           6U
+#define TMC2240_POS_NEG_EDGE_FIELD           TMC2240_FIELD(TMC2240_POS_NEG_EDGE_MASK, TMC2240_POS_NEG_EDGE_SHIFT, TMC2240_ENCMODE, false)
+
+#define TMC2240_CLR_ENC_X_MASK               0x00000100UL
+#define TMC2240_CLR_ENC_X_SHIFT              8U
+#define TMC2240_CLR_ENC_X_FIELD              TMC2240_FIELD(TMC2240_CLR_ENC_X_MASK, TMC2240_CLR_ENC_X_SHIFT, TMC2240_ENCMODE, false)
+
+/* NOTE: ENCMODE bit 9 is reserved per datasheet — do not write it. */
+
+#define TMC2240_ENC_SEL_DECIMAL_MASK         0x00000400UL
+#define TMC2240_ENC_SEL_DECIMAL_SHIFT        10U
+#define TMC2240_ENC_SEL_DECIMAL_FIELD        TMC2240_FIELD(TMC2240_ENC_SEL_DECIMAL_MASK, TMC2240_ENC_SEL_DECIMAL_SHIFT, TMC2240_ENCMODE, false)
+
+/* ---- XENC (0x39), ENC_CONST (0x3A), ENC_LATCH (0x3C) ---- */
+#define TMC2240_X_ENC_MASK                   0xFFFFFFFFUL
+#define TMC2240_X_ENC_SHIFT                  0U
+#define TMC2240_X_ENC_FIELD                  TMC2240_FIELD(TMC2240_X_ENC_MASK, TMC2240_X_ENC_SHIFT, TMC2240_XENC, true)
+
+#define TMC2240_ENC_CONST_MASK               0xFFFFFFFFUL
+#define TMC2240_ENC_CONST_SHIFT              0U
+#define TMC2240_ENC_CONST_FIELD              TMC2240_FIELD(TMC2240_ENC_CONST_MASK, TMC2240_ENC_CONST_SHIFT, TMC2240_ENC_CONST, true)
+
+#define TMC2240_ENC_LATCH_MASK               0xFFFFFFFFUL
+#define TMC2240_ENC_LATCH_SHIFT              0U
+#define TMC2240_ENC_LATCH_FIELD              TMC2240_FIELD(TMC2240_ENC_LATCH_MASK, TMC2240_ENC_LATCH_SHIFT, TMC2240_ENC_LATCH, true)
+
+/* ---- ENC_STATUS (0x3B) ---- */
+#define TMC2240_N_EVENT_MASK                 0x00000001UL
+#define TMC2240_N_EVENT_SHIFT                0U
+#define TMC2240_N_EVENT_FIELD                TMC2240_FIELD(TMC2240_N_EVENT_MASK, TMC2240_N_EVENT_SHIFT, TMC2240_ENC_STATUS, false)
+
+/* ---- ADC (0x50, 0x51) ---- */
+#define TMC2240_ADC_VSUPPLY_MASK             0x00001FFFUL
+#define TMC2240_ADC_VSUPPLY_SHIFT            0U
+#define TMC2240_ADC_VSUPPLY_FIELD            TMC2240_FIELD(TMC2240_ADC_VSUPPLY_MASK, TMC2240_ADC_VSUPPLY_SHIFT, TMC2240_ADC_VSUPPLY_AIN, false)
+
+#define TMC2240_ADC_TEMP_MASK                0x00001FFFUL
+#define TMC2240_ADC_TEMP_SHIFT               0U
+#define TMC2240_ADC_TEMP_FIELD               TMC2240_FIELD(TMC2240_ADC_TEMP_MASK, TMC2240_ADC_TEMP_SHIFT, TMC2240_ADC_TEMP, false)
+
+/* ---- MSCNT (0x6A) - 10-bit microstep counter ---- */
+#define TMC2240_MSCNT_MASK                   0x000003FFUL
+#define TMC2240_MSCNT_SHIFT                  0U
+#define TMC2240_MSCNT_FIELD                  TMC2240_FIELD(TMC2240_MSCNT_MASK, TMC2240_MSCNT_SHIFT, TMC2240_MSCNT, false)
+
+/* ---- MSCURACT (0x6B) - actual motor phase currents ----
+ * Datasheet: CUR_A is bits 24:16, CUR_B is bits 8:0. */
+#define TMC2240_CUR_B_MASK                   0x000001FFUL
+#define TMC2240_CUR_B_SHIFT                  0U
+#define TMC2240_CUR_B_FIELD                  TMC2240_FIELD(TMC2240_CUR_B_MASK, TMC2240_CUR_B_SHIFT, TMC2240_MSCURACT, true)
+
+#define TMC2240_CUR_A_MASK                   0x01FF0000UL
+#define TMC2240_CUR_A_SHIFT                  16U
+#define TMC2240_CUR_A_FIELD                  TMC2240_FIELD(TMC2240_CUR_A_MASK, TMC2240_CUR_A_SHIFT, TMC2240_MSCURACT, true)
+
+/* ---- CHOPCONF (0x6C) ---- */
+#define TMC2240_TOFF_MASK                    0x0000000FUL
+#define TMC2240_TOFF_SHIFT                   0U
+#define TMC2240_TOFF_FIELD                   TMC2240_FIELD(TMC2240_TOFF_MASK, TMC2240_TOFF_SHIFT, TMC2240_CHOPCONF, false)
+
+#define TMC2240_HSTRT_TFD_MASK               0x00000070UL
+#define TMC2240_HSTRT_TFD_SHIFT              4U
+#define TMC2240_HSTRT_TFD_FIELD              TMC2240_FIELD(TMC2240_HSTRT_TFD_MASK, TMC2240_HSTRT_TFD_SHIFT, TMC2240_CHOPCONF, false)
+
+#define TMC2240_HEND_OFFSET_MASK             0x00000780UL
+#define TMC2240_HEND_OFFSET_SHIFT            7U
+#define TMC2240_HEND_OFFSET_FIELD            TMC2240_FIELD(TMC2240_HEND_OFFSET_MASK, TMC2240_HEND_OFFSET_SHIFT, TMC2240_CHOPCONF, false)
+
+#define TMC2240_FD3_MASK                     0x00000800UL
+#define TMC2240_FD3_SHIFT                    11U
+#define TMC2240_FD3_FIELD                    TMC2240_FIELD(TMC2240_FD3_MASK, TMC2240_FD3_SHIFT, TMC2240_CHOPCONF, false)
+
+#define TMC2240_DISFDCC_MASK                 0x00001000UL
+#define TMC2240_DISFDCC_SHIFT                12U
+#define TMC2240_DISFDCC_FIELD                TMC2240_FIELD(TMC2240_DISFDCC_MASK, TMC2240_DISFDCC_SHIFT, TMC2240_CHOPCONF, false)
+
+#define TMC2240_CHM_MASK                     0x00004000UL
+#define TMC2240_CHM_SHIFT                    14U
+#define TMC2240_CHM_FIELD                    TMC2240_FIELD(TMC2240_CHM_MASK, TMC2240_CHM_SHIFT, TMC2240_CHOPCONF, false)
+
+#define TMC2240_TBL_MASK                     0x00018000UL
+#define TMC2240_TBL_SHIFT                    15U
+#define TMC2240_TBL_FIELD                    TMC2240_FIELD(TMC2240_TBL_MASK, TMC2240_TBL_SHIFT, TMC2240_CHOPCONF, false)
+
+#define TMC2240_VHIGHFS_MASK                 0x00040000UL
+#define TMC2240_VHIGHFS_SHIFT                18U
+#define TMC2240_VHIGHFS_FIELD                TMC2240_FIELD(TMC2240_VHIGHFS_MASK, TMC2240_VHIGHFS_SHIFT, TMC2240_CHOPCONF, false)
+
+#define TMC2240_VHIGHCHM_MASK                0x00080000UL
+#define TMC2240_VHIGHCHM_SHIFT               19U
+#define TMC2240_VHIGHCHM_FIELD               TMC2240_FIELD(TMC2240_VHIGHCHM_MASK, TMC2240_VHIGHCHM_SHIFT, TMC2240_CHOPCONF, false)
+
+#define TMC2240_TPFD_MASK                    0x00F00000UL
+#define TMC2240_TPFD_SHIFT                   20U
+#define TMC2240_TPFD_FIELD                   TMC2240_FIELD(TMC2240_TPFD_MASK, TMC2240_TPFD_SHIFT, TMC2240_CHOPCONF, false)
+
+#define TMC2240_MRES_MASK                    0x0F000000UL
+#define TMC2240_MRES_SHIFT                   24U
+#define TMC2240_MRES_FIELD                   TMC2240_FIELD(TMC2240_MRES_MASK, TMC2240_MRES_SHIFT, TMC2240_CHOPCONF, false)
+
+#define TMC2240_INTPOL_MASK                  0x10000000UL
+#define TMC2240_INTPOL_SHIFT                 28U
+#define TMC2240_INTPOL_FIELD                 TMC2240_FIELD(TMC2240_INTPOL_MASK, TMC2240_INTPOL_SHIFT, TMC2240_CHOPCONF, false)
+
+#define TMC2240_DEDGE_MASK                   0x20000000UL
+#define TMC2240_DEDGE_SHIFT                  29U
+#define TMC2240_DEDGE_FIELD                  TMC2240_FIELD(TMC2240_DEDGE_MASK, TMC2240_DEDGE_SHIFT, TMC2240_CHOPCONF, false)
+
+#define TMC2240_DISS2G_MASK                  0x40000000UL
+#define TMC2240_DISS2G_SHIFT                 30U
+#define TMC2240_DISS2G_FIELD                 TMC2240_FIELD(TMC2240_DISS2G_MASK, TMC2240_DISS2G_SHIFT, TMC2240_CHOPCONF, false)
+
+#define TMC2240_DISS2VS_MASK                 0x80000000UL
+#define TMC2240_DISS2VS_SHIFT                31U
+#define TMC2240_DISS2VS_FIELD                TMC2240_FIELD(TMC2240_DISS2VS_MASK, TMC2240_DISS2VS_SHIFT, TMC2240_CHOPCONF, false)
+
+/* ---- COOLCONF (0x6D) ---- */
+#define TMC2240_SEMIN_MASK                   0x0000000FUL
+#define TMC2240_SEMIN_SHIFT                  0U
+#define TMC2240_SEMIN_FIELD                  TMC2240_FIELD(TMC2240_SEMIN_MASK, TMC2240_SEMIN_SHIFT, TMC2240_COOLCONF, false)
+
+#define TMC2240_SEUP_MASK                    0x00000060UL
+#define TMC2240_SEUP_SHIFT                   5U
+#define TMC2240_SEUP_FIELD                   TMC2240_FIELD(TMC2240_SEUP_MASK, TMC2240_SEUP_SHIFT, TMC2240_COOLCONF, false)
+
+#define TMC2240_SEMAX_MASK                   0x00000F00UL
+#define TMC2240_SEMAX_SHIFT                  8U
+#define TMC2240_SEMAX_FIELD                  TMC2240_FIELD(TMC2240_SEMAX_MASK, TMC2240_SEMAX_SHIFT, TMC2240_COOLCONF, false)
+
+#define TMC2240_SEDN_MASK                    0x00006000UL
+#define TMC2240_SEDN_SHIFT                   13U
+#define TMC2240_SEDN_FIELD                   TMC2240_FIELD(TMC2240_SEDN_MASK, TMC2240_SEDN_SHIFT, TMC2240_COOLCONF, false)
+
+#define TMC2240_SEIMIN_MASK                  0x00008000UL
+#define TMC2240_SEIMIN_SHIFT                 15U
+#define TMC2240_SEIMIN_FIELD                 TMC2240_FIELD(TMC2240_SEIMIN_MASK, TMC2240_SEIMIN_SHIFT, TMC2240_COOLCONF, false)
+
+#define TMC2240_SGT_MASK                     0x007F0000UL
+#define TMC2240_SGT_SHIFT                    16U
+#define TMC2240_SGT_FIELD                    TMC2240_FIELD(TMC2240_SGT_MASK, TMC2240_SGT_SHIFT, TMC2240_COOLCONF, true)
+
+#define TMC2240_SFILT_MASK                   0x01000000UL
+#define TMC2240_SFILT_SHIFT                  24U
+#define TMC2240_SFILT_FIELD                  TMC2240_FIELD(TMC2240_SFILT_MASK, TMC2240_SFILT_SHIFT, TMC2240_COOLCONF, false)
+
+/* ---- DRVSTATUS (0x6F) ---- */
+#define TMC2240_SG_RESULT_MASK               0x000003FFUL
+#define TMC2240_SG_RESULT_SHIFT              0U
+#define TMC2240_SG_RESULT_FIELD              TMC2240_FIELD(TMC2240_SG_RESULT_MASK, TMC2240_SG_RESULT_SHIFT, TMC2240_DRVSTATUS, false)
+
+#define TMC2240_S2VSA_MASK                   0x00001000UL
+#define TMC2240_S2VSA_SHIFT                  12U
+#define TMC2240_S2VSA_FIELD                  TMC2240_FIELD(TMC2240_S2VSA_MASK, TMC2240_S2VSA_SHIFT, TMC2240_DRVSTATUS, false)
+
+#define TMC2240_S2VSB_MASK                   0x00002000UL
+#define TMC2240_S2VSB_SHIFT                  13U
+#define TMC2240_S2VSB_FIELD                  TMC2240_FIELD(TMC2240_S2VSB_MASK, TMC2240_S2VSB_SHIFT, TMC2240_DRVSTATUS, false)
+
+#define TMC2240_STEALTH_MASK                 0x00004000UL
+#define TMC2240_STEALTH_SHIFT                14U
+#define TMC2240_STEALTH_FIELD                TMC2240_FIELD(TMC2240_STEALTH_MASK, TMC2240_STEALTH_SHIFT, TMC2240_DRVSTATUS, false)
+
+#define TMC2240_FSACTIVE_MASK                0x00008000UL
+#define TMC2240_FSACTIVE_SHIFT               15U
+#define TMC2240_FSACTIVE_FIELD               TMC2240_FIELD(TMC2240_FSACTIVE_MASK, TMC2240_FSACTIVE_SHIFT, TMC2240_DRVSTATUS, false)
+
+#define TMC2240_CS_ACTUAL_MASK               0x001F0000UL
+#define TMC2240_CS_ACTUAL_SHIFT              16U
+#define TMC2240_CS_ACTUAL_FIELD              TMC2240_FIELD(TMC2240_CS_ACTUAL_MASK, TMC2240_CS_ACTUAL_SHIFT, TMC2240_DRVSTATUS, false)
+
+#define TMC2240_STALLGUARD_MASK              0x01000000UL
+#define TMC2240_STALLGUARD_SHIFT             24U
+#define TMC2240_STALLGUARD_FIELD             TMC2240_FIELD(TMC2240_STALLGUARD_MASK, TMC2240_STALLGUARD_SHIFT, TMC2240_DRVSTATUS, false)
+
+#define TMC2240_OT_MASK                      0x02000000UL
+#define TMC2240_OT_SHIFT                     25U
+#define TMC2240_OT_FIELD                     TMC2240_FIELD(TMC2240_OT_MASK, TMC2240_OT_SHIFT, TMC2240_DRVSTATUS, false)
+
+#define TMC2240_OTPW_MASK                    0x04000000UL
+#define TMC2240_OTPW_SHIFT                   26U
+#define TMC2240_OTPW_FIELD                   TMC2240_FIELD(TMC2240_OTPW_MASK, TMC2240_OTPW_SHIFT, TMC2240_DRVSTATUS, false)
+
+#define TMC2240_S2GA_MASK                    0x08000000UL
+#define TMC2240_S2GA_SHIFT                   27U
+#define TMC2240_S2GA_FIELD                   TMC2240_FIELD(TMC2240_S2GA_MASK, TMC2240_S2GA_SHIFT, TMC2240_DRVSTATUS, false)
+
+#define TMC2240_S2GB_MASK                    0x10000000UL
+#define TMC2240_S2GB_SHIFT                   28U
+#define TMC2240_S2GB_FIELD                   TMC2240_FIELD(TMC2240_S2GB_MASK, TMC2240_S2GB_SHIFT, TMC2240_DRVSTATUS, false)
+
+#define TMC2240_OLA_MASK                     0x20000000UL
+#define TMC2240_OLA_SHIFT                    29U
+#define TMC2240_OLA_FIELD                    TMC2240_FIELD(TMC2240_OLA_MASK, TMC2240_OLA_SHIFT, TMC2240_DRVSTATUS, false)
+
+#define TMC2240_OLB_MASK                     0x40000000UL
+#define TMC2240_OLB_SHIFT                    30U
+#define TMC2240_OLB_FIELD                    TMC2240_FIELD(TMC2240_OLB_MASK, TMC2240_OLB_SHIFT, TMC2240_DRVSTATUS, false)
+
+#define TMC2240_STST_MASK                    0x80000000UL
+#define TMC2240_STST_SHIFT                   31U
+#define TMC2240_STST_FIELD                   TMC2240_FIELD(TMC2240_STST_MASK, TMC2240_STST_SHIFT, TMC2240_DRVSTATUS, false)
+
+/* ---- PWMCONF (0x70) ---- */
+#define TMC2240_PWM_OFS_MASK                 0x000000FFUL
+#define TMC2240_PWM_OFS_SHIFT                0U
+#define TMC2240_PWM_OFS_FIELD                TMC2240_FIELD(TMC2240_PWM_OFS_MASK, TMC2240_PWM_OFS_SHIFT, TMC2240_PWMCONF, false)
+
+#define TMC2240_PWM_GRAD_MASK                0x0000FF00UL
+#define TMC2240_PWM_GRAD_SHIFT               8U
+#define TMC2240_PWM_GRAD_FIELD               TMC2240_FIELD(TMC2240_PWM_GRAD_MASK, TMC2240_PWM_GRAD_SHIFT, TMC2240_PWMCONF, false)
+
+#define TMC2240_PWM_FREQ_MASK                0x00030000UL
+#define TMC2240_PWM_FREQ_SHIFT               16U
+#define TMC2240_PWM_FREQ_FIELD               TMC2240_FIELD(TMC2240_PWM_FREQ_MASK, TMC2240_PWM_FREQ_SHIFT, TMC2240_PWMCONF, false)
+
+#define TMC2240_PWM_AUTOSCALE_MASK           0x00040000UL
+#define TMC2240_PWM_AUTOSCALE_SHIFT          18U
+#define TMC2240_PWM_AUTOSCALE_FIELD          TMC2240_FIELD(TMC2240_PWM_AUTOSCALE_MASK, TMC2240_PWM_AUTOSCALE_SHIFT, TMC2240_PWMCONF, false)
+
+#define TMC2240_PWM_AUTOGRAD_MASK            0x00080000UL
+#define TMC2240_PWM_AUTOGRAD_SHIFT           19U
+#define TMC2240_PWM_AUTOGRAD_FIELD           TMC2240_FIELD(TMC2240_PWM_AUTOGRAD_MASK, TMC2240_PWM_AUTOGRAD_SHIFT, TMC2240_PWMCONF, false)
+
+#define TMC2240_FREEWHEEL_MASK               0x00300000UL
+#define TMC2240_FREEWHEEL_SHIFT              20U
+#define TMC2240_FREEWHEEL_FIELD              TMC2240_FIELD(TMC2240_FREEWHEEL_MASK, TMC2240_FREEWHEEL_SHIFT, TMC2240_PWMCONF, false)
+
+#define TMC2240_PWM_MEAS_SD_ENABLE_MASK      0x00400000UL
+#define TMC2240_PWM_MEAS_SD_ENABLE_SHIFT     22U
+#define TMC2240_PWM_MEAS_SD_ENABLE_FIELD     TMC2240_FIELD(TMC2240_PWM_MEAS_SD_ENABLE_MASK, TMC2240_PWM_MEAS_SD_ENABLE_SHIFT, TMC2240_PWMCONF, false)
+
+#define TMC2240_PWM_DIS_REG_STST_MASK        0x00800000UL
+#define TMC2240_PWM_DIS_REG_STST_SHIFT       23U
+#define TMC2240_PWM_DIS_REG_STST_FIELD       TMC2240_FIELD(TMC2240_PWM_DIS_REG_STST_MASK, TMC2240_PWM_DIS_REG_STST_SHIFT, TMC2240_PWMCONF, false)
+
+#define TMC2240_PWM_REG_MASK                 0x0F000000UL
+#define TMC2240_PWM_REG_SHIFT                24U
+#define TMC2240_PWM_REG_FIELD                TMC2240_FIELD(TMC2240_PWM_REG_MASK, TMC2240_PWM_REG_SHIFT, TMC2240_PWMCONF, false)
+
+#define TMC2240_PWM_LIM_MASK                 0xF0000000UL
+#define TMC2240_PWM_LIM_SHIFT                28U
+#define TMC2240_PWM_LIM_FIELD                TMC2240_FIELD(TMC2240_PWM_LIM_MASK, TMC2240_PWM_LIM_SHIFT, TMC2240_PWMCONF, false)
+
+/* ---- PWM_SCALE (0x71) ---- */
+#define TMC2240_PWM_SCALE_SUM_MASK           0x000003FFUL
+#define TMC2240_PWM_SCALE_SUM_SHIFT          0U
+#define TMC2240_PWM_SCALE_SUM_FIELD          TMC2240_FIELD(TMC2240_PWM_SCALE_SUM_MASK, TMC2240_PWM_SCALE_SUM_SHIFT, TMC2240_PWM_SCALE, false)
+
+#define TMC2240_PWM_SCALE_AUTO_MASK          0x01FF0000UL
+#define TMC2240_PWM_SCALE_AUTO_SHIFT         16U
+#define TMC2240_PWM_SCALE_AUTO_FIELD         TMC2240_FIELD(TMC2240_PWM_SCALE_AUTO_MASK, TMC2240_PWM_SCALE_AUTO_SHIFT, TMC2240_PWM_SCALE, true)
+
+/* ---- SG4_THRS (0x74) ---- */
+#define TMC2240_SG4_THRS_MASK                0x000000FFUL
+#define TMC2240_SG4_THRS_SHIFT               0U
+#define TMC2240_SG4_THRS_FIELD               TMC2240_FIELD(TMC2240_SG4_THRS_MASK, TMC2240_SG4_THRS_SHIFT, TMC2240_SG4_THRS, false)
+
+#define TMC2240_SG4_FILT_EN_MASK             0x00000100UL
+#define TMC2240_SG4_FILT_EN_SHIFT            8U
+#define TMC2240_SG4_FILT_EN_FIELD            TMC2240_FIELD(TMC2240_SG4_FILT_EN_MASK, TMC2240_SG4_FILT_EN_SHIFT, TMC2240_SG4_THRS, false)
+
+#define TMC2240_SG_ANGLE_OFFSET_MASK         0x00000200UL
+#define TMC2240_SG_ANGLE_OFFSET_SHIFT        9U
+#define TMC2240_SG_ANGLE_OFFSET_FIELD        TMC2240_FIELD(TMC2240_SG_ANGLE_OFFSET_MASK, TMC2240_SG_ANGLE_OFFSET_SHIFT, TMC2240_SG4_THRS, false)
+
+/* ---- SG4_RESULT (0x75) ---- */
+#define TMC2240_SG4_RESULT_MASK              0x000003FFUL
+#define TMC2240_SG4_RESULT_SHIFT             0U
+#define TMC2240_SG4_RESULT_FIELD             TMC2240_FIELD(TMC2240_SG4_RESULT_MASK, TMC2240_SG4_RESULT_SHIFT, TMC2240_SG4_RESULT, false)
+
+/* ---- SG4_IND (0x76) ---- */
+#define TMC2240_SG4_IND_0_MASK               0x000000FFUL
+#define TMC2240_SG4_IND_0_SHIFT              0U
+#define TMC2240_SG4_IND_0_FIELD              TMC2240_FIELD(TMC2240_SG4_IND_0_MASK, TMC2240_SG4_IND_0_SHIFT, TMC2240_SG4_IND, false)
+
+#define TMC2240_SG4_IND_1_MASK               0x0000FF00UL
+#define TMC2240_SG4_IND_1_SHIFT              8U
+#define TMC2240_SG4_IND_1_FIELD              TMC2240_FIELD(TMC2240_SG4_IND_1_MASK, TMC2240_SG4_IND_1_SHIFT, TMC2240_SG4_IND, false)
+
+#define TMC2240_SG4_IND_2_MASK               0x00FF0000UL
+#define TMC2240_SG4_IND_2_SHIFT              16U
+#define TMC2240_SG4_IND_2_FIELD              TMC2240_FIELD(TMC2240_SG4_IND_2_MASK, TMC2240_SG4_IND_2_SHIFT, TMC2240_SG4_IND, false)
+
+#define TMC2240_SG4_IND_3_MASK               0xFF000000UL
+#define TMC2240_SG4_IND_3_SHIFT              24U
+#define TMC2240_SG4_IND_3_FIELD              TMC2240_FIELD(TMC2240_SG4_IND_3_MASK, TMC2240_SG4_IND_3_SHIFT, TMC2240_SG4_IND, false)
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* TMC_IC_TMC2240_HW_ABSTRACTION_H_ */

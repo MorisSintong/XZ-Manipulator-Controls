@@ -61,9 +61,9 @@ CPackSourceConfig.cmake
 *.srec
 
 # Preserve audited diagnostic release binaries
-!MotorControls/Drivers/TMC2240-Driver/firmware/*.bin
-!MotorControls/Drivers/TMC2240-Driver/firmware/*.hex
-!MotorControls/Drivers/TMC2240-Driver/firmware/*.elf
+!legacy/TMC2240-Driver/firmware/*.bin
+!legacy/TMC2240-Driver/firmware/*.hex
+!legacy/TMC2240-Driver/firmware/*.elf
 
 # Test coverage & profiling
 *.gcda
