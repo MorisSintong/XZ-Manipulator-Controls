@@ -88,10 +88,8 @@ void console_write(const char *s, size_t n) {
   (void)SEGGER_RTT_Write(0U, s, (unsigned)n);
 #if defined(USE_USB_CDC) && (USE_USB_CDC != 0)
   if (usb_cdc_port_is_mounted()) {
-    const uint32_t written =
-        usb_cdc_port_write((const uint8_t *)s, (uint32_t)n);
-    if (written < (uint32_t)n) {
-      g_dropped += (uint32_t)n - written;
+    if (!usb_cdc_port_write_all((const uint8_t *)s, (uint32_t)n, 5U)) {
+      g_dropped += (uint32_t)n;
     }
   }
 #endif

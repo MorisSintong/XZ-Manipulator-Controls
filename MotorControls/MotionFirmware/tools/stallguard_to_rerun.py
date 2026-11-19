@@ -6,11 +6,12 @@
 # ///
 """Convert stallguard_cli diagnostic logs into a synchronized Rerun (.rrd) replay.
 
-Visualizes the 2D X-Z manipulator gantry schematic (cantilever post at X=0,
-+Z up, soft-limit safe envelope, moving Z column + X carriage, motion trail,
-and stall markers) synchronized on a single `controller_time` timeline alongside
-50 Hz StallGuard4 traces, EMA baselines, 0.72x drop thresholds, position,
-velocity, driver current/temperature, and CLI/event TextLogs.
+Visualizes the 2D X-Z-Theta manipulator gantry schematic (cantilever post at X=0,
++Z up, soft-limit safe envelope, moving Z column + X carriage, end-effector
+rotation dial & orientation arrow for MOTOR2_1, motion trail, and stall markers)
+synchronized on a single `controller_time` timeline alongside 50 Hz StallGuard4
+traces, EMA baselines, 0.72x drop thresholds, position, velocity, rotation
+angle/MSCNT phase verification, driver current/temperature, and CLI/event TextLogs.
 
 Usage (via uv, no manual venv setup needed):
   uv run MotorControls\\MotionFirmware\\tools\\stallguard_to_rerun.py ^
@@ -20,6 +21,7 @@ Usage (via uv, no manual venv setup needed):
 from __future__ import annotations
 
 import argparse
+import math
 import re
 import subprocess
 from collections import deque
@@ -28,16 +30,28 @@ from pathlib import Path
 import rerun as rr
 import rerun.blueprint as rrb
 
+PAT_ROT_LINE = re.compile(
+    r"^(?:\[\d+:\d+:\d+\.\d+\]\s+)?\[\s*(\d+\.\d+)\]\s+\[ROT\]\s+"
+    r"cmd\s+([-+]?\d+\.\d+)\s+deg\s+->\s+actual\s+([-+]?\d+\.\d+)\s+deg\s+"
+    r"\(quant\s+([-+]?\d+\.\d+)\s+deg\)\s+\|\s+"
+    r"usteps\s+([-+]?\d+)\s+\(pos\s+([-+]?\d+)\)\s+\|\s+"
+    r"MSCNT\s+(\d+)->(\d+)\s+\(obs\s+([-+]?\d+),\s+exp\s+([-+]?\d+),\s+"
+    r"err\s+([-+]?\d+)\s+=\s+([-+]?\d+\.\d+)\s+deg\)\s+\|\s+"
+    r"SG4\s+(\d+)\s+CS\s+(\d+)\s+(\d+)\s+ms"
+)
+
 
 def parse_log_timeline(log_path: Path) -> dict:
     lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
     status_frames: list[dict] = []
     sg_frames: list[dict] = []
+    rot_frames: list[dict] = []
     events: list[dict] = []
 
     cur_t_s: float | None = None
     pending_status_t: float | None = None
     pending_axes: dict[str, dict] = {}
+    pending_rot: dict | None = None
 
     pat_hdr = re.compile(
         r"^(?:\[\d+:\d+:\d+\.\d+\]\s+)?\[\s*(\d+\.\d+)\]\s+(\w+),\s+mode\s+(\w+)"
@@ -45,11 +59,14 @@ def parse_log_timeline(log_path: Path) -> dict:
     pat_ax = re.compile(
         r"^(?:\[\d+:\d+:\d+\.\d+\]\s+)?\s+([ZX])\s+(\S+)\s+pos[?\s]\s*([-+]?\d+\.\d+)\s+mm\s+v\s+([-+]?\d+\.\d+)\s+mm/s.*?SG\s+(\d+)\s+CS\s+(\d+)\s+([-+]?\d+\.\d+)C\s+cyc\s+(\d+)"
     )
+    pat_rot_st = re.compile(
+        r"^(?:\[\d+:\d+:\d+\.\d+\]\s+)?\s+R\s+(\S+)\s+ang\s+([-+]?\d+\.\d+)\s+deg\s+\(([-+]?\d+)\s+ustep\)\s+MSCNT\s+(\d+)\s+SG\s+(\d+)\s+CS\s+(\d+)\s+([-+]?\d+\.\d+)C\s+mv\s+(\d+)"
+    )
     pat_sg = re.compile(
         r"^(?:\[\d+:\d+:\d+\.\d+\]\s+)?sg,([ZX]),(\d+),([-+]?\d+\.\d+),(\d+),(\d+),(\d+),(\d+)$"
     )
     pat_event = re.compile(
-        r"^(?:\[\d+:\d+:\d+\.\d+\]\s+)?\[\s*(\d+\.\d+)\]\s+(\[(?:HOME|BOUNCE|SYS|ENC|JOG|FAULT)\].+)$"
+        r"^(?:\[\d+:\d+:\d+\.\d+\]\s+)?\[\s*(\d+\.\d+)\]\s+(\[(?:HOME|BOUNCE|SYS|ENC|JOG|ROT|FAULT)\].+)$"
     )
     pat_stall = re.compile(
         r"\[(HOME|BOUNCE)\]\s+([ZX]):\s+stall at (\w+) end,\s+([-+]?\d+\.\d+)\s+mm\s+\(([^,]+),\s+SG4\s+(\d+),\s+baseline\s+(\d+),\s+SG4_THRS\s+(\d+)\)"
@@ -60,11 +77,18 @@ def parse_log_timeline(log_path: Path) -> dict:
     pat_cmd = re.compile(r"^\[\d+:\d+:\d+\.\d+\]\s+>>>\s+(.+)$")
 
     def flush_pending():
-        nonlocal pending_status_t, pending_axes
+        nonlocal pending_status_t, pending_axes, pending_rot
         if pending_status_t is not None and pending_axes:
-            status_frames.append({"t_s": pending_status_t, "axes": dict(pending_axes)})
+            status_frames.append(
+                {
+                    "t_s": pending_status_t,
+                    "axes": dict(pending_axes),
+                    "rot": dict(pending_rot) if pending_rot else None,
+                }
+            )
         pending_status_t = None
         pending_axes = {}
+        pending_rot = None
 
     for ln in lines:
         m = pat_hdr.match(ln)
@@ -84,11 +108,24 @@ def parse_log_timeline(log_path: Path) -> dict:
                 "temp_c": float(m.group(7)),
                 "cyc": int(m.group(8)),
             }
-            if len(pending_axes) == 2:
-                flush_pending()
+            continue
+        m = pat_rot_st.match(ln)
+        if m and pending_status_t is not None:
+            pending_rot = {
+                "state": m.group(1),
+                "ang_deg": float(m.group(2)),
+                "pos_usteps": int(m.group(3)),
+                "mscnt": int(m.group(4)),
+                "sg": int(m.group(5)),
+                "cs": int(m.group(6)),
+                "temp_c": float(m.group(7)),
+                "moves": int(m.group(8)),
+            }
+            flush_pending()
             continue
         m = pat_sg.match(ln)
         if m:
+            flush_pending()
             sg_frames.append(
                 {
                     "axis": m.group(1),
@@ -101,9 +138,42 @@ def parse_log_timeline(log_path: Path) -> dict:
                 }
             )
             continue
+        mr = PAT_ROT_LINE.match(ln.strip())
+        if mr:
+            flush_pending()
+            t_ev = float(mr.group(1))
+            cur_t_s = t_ev
+            rf = {
+                "t_s": t_ev,
+                "cmd_deg": float(mr.group(2)),
+                "actual_deg": float(mr.group(3)),
+                "quant_err_deg": float(mr.group(4)),
+                "delta_usteps": int(mr.group(5)),
+                "pos_usteps": int(mr.group(6)),
+                "mscnt_start": int(mr.group(7)),
+                "mscnt_end": int(mr.group(8)),
+                "mscnt_obs": int(mr.group(9)),
+                "mscnt_exp": int(mr.group(10)),
+                "phase_err_mscnt": int(mr.group(11)),
+                "phase_err_deg": float(mr.group(12)),
+                "sg4": int(mr.group(13)),
+                "cs": int(mr.group(14)),
+                "duration_ms": int(mr.group(15)),
+            }
+            rot_frames.append(rf)
+            events.append(
+                {
+                    "t_s": t_ev,
+                    "kind": "rot_move",
+                    "msg": ln.strip().split("] ", 1)[-1],
+                }
+            )
+            continue
         m = pat_event.match(ln)
         if m:
+            flush_pending()
             t_ev = float(m.group(1))
+            cur_t_s = t_ev
             msg = m.group(2)
             ev = {"t_s": t_ev, "kind": "log", "msg": msg}
             ms = pat_stall.search(msg)
@@ -135,12 +205,18 @@ def parse_log_timeline(log_path: Path) -> dict:
             continue
         m = pat_cmd.match(ln)
         if m and cur_t_s is not None:
+            flush_pending()
             events.append(
                 {"t_s": cur_t_s, "kind": "cmd", "msg": f">>> {m.group(1).strip()}"}
             )
 
     flush_pending()
-    return {"status": status_frames, "sg": sg_frames, "events": events}
+    return {
+        "status": status_frames,
+        "sg": sg_frames,
+        "rot": rot_frames,
+        "events": events,
+    }
 
 
 def build_blueprint() -> rrb.Blueprint:
@@ -149,21 +225,21 @@ def build_blueprint() -> rrb.Blueprint:
             rrb.Vertical(
                 rrb.Spatial2DView(
                     origin="/gantry",
-                    name="2D X-Z Gantry Schematic",
+                    name="2D X-Z-Theta Manipulator Schematic",
                     visual_bounds=rrb.VisualBounds2D(
                         x_range=[-30.0, 245.0], y_range=[-135.0, 22.0]
                     ),
                 ),
                 rrb.TextLogView(
                     origin="/logs",
-                    name="CLI Commands & Homing Events",
+                    name="CLI Commands, Homing & Rotation Precision Events",
                 ),
-                row_shares=[0.68, 0.32],
+                row_shares=[0.66, 0.34],
             ),
             rrb.Vertical(
                 rrb.TimeSeriesView(
                     origin="/plots/z/motion",
-                    name="Z Axis - Position (mm) & Velocity (mm/s)",
+                    name="Z Axis (MOTOR1) - Position (mm) & Velocity (mm/s)",
                 ),
                 rrb.TimeSeriesView(
                     origin="/plots/z/sg4",
@@ -171,17 +247,21 @@ def build_blueprint() -> rrb.Blueprint:
                 ),
                 rrb.TimeSeriesView(
                     origin="/plots/x/motion",
-                    name="X Axis - Position (mm) & Velocity (mm/s)",
+                    name="X Axis (MOTOR0) - Position (mm) & Velocity (mm/s)",
                 ),
                 rrb.TimeSeriesView(
                     origin="/plots/x/sg4",
                     name="X Axis - StallGuard4, Baseline & 0.72x Threshold",
                 ),
                 rrb.TimeSeriesView(
-                    origin="/plots/drivers",
-                    name="TMC2240 Chip Temperature (C) & Current Scale (CS)",
+                    origin="/plots/rot",
+                    name="Rotation Motor (MOTOR2_1 / Theta) - Angle (deg) & MSCNT Phase Error (deg)",
                 ),
-                row_shares=[0.20, 0.23, 0.20, 0.23, 0.14],
+                rrb.TimeSeriesView(
+                    origin="/plots/drivers",
+                    name="3x TMC2240 Chip Temperature (C) & Current Scale (CS)",
+                ),
+                row_shares=[0.17, 0.19, 0.17, 0.19, 0.16, 0.12],
             ),
             column_shares=[0.42, 0.58],
         ),
@@ -193,13 +273,15 @@ def export_rrd(log_path: Path, rrd_path: Path) -> dict:
     parsed = parse_log_timeline(log_path)
     status = parsed["status"]
     sg = parsed["sg"]
+    rot = parsed["rot"]
     events = parsed["events"]
 
     active_t = [
         f["t_s"]
         for f in status
         if any(ax_d["state"] != "IDLE" for ax_d in f["axes"].values())
-    ]
+        or (f.get("rot") and f["rot"]["state"] != "IDLE")
+    ] + [r["t_s"] for r in rot]
     if not active_t:
         raise RuntimeError(f"No active motion frames found in {log_path}")
     t0 = min(active_t) - 1.0
@@ -211,6 +293,9 @@ def export_rrd(log_path: Path, rrd_path: Path) -> dict:
     for r in sg:
         if r["t_s"] >= t0:
             stream.append((r["t_s"] - t0, 0, "sg", r))
+    for rf in rot:
+        if rf["t_s"] >= t0:
+            stream.append((rf["t_s"] - t0, 1, "rot", rf))
     for ev in events:
         if ev["t_s"] >= t0:
             stream.append((ev["t_s"] - t0, 2, "event", ev))
@@ -302,6 +387,33 @@ def export_rrd(log_path: Path, rrd_path: Path) -> dict:
         )
 
     rr.log(
+        "/plots/rot/cmd_deg",
+        rr.SeriesLines(
+            colors=[230, 115, 30], names="Theta Commanded (deg)", widths=1.5
+        ),
+        static=True,
+    )
+    rr.log(
+        "/plots/rot/actual_deg",
+        rr.SeriesLines(colors=[34, 108, 205], names="Theta Actual (deg)", widths=2.2),
+        static=True,
+    )
+    rr.log(
+        "/plots/rot/phase_err_deg",
+        rr.SeriesLines(
+            colors=[42, 155, 75], names="MSCNT Phase Error (deg)", widths=2.0
+        ),
+        static=True,
+    )
+    rr.log(
+        "/plots/rot/quant_err_deg",
+        rr.SeriesLines(
+            colors=[140, 70, 175], names="Step Quant Residual (deg)", widths=1.5
+        ),
+        static=True,
+    )
+
+    rr.log(
         "/plots/drivers/z_temp_c",
         rr.SeriesLines(colors=[210, 80, 50], names="Z TMC2240 Temp (C)"),
         static=True,
@@ -309,6 +421,11 @@ def export_rrd(log_path: Path, rrd_path: Path) -> dict:
     rr.log(
         "/plots/drivers/x_temp_c",
         rr.SeriesLines(colors=[50, 140, 210], names="X TMC2240 Temp (C)"),
+        static=True,
+    )
+    rr.log(
+        "/plots/drivers/r_temp_c",
+        rr.SeriesLines(colors=[42, 165, 85], names="Theta TMC2240 Temp (C)"),
         static=True,
     )
     rr.log(
@@ -321,9 +438,17 @@ def export_rrd(log_path: Path, rrd_path: Path) -> dict:
         rr.SeriesLines(colors=[90, 160, 130], names="X CS (0..31)"),
         static=True,
     )
+    rr.log(
+        "/plots/drivers/r_cs",
+        rr.SeriesLines(colors=[140, 90, 190], names="Theta CS (0..31)"),
+        static=True,
+    )
 
     cur_pos = {"Z": 0.0, "X": 0.0}
     cur_state = {"Z": "IDLE", "X": "IDLE"}
+    cur_rot_deg = 0.0
+    cur_rot_mscnt = 8
+    cur_rot_state = "IDLE"
     soft_bounds = {"Z": (5.0, 110.7), "X": (10.0, 214.1)}
     travel_est = {"Z": 115.7, "X": 224.1}
     trail: deque[list[float]] = deque(maxlen=180)
@@ -367,11 +492,25 @@ def export_rrd(log_path: Path, rrd_path: Path) -> dict:
             "/gantry/end_effector",
             rr.Boxes2D(
                 centers=[[xp, y_screen]],
-                sizes=[[10.0, 8.0]],
+                sizes=[[11.0, 9.0]],
                 colors=[[30, 115, 230]],
                 labels=[
-                    f"X={xp:.2f} ({cur_state['X']}) | Z={zp:.2f} ({cur_state['Z']})"
+                    f"X={xp:.1f} ({cur_state['X']}) | Z={zp:.1f} ({cur_state['Z']}) | Theta={cur_rot_deg:+.2f} deg (MSCNT={cur_rot_mscnt})"
                 ],
+            ),
+        )
+        # Draw end-effector rotation pointer arrow for MOTOR2_1 (Theta)
+        ang_rad = math.radians(cur_rot_deg)
+        arrow_len = 12.0
+        dx = arrow_len * math.cos(ang_rad)
+        dy = arrow_len * math.sin(ang_rad)
+        rr.log(
+            "/gantry/theta_indicator",
+            rr.Arrows2D(
+                origins=[[xp, y_screen]],
+                vectors=[[dx, dy]],
+                colors=[[42, 175, 85] if cur_rot_state == "HOLD" else [150, 158, 168]],
+                radii=[0.85],
             ),
         )
         if len(trail) >= 2:
@@ -422,6 +561,24 @@ def export_rrd(log_path: Path, rrd_path: Path) -> dict:
                 rr.log(f"/plots/{ax_l}/sg4/sg4_4hz", rr.Scalars(float(ad["sg"])))
                 rr.log(f"/plots/drivers/{ax_l}_temp_c", rr.Scalars(ad["temp_c"]))
                 rr.log(f"/plots/drivers/{ax_l}_cs", rr.Scalars(float(ad["cs"])))
+            rot_d = payload.get("rot")
+            if rot_d:
+                cur_rot_deg = rot_d["ang_deg"]
+                cur_rot_mscnt = rot_d["mscnt"]
+                cur_rot_state = rot_d["state"]
+                rr.log("/plots/rot/actual_deg", rr.Scalars(rot_d["ang_deg"]))
+                rr.log("/plots/drivers/r_temp_c", rr.Scalars(rot_d["temp_c"]))
+                rr.log("/plots/drivers/r_cs", rr.Scalars(float(rot_d["cs"])))
+            update_gantry(t_rel, force=True)
+        elif kind == "rot":
+            cur_rot_deg = payload["actual_deg"]
+            cur_rot_mscnt = payload["mscnt_end"]
+            cur_rot_state = "HOLD"
+            rr.log("/plots/rot/cmd_deg", rr.Scalars(payload["cmd_deg"]))
+            rr.log("/plots/rot/actual_deg", rr.Scalars(payload["actual_deg"]))
+            rr.log("/plots/rot/phase_err_deg", rr.Scalars(payload["phase_err_deg"]))
+            rr.log("/plots/rot/quant_err_deg", rr.Scalars(payload["quant_err_deg"]))
+            rr.log("/plots/drivers/r_cs", rr.Scalars(float(payload["cs"])))
             update_gantry(t_rel, force=True)
         elif kind == "event":
             ev_kind = payload["kind"]
@@ -447,6 +604,7 @@ def export_rrd(log_path: Path, rrd_path: Path) -> dict:
     return {
         "status_frames": len(status),
         "sg_frames": len(sg),
+        "rot_frames": len(rot),
         "events": len(events),
         "duration_s": round(stream[-1][0], 2) if stream else 0.0,
     }

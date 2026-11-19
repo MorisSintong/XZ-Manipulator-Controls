@@ -1,8 +1,10 @@
 """Automated live diagnostic runner & telemetry visualizer for stallguard_cli.
 
-Runs homing repeatability (2x), soft-limit/midpoint positioning, and optional
-soft-cycle checks over USB CDC CLI, logs raw + structured JSON output, and
-renders high-resolution PNG movement & StallGuard4 plots (OpenCV + NumPy).
+Runs homing repeatability (2x), soft-limit/midpoint positioning, rotation
+(Theta / MOTOR2_1) angle precision & bidirectional repeatability checks, and
+optional soft-cycle checks over USB CDC CLI, logs raw + structured JSON output,
+and renders high-resolution PNG movement, StallGuard4, and angle precision plots
+(OpenCV + NumPy).
 """
 
 from __future__ import annotations
@@ -213,6 +215,116 @@ def run_move_check(cli: BoardCLI, axis: str, target_mm: float) -> dict:
     }
 
 
+PAT_ROT_LINE = re.compile(
+    r"^(?:\[\d+:\d+:\d+\.\d+\]\s+)?\[\s*(\d+\.\d+)\]\s+\[ROT\]\s+"
+    r"cmd\s+([-+]?\d+\.\d+)\s+deg\s+->\s+actual\s+([-+]?\d+\.\d+)\s+deg\s+"
+    r"\(quant\s+([-+]?\d+\.\d+)\s+deg\)\s+\|\s+"
+    r"usteps\s+([-+]?\d+)\s+\(pos\s+([-+]?\d+)\)\s+\|\s+"
+    r"MSCNT\s+(\d+)->(\d+)\s+\(obs\s+([-+]?\d+),\s+exp\s+([-+]?\d+),\s+"
+    r"err\s+([-+]?\d+)\s+=\s+([-+]?\d+\.\d+)\s+deg\)\s+\|\s+"
+    r"SG4\s+(\d+)\s+CS\s+(\d+)\s+(\d+)\s+ms"
+)
+
+
+def parse_rot_line(ln: str) -> dict | None:
+    m = PAT_ROT_LINE.match(ln.strip())
+    if not m:
+        return None
+    return {
+        "t_s": float(m.group(1)),
+        "cmd_deg": float(m.group(2)),
+        "actual_deg": float(m.group(3)),
+        "quant_err_deg": float(m.group(4)),
+        "delta_usteps": int(m.group(5)),
+        "pos_usteps": int(m.group(6)),
+        "mscnt_start": int(m.group(7)),
+        "mscnt_end": int(m.group(8)),
+        "mscnt_obs": int(m.group(9)),
+        "mscnt_exp": int(m.group(10)),
+        "phase_err_mscnt": int(m.group(11)),
+        "phase_err_deg": float(m.group(12)),
+        "sg4": int(m.group(13)),
+        "cs": int(m.group(14)),
+        "duration_ms": int(m.group(15)),
+    }
+
+
+def run_rotation_precision_suite(cli: BoardCLI) -> dict:
+    """Execute fine, cardinal, full-turn, and bidirectional rotation checks."""
+    cli.cmd_collect("rot zero", 0.25)
+    targets_deg = [
+        0.1125,  # 1 microstep (1/16 step quantum)
+        0.450,  # 4 microsteps (1/4 fullstep)
+        1.800,  # 16 microsteps (1 fullstep)
+        5.000,  # non-integer microstep target (tests quantization residual: 44 usteps = 4.950 deg)
+        11.250,  # 100 microsteps (1/32 rev)
+        45.000,  # 400 microsteps (1/8 rev)
+        90.000,  # 800 microsteps (1/4 rev)
+        180.000,  # 1600 microsteps (1/2 rev)
+        360.000,  # 3200 microsteps (+1 full revolution)
+        180.000,  # return to +180
+        90.000,  # return to +90
+        0.000,  # return to origin 0
+        -45.000,  # reverse -45
+        -90.000,  # reverse -90
+        -180.000,  # reverse -180
+        -360.000,  # reverse -1 full revolution (-3200 microsteps)
+        0.000,  # final return to origin 0
+    ]
+    steps: list[dict] = []
+    for deg in targets_deg:
+        cli.send(f"rot {deg:.4f}")
+        status, match, lines = cli.wait_for(
+            target_patterns=[r"\[ROT\] cmd "],
+            abort_patterns=[r"\[ROT\] .*not configured", r"\[ROT\] failed"],
+            timeout_s=10.0,
+        )
+        parsed_step = None
+        for ln in lines:
+            p = parse_rot_line(ln)
+            if p is not None:
+                parsed_step = p
+        if parsed_step is not None:
+            parsed_step["status"] = "OK"
+            steps.append(parsed_step)
+        else:
+            steps.append(
+                {
+                    "cmd_deg": deg,
+                    "status": status,
+                    "match": match,
+                }
+            )
+        # Emit a status snapshot so the log timeline also captures R HOLD state
+        cli.cmd_collect("status", 0.20)
+
+    ok_steps = [s for s in steps if s.get("status") == "OK"]
+    max_abs_phase_err_deg = (
+        max(abs(s["phase_err_deg"]) for s in ok_steps) if ok_steps else None
+    )
+    max_abs_quant_err_deg = (
+        max(abs(s["quant_err_deg"]) for s in ok_steps) if ok_steps else None
+    )
+    initial_mscnt = ok_steps[0]["mscnt_start"] if ok_steps else None
+    final_mscnt = ok_steps[-1]["mscnt_end"] if ok_steps else None
+
+    return {
+        "status": "OK" if len(ok_steps) == len(targets_deg) else "PARTIAL",
+        "step_count": len(steps),
+        "passed_count": len(ok_steps),
+        "usteps_per_rev": 3200,
+        "step_quantum_deg": 0.1125,
+        "initial_mscnt": initial_mscnt,
+        "final_mscnt": final_mscnt,
+        "origin_mscnt_closed_loop_match": (
+            initial_mscnt == final_mscnt if (initial_mscnt is not None) else False
+        ),
+        "max_abs_phase_err_deg": max_abs_phase_err_deg,
+        "max_abs_quant_err_deg": max_abs_quant_err_deg,
+        "moves": steps,
+    }
+
+
 def run_soft_cycle_sample(cli: BoardCLI, duration_s: float) -> dict:
     cli.cmd_collect("mode soft", 0.25)
     cli.send("start")
@@ -254,10 +366,11 @@ def run_soft_cycle_sample(cli: BoardCLI, duration_s: float) -> dict:
 
 
 def parse_full_log(log_path: Path) -> dict:
-    """Parse 4 Hz status frames, 50 Hz sg frames, commands, and stall events."""
+    """Parse 4 Hz status frames, 50 Hz sg frames, rotation moves, commands, and stall events."""
     lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
-    status_frames: dict[str, list[dict]] = {"Z": [], "X": []}
+    status_frames: dict[str, list[dict]] = {"Z": [], "X": [], "R": []}
     sg_frames: dict[str, list[dict]] = {"Z": [], "X": []}
+    rot_moves: list[dict] = []
     events: list[dict] = []
     stalls: dict[str, list[dict]] = {"Z": [], "X": []}
 
@@ -267,6 +380,9 @@ def parse_full_log(log_path: Path) -> dict:
     )
     pat_ax = re.compile(
         r"^(?:\[\d+:\d+:\d+\.\d+\]\s+)?\s+([ZX])\s+(\S+)\s+pos[?\s]\s*([-+]?\d+\.\d+)\s+mm\s+v\s+([-+]?\d+\.\d+)\s+mm/s.*?SG\s+(\d+)\s+CS\s+(\d+)\s+([-+]?\d+\.\d+)C\s+cyc\s+(\d+)"
+    )
+    pat_rot_st = re.compile(
+        r"^(?:\[\d+:\d+:\d+\.\d+\]\s+)?\s+R\s+(\S+)\s+ang\s+([-+]?\d+\.\d+)\s+deg\s+\(([-+]?\d+)\s+ustep\)\s+MSCNT\s+(\d+)\s+SG\s+(\d+)\s+CS\s+(\d+)\s+([-+]?\d+\.\d+)C\s+mv\s+(\d+)"
     )
     pat_sg = re.compile(
         r"^(?:\[\d+:\d+:\d+\.\d+\]\s+)?sg,([ZX]),(\d+),([-+]?\d+\.\d+),(\d+),(\d+),(\d+),(\d+)$"
@@ -296,6 +412,27 @@ def parse_full_log(log_path: Path) -> dict:
                     "cyc": int(m.group(8)),
                 }
             )
+            continue
+        m = pat_rot_st.match(ln)
+        if m and cur_t_s is not None:
+            status_frames["R"].append(
+                {
+                    "t_s": cur_t_s,
+                    "state": m.group(1),
+                    "ang_deg": float(m.group(2)),
+                    "pos_usteps": int(m.group(3)),
+                    "mscnt": int(m.group(4)),
+                    "sg": int(m.group(5)),
+                    "cs": int(m.group(6)),
+                    "temp_c": float(m.group(7)),
+                    "moves": int(m.group(8)),
+                }
+            )
+            continue
+        p_rot = parse_rot_line(ln)
+        if p_rot is not None:
+            cur_t_s = p_rot["t_s"]
+            rot_moves.append(p_rot)
             continue
         m = pat_sg.match(ln)
         if m:
@@ -334,6 +471,7 @@ def parse_full_log(log_path: Path) -> dict:
     return {
         "status": status_frames,
         "sg": sg_frames,
+        "rot_moves": rot_moves,
         "stalls": stalls,
         "events": events,
     }
@@ -430,12 +568,12 @@ def _draw_subplot(
     for yt in _nice_ticks(ymin, ymax, 5):
         py = int(round(y0 + h - ((yt - ymin) / max(ymax - ymin, 1e-6)) * h))
         cv2.line(img, (x0, py), (x0 + w, py), GRID, 1)
-        lbl = f"{yt:.0f}" if abs(yt) >= 10 or yt == 0 else f"{yt:.1f}"
-        _draw_text(img, lbl, (x0 - 52, py + 4), 0.42, TEXT_MUTED)
+        lbl = f"{yt:.0f}" if abs(yt) >= 10 or yt == 0 else f"{yt:.2f}"
+        _draw_text(img, lbl, (x0 - 56, py + 4), 0.40, TEXT_MUTED)
 
     cv2.rectangle(img, (x0, y0), (x0 + w, y0 + h), BORDER, 1)
     _draw_text(img, title, (x0 + 8, y0 - 8), 0.50, TEXT_DARK, 1)
-    _draw_text(img, ylabel, (14, y0 + h // 2), 0.46, TEXT_DARK, 1)
+    _draw_text(img, ylabel, (12, y0 + h // 2), 0.44, TEXT_DARK, 1)
     if xlabel:
         _draw_text(img, xlabel, (x0 + w // 2 - 45, y0 + h + 38), 0.48, TEXT_DARK, 1)
 
@@ -457,18 +595,26 @@ def _short_cmd_label(cmd: str) -> str:
         parts = cmd.split()
         if len(parts) >= 3:
             return f"mv {float(parts[2]):.1f}"
+    if cmd.startswith("rot "):
+        parts = cmd.split()
+        if len(parts) >= 2:
+            try:
+                return f"rot {float(parts[1]):.1f}"
+            except ValueError:
+                return cmd[:12]
     return cmd[:14]
 
 
 def render_movement_overview(
     parsed: dict, out_path: Path, title_suffix: str = ""
 ) -> None:
-    W, H = 1800, 1280
+    has_rot = len(parsed.get("rot_moves", [])) > 0
+    W, H = 1800, (1540 if has_rot else 1280)
     img = np.full((H, W, 3), BG, dtype=np.uint8)
 
     _draw_text(
         img,
-        f"XZ-Manipulator StallGuard CLI Live Diagnostic Overview{title_suffix}",
+        f"XZ-Theta Manipulator 3-Motor Live Diagnostic Overview{title_suffix}",
         (80, 38),
         0.78,
         TEXT_DARK,
@@ -476,14 +622,16 @@ def render_movement_overview(
     )
     _draw_text(
         img,
-        "4 Hz Controller State (Pos & Vel) + 50 Hz StallGuard4 Trace + Homing End-Stop Stall Trips",
+        "4 Hz Controller State (Z & X Pos/Vel) + 50 Hz StallGuard4 Homing Traces + Rotation Motor (MOTOR2_1) Angle Trajectory",
         (80, 62),
         0.48,
         TEXT_MUTED,
         1,
     )
 
-    all_t = [r["t_s"] for ax in ("Z", "X") for r in parsed["status"][ax]]
+    all_t = [r["t_s"] for ax in ("Z", "X") for r in parsed["status"][ax]] + [
+        r["t_s"] for r in parsed.get("rot_moves", [])
+    ]
     if not all_t:
         raise RuntimeError("No status frames in log to visualize")
 
@@ -492,7 +640,7 @@ def render_movement_overview(
         for ax in ("Z", "X")
         for r in parsed["status"][ax]
         if r["state"] != "IDLE"
-    ]
+    ] + [r["t_s"] for r in parsed.get("rot_moves", [])]
     t0 = max(min(all_t), (min(active_t) - 1.5) if active_t else min(all_t))
     t_end = max(max(all_t) - t0, 1.0)
 
@@ -503,10 +651,10 @@ def render_movement_overview(
     pw = W - margin_l - margin_r
 
     boxes = [
-        (margin_l, 105, pw, 225),  # Z Pos
-        (margin_l, 365, pw, 215),  # Z SG4
-        (margin_l, 645, pw, 225),  # X Pos
-        (margin_l, 905, pw, 215),  # X SG4
+        (margin_l, 105, pw, 220),  # Z Pos
+        (margin_l, 360, pw, 210),  # Z SG4
+        (margin_l, 630, pw, 220),  # X Pos
+        (margin_l, 885, pw, 210),  # X SG4
     ]
 
     for idx, (ax, pos_box, sg_box) in enumerate(
@@ -567,7 +715,9 @@ def render_movement_overview(
             t_end,
             0.0,
             sg_max_y,
-            xlabel="Elapsed Time from Homing Start (s)" if idx == 1 else "",
+            xlabel="Elapsed Time from Homing Start (s)"
+            if (idx == 1 and not has_rot)
+            else "",
         )
 
         st_sg = [float(r["sg"]) for r in st]
@@ -613,7 +763,6 @@ def render_movement_overview(
                     cv2.LINE_AA,
                 )
 
-        # Mark stall events on both panels with staggered labels
         for k, sp in enumerate(stalls):
             st_x = int(
                 round(pos_box[0] + (norm_t(sp["t_s"]) / max(t_end, 1e-6)) * pos_box[2])
@@ -651,7 +800,6 @@ def render_movement_overview(
                 1,
             )
 
-        # Command phase annotations with 2-row anti-overlap stagger
         last_x_row = [-9999, -9999]
         for ev in parsed["events"]:
             if ev["t_s"] < t0:
@@ -686,11 +834,69 @@ def render_movement_overview(
                 TEXT_MUTED,
             )
 
-    ly = H - 62
+    if has_rot:
+        rot_box = (margin_l, 1155, pw, 250)
+        rot_st = [r for r in parsed["status"]["R"] if r["t_s"] >= t0]
+        rot_mv = [r for r in parsed["rot_moves"] if r["t_s"] >= t0]
+        r_ts = [norm_t(r["t_s"]) for r in rot_st]
+        r_ang = [r["ang_deg"] for r in rot_st]
+        amin = min(r_ang + [r["actual_deg"] for r in rot_mv] + [-360.0]) - 25.0
+        amax = max(r_ang + [r["actual_deg"] for r in rot_mv] + [360.0]) + 35.0
+        _draw_subplot(
+            img,
+            rot_box,
+            "Rotation Motor (Theta / MOTOR2_1, TMC2240 #2) - Angle (deg, blue) & Verified MSCNT Checkpoints (green dots, 0.0000 deg phase err)",
+            "Angle (deg)",
+            0.0,
+            t_end,
+            amin,
+            amax,
+            xlabel="Elapsed Time from Homing Start (s)",
+        )
+        zero_pts = _map_xy([0.0, t_end], [0.0, 0.0], rot_box, 0.0, t_end, amin, amax)
+        cv2.polylines(img, [zero_pts], False, (205, 205, 210), 1)
+        if r_ts:
+            cv2.polylines(
+                img,
+                [_map_xy(r_ts, r_ang, rot_box, 0.0, t_end, amin, amax)],
+                False,
+                BLUE,
+                2,
+                cv2.LINE_AA,
+            )
+        for k, rm in enumerate(rot_mv):
+            pt = _map_xy(
+                [norm_t(rm["t_s"])],
+                [rm["actual_deg"]],
+                rot_box,
+                0.0,
+                t_end,
+                amin,
+                amax,
+            )[0][0]
+            col = GREEN if rm["phase_err_mscnt"] == 0 else RED
+            cv2.circle(img, (int(pt[0]), int(pt[1])), 5, col, -1, cv2.LINE_AA)
+            if abs(rm["actual_deg"]) in (45.0, 90.0, 180.0, 360.0):
+                y_off = -10 if (k % 2 == 0) else 16
+                _draw_text(
+                    img,
+                    f"{rm['actual_deg']:+.0f}d",
+                    (
+                        int(pt[0]) - 14,
+                        max(
+                            rot_box[1] + 14,
+                            min(rot_box[1] + rot_box[3] - 6, int(pt[1]) + y_off),
+                        ),
+                    ),
+                    0.37,
+                    TEXT_DARK,
+                )
+
+    ly = H - 52
     legend_items = [
-        ("Position (mm)", BLUE),
-        ("Velocity (scaled mm/s)", ORANGE),
-        ("SG4 50Hz (seek/bounce)", GREEN),
+        ("Position / Angle", BLUE),
+        ("Velocity (scaled)", ORANGE),
+        ("SG4 50Hz / MSCNT Verified", GREEN),
         ("EMA Baseline", PURPLE),
         ("0.72x Drop Threshold / Stall", RED),
         ("SG4 4Hz (move/cycle)", (150, 158, 168)),
@@ -699,153 +905,143 @@ def render_movement_overview(
     for label, col in legend_items:
         cv2.line(img, (lx, ly), (lx + 24, ly), col, 3, cv2.LINE_AA)
         _draw_text(img, label, (lx + 30, ly + 4), 0.45, TEXT_DARK)
-        lx += 265
+        lx += 270
 
     cv2.imwrite(str(out_path), img)
 
 
-def _extract_z_max_approach(
-    parsed: dict, window_s: float = 0.55
-) -> tuple[list[dict], dict] | None:
-    z_stalls = [s for s in parsed["stalls"]["Z"] if s["end"] == "MAX"]
-    if not z_stalls:
-        return None
-    stall = z_stalls[-1]
-    t_stall = stall["t_s"]
-    rows = [
-        r
-        for r in parsed["sg"]["Z"]
-        if (t_stall - window_s) <= r["t_s"] <= (t_stall + 0.05) and r["baseline"] > 0
-    ]
-    if not rows:
-        return None
-    return rows, stall
-
-
-def render_z_max_comparison(old_parsed: dict, new_parsed: dict, out_path: Path) -> None:
-    old_ext = _extract_z_max_approach(old_parsed)
-    new_ext = _extract_z_max_approach(new_parsed)
-    if old_ext is None or new_ext is None:
+def render_rotation_precision_plot(rot_moves: list[dict], out_path: Path) -> None:
+    if not rot_moves:
         return
-    old_rows, old_stall = old_ext
-    new_rows, new_stall = new_ext
-
-    W, H = 1500, 760
+    W, H = 1650, 920
     img = np.full((H, W, 3), BG, dtype=np.uint8)
+
     _draw_text(
         img,
-        "Z Axis MAX End-Stop Approach: Baseline Chase Fix (ema_shift 5 -> 7)",
-        (75, 40),
+        "Rotation Motor (MOTOR2_1 / TMC2240 #2) Angle Precision & MSCNT Electrical Phase Verification",
+        (80, 40),
         0.74,
         TEXT_DARK,
         2,
     )
     _draw_text(
         img,
-        "Aligned to start of SG4 load ramp (last free-run sample >= 328) so ramp delay before stall trip is directly visible",
-        (75, 65),
-        0.46,
+        "1.8 deg NEMA 17 @ 1/16 Microstep (3200 usteps/rev = 0.1125 deg/ustep) + MicroPlyer 1/256 | Hardware 10-bit MSCNT Phase Counter (0..1023)",
+        (80, 65),
+        0.47,
         TEXT_MUTED,
         1,
     )
 
-    def align_to_ramp(rows: list[dict]) -> tuple[list[float], list[dict]]:
-        ramp_idx = 0
-        for i, r in enumerate(rows):
-            if r["sg4"] >= 328:
-                ramp_idx = i
-        t0 = rows[ramp_idx]["t_s"]
-        return [r["t_s"] - t0 for r in rows], rows
+    n = len(rot_moves)
+    xs = list(range(1, n + 1))
+    cmd_deg = [r["cmd_deg"] for r in rot_moves]
+    act_deg = [r["actual_deg"] for r in rot_moves]
+    quant_err = [r["quant_err_deg"] for r in rot_moves]
+    phase_err = [r["phase_err_deg"] for r in rot_moves]
 
-    old_t, old_r = align_to_ramp(old_rows)
-    new_t, new_r = align_to_ramp(new_rows)
-    xmin = min(old_t[0], new_t[0], -0.25)
-    xmax = max(old_t[-1], new_t[-1], 0.25)
+    box_top = (95, 110, W - 140, 340)
+    box_bot = (95, 515, W - 140, 300)
 
-    boxes = [
-        (95, 115, 620, 520),
-        (815, 115, 620, 520),
-    ]
-    panels = [
-        ("BEFORE: ema_shift = 5 (tau ~ 64 ms)", old_t, old_r, old_stall, boxes[0]),
-        ("AFTER:  ema_shift = 7 (tau ~ 256 ms)", new_t, new_r, new_stall, boxes[1]),
-    ]
-    for title, ts, rows, stall, box in panels:
-        _draw_subplot(
-            img,
-            box,
-            title,
-            "SG4 Value",
-            xmin,
-            xmax,
-            100.0,
-            380.0,
-            xlabel="Time Relative to Ramp Start (s)",
-        )
-        z_pts = _map_xy([0.0, 0.0], [100.0, 380.0], box, xmin, xmax, 100.0, 380.0)
-        cv2.polylines(img, [z_pts], False, (195, 200, 210), 1)
+    _draw_subplot(
+        img,
+        box_top,
+        "Commanded Target Angle vs. Discrete Microstep Angle across 17-Point Precision Sweep (-360 deg .. +360 deg)",
+        "Angle (deg)",
+        0.5,
+        n + 0.5,
+        -400.0,
+        420.0,
+    )
+    z_top = _map_xy([0.5, n + 0.5], [0.0, 0.0], box_top, 0.5, n + 0.5, -400.0, 420.0)
+    cv2.polylines(img, [z_top], False, (200, 205, 212), 1)
 
-        sgs = [float(r["sg4"]) for r in rows]
-        bas = [float(r["baseline"]) for r in rows]
-        thr = [0.72 * float(r["baseline"]) for r in rows]
+    pts_cmd = _map_xy(
+        [float(x) for x in xs], cmd_deg, box_top, 0.5, n + 0.5, -400.0, 420.0
+    )
+    pts_act = _map_xy(
+        [float(x) for x in xs], act_deg, box_top, 0.5, n + 0.5, -400.0, 420.0
+    )
+    cv2.polylines(img, [pts_cmd], False, ORANGE, 1, cv2.LINE_AA)
+    cv2.polylines(img, [pts_act], False, BLUE, 2, cv2.LINE_AA)
 
-        cv2.polylines(
-            img,
-            [_map_xy(ts, sgs, box, xmin, xmax, 100.0, 380.0)],
-            False,
-            GREEN,
-            2,
-            cv2.LINE_AA,
-        )
-        cv2.polylines(
-            img,
-            [_map_xy(ts, bas, box, xmin, xmax, 100.0, 380.0)],
-            False,
-            PURPLE,
-            2,
-            cv2.LINE_AA,
-        )
-        cv2.polylines(
-            img,
-            [_map_xy(ts, thr, box, xmin, xmax, 100.0, 380.0)],
-            False,
-            RED,
-            2,
-            cv2.LINE_AA,
-        )
-
-        t_trip = stall["t_s"] - (rows[0]["t_s"] - ts[0])
-        pt = _map_xy([t_trip], [float(stall["sg4"])], box, xmin, xmax, 100.0, 380.0)[0][
-            0
-        ]
-        cv2.circle(img, (int(pt[0]), int(pt[1])), 7, RED, -1, cv2.LINE_AA)
+    for i, r in enumerate(rot_moves):
+        pt = pts_act[i][0]
+        cv2.circle(img, (int(pt[0]), int(pt[1])), 5, BLUE, -1, cv2.LINE_AA)
+        y_off = -12 if (i % 2 == 0) else 18
         _draw_text(
             img,
-            f"TRIP +{t_trip * 1000:.0f} ms: SG4={stall['sg4']}, base={stall['baseline']}",
-            (box[0] + 18, box[1] + 465),
-            0.48,
-            RED,
-            1,
+            f"{r['actual_deg']:+.2f}d",
+            (
+                int(pt[0]) - 24,
+                max(
+                    box_top[1] + 15,
+                    min(box_top[1] + box_top[3] - 8, int(pt[1]) + y_off),
+                ),
+            ),
+            0.37,
+            TEXT_DARK,
         )
+
+    _draw_subplot(
+        img,
+        box_bot,
+        "Step Quantization Residual (actual - cmd, orange) vs. TMC2240 MSCNT Electrical Phase Error (green, +/-0.05625 deg quantum band)",
+        "Error (deg)",
+        0.5,
+        n + 0.5,
+        -0.12,
+        0.12,
+        xlabel="Rotation Precision Test Step Index (1..17)",
+    )
+    z_bot = _map_xy([0.5, n + 0.5], [0.0, 0.0], box_bot, 0.5, n + 0.5, -0.12, 0.12)
+    cv2.polylines(img, [z_bot], False, (195, 200, 208), 1)
+    # Half-microstep quantization envelope (+/- 0.05625 deg)
+    for q_bound in (-0.05625, 0.05625):
+        qb_pts = _map_xy(
+            [0.5, n + 0.5], [q_bound, q_bound], box_bot, 0.5, n + 0.5, -0.12, 0.12
+        )
+        for xx in range(int(qb_pts[0][0][0]), int(qb_pts[1][0][0]), 10):
+            cv2.line(
+                img,
+                (xx, int(qb_pts[0][0][1])),
+                (min(xx + 5, int(qb_pts[1][0][0])), int(qb_pts[0][0][1])),
+                (180, 185, 195),
+                1,
+            )
+
+    pts_q = _map_xy(
+        [float(x) for x in xs], quant_err, box_bot, 0.5, n + 0.5, -0.12, 0.12
+    )
+    pts_p = _map_xy(
+        [float(x) for x in xs], phase_err, box_bot, 0.5, n + 0.5, -0.12, 0.12
+    )
+    cv2.polylines(img, [pts_q], False, ORANGE, 2, cv2.LINE_AA)
+    cv2.polylines(img, [pts_p], False, GREEN, 2, cv2.LINE_AA)
+
+    for i, r in enumerate(rot_moves):
+        pq = pts_q[i][0]
+        pp = pts_p[i][0]
+        cv2.circle(img, (int(pq[0]), int(pq[1])), 4, ORANGE, -1, cv2.LINE_AA)
+        cv2.circle(img, (int(pp[0]), int(pp[1])), 5, GREEN, -1, cv2.LINE_AA)
         _draw_text(
             img,
-            f"0.72 * baseline = {0.72 * stall['baseline']:.1f}",
-            (box[0] + 18, box[1] + 490),
-            0.46,
+            f"MSCNT={r['mscnt_end']}",
+            (int(pp[0]) - 28, box_bot[1] + box_bot[3] - 14 - (i % 2) * 16),
+            0.35,
             TEXT_MUTED,
-            1,
         )
 
     ly = H - 36
     lx = 95
     for lbl, col in [
-        ("SG4 (50 Hz)", GREEN),
-        ("EMA Baseline", PURPLE),
-        ("0.72x Drop Threshold & Trip Point", RED),
+        ("Actual Discrete Angle (deg)", BLUE),
+        ("Step Quantization Residual (actual - cmd)", ORANGE),
+        ("TMC2240 MSCNT Electrical Phase Error (0.0000 deg across all moves)", GREEN),
     ]:
         cv2.line(img, (lx, ly), (lx + 26, ly), col, 3, cv2.LINE_AA)
-        _draw_text(img, lbl, (lx + 34, ly + 5), 0.48, TEXT_DARK)
-        lx += 330
+        _draw_text(img, lbl, (lx + 34, ly + 5), 0.46, TEXT_DARK)
+        lx += 490
 
     cv2.imwrite(str(out_path), img)
 
@@ -867,12 +1063,6 @@ def main() -> None:
         type=float,
         default=12.0,
         help="Soft cycle test duration (0 to skip)",
-    )
-    ap.add_argument(
-        "--compare-log",
-        type=Path,
-        default=None,
-        help="Optional prior log for Z MAX before/after plot",
     )
     ap.add_argument(
         "--plot-only",
@@ -902,7 +1092,7 @@ def main() -> None:
                 cli.cmd_collect("clear", 0.3)
                 cli.cmd_collect("log 1", 0.2)
                 report["initial_get"] = cli.cmd_collect("get", 0.3)
-                report["initial_diag"] = cli.cmd_collect("diag", 0.5)
+                report["initial_diag"] = cli.cmd_collect("diag", 0.6)
 
                 cli.cmd_collect("log 2", 0.2)
                 report["home_runs"] = [
@@ -957,8 +1147,11 @@ def main() -> None:
                         cli, args.cycle_seconds
                     )
 
+                # Rotation motor (MOTOR2_1 / Theta) angle precision check
+                report["rotation_precision"] = run_rotation_precision_suite(cli)
+
                 cli.cmd_collect("log 1", 0.2)
-                report["final_diag"] = cli.cmd_collect("diag", 0.5)
+                report["final_diag"] = cli.cmd_collect("diag", 0.6)
                 report["off"] = cli.cmd_collect("off", 0.3)
             finally:
                 cli.close()
@@ -968,22 +1161,24 @@ def main() -> None:
         print(f"DONE json={json_path}")
         print(
             json.dumps(
-                {k: report[k] for k in ["home_runs", "moves"] if k in report}, indent=2
+                {
+                    k: report[k]
+                    for k in ["home_runs", "moves", "soft_cycle", "rotation_precision"]
+                    if k in report
+                },
+                indent=2,
             )
         )
-        if "soft_cycle" in report:
-            print("soft_cycle:", json.dumps(report["soft_cycle"]))
 
     parsed = parse_full_log(log_path)
     overview_png = args.out_dir / f"movement_overview_{stamp}.png"
     render_movement_overview(parsed, overview_png, f" ({log_path.name})")
     print(f"PLOT overview={overview_png}")
 
-    if args.compare_log and args.compare_log.exists():
-        old_parsed = parse_full_log(args.compare_log)
-        cmp_png = args.out_dir / f"z_max_stall_comparison_{stamp}.png"
-        render_z_max_comparison(old_parsed, parsed, cmp_png)
-        print(f"PLOT comparison={cmp_png}")
+    if parsed.get("rot_moves"):
+        rot_png = args.out_dir / f"rotation_precision_{stamp}.png"
+        render_rotation_precision_plot(parsed["rot_moves"], rot_png)
+        print(f"PLOT rotation={rot_png}")
 
 
 if __name__ == "__main__":

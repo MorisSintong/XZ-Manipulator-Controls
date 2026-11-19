@@ -34,53 +34,56 @@
 extern "C" {
 #endif
 
-#define TMC_AXIS_MAX 2U
+#define TMC_AXIS_MAX 3U
 
 typedef enum {
-    TMC_HEALTH_OK = 0,
-    TMC_HEALTH_WARN,  /* over-temperature pre-warning / open load */
-    TMC_HEALTH_SPI,   /* repeated SPI failures */
-    TMC_HEALTH_RESET, /* chip reset (e.g. VM brown-out): configuration lost */
-    TMC_HEALTH_FAULT  /* over-temperature / short circuit / driver error */
+  TMC_HEALTH_OK = 0,
+  TMC_HEALTH_WARN,  /* over-temperature pre-warning / open load */
+  TMC_HEALTH_SPI,   /* repeated SPI failures */
+  TMC_HEALTH_RESET, /* chip reset (e.g. VM brown-out): configuration lost */
+  TMC_HEALTH_FAULT  /* over-temperature / short circuit / driver error */
 } tmc_health_t;
 
 typedef struct {
-    bool           configured;
-    axis_profile_t profile;
-    tmc_current_t  current;
-    uint8_t        gstat_at_init;
-    uint8_t        spi_status;   /* last SPI status byte */
-    uint32_t       drv_status;
-    uint16_t       sg_result;    /* DRV_STATUS.SG_RESULT */
-    uint16_t       sg4;          /* last SG4_RESULT */
-    uint8_t        cs_actual;
-    bool           stealth;
-    bool           standstill;
-    bool           otpw;
-    bool           open_load;
-    bool           adc_valid;
-    int16_t        temp_c10;
-    uint32_t       vm_mv;
-    uint32_t       spi_errors;
-    uint8_t        spi_error_run;
-    TMC2240Status  last_error;
+  bool configured;
+  axis_profile_t profile;
+  tmc_current_t current;
+  uint8_t gstat_at_init;
+  uint8_t spi_status; /* last SPI status byte */
+  uint32_t drv_status;
+  uint16_t sg_result; /* DRV_STATUS.SG_RESULT */
+  uint16_t sg4;       /* last SG4_RESULT */
+  uint8_t cs_actual;
+  bool stealth;
+  bool standstill;
+  bool otpw;
+  bool open_load;
+  bool adc_valid;
+  int16_t temp_c10;
+  uint32_t vm_mv;
+  uint32_t spi_errors;
+  uint8_t spi_error_run;
+  TMC2240Status last_error;
 } tmc_axis_info_t;
 
 /** Initialise the shared SPI transport (CS lines inactive, no IC writes). */
-bool             tmc_axis_bus_init(const TMC2240_SPIConfig_t *configs, uint8_t count);
+bool tmc_axis_bus_init(const TMC2240_SPIConfig_t *configs, uint8_t count);
 /** Detect the chip, acknowledge power-up flags, write and verify the complete
- *  configuration (RUN profile) and activate the chopper. ENN stays untouched. */
-TMC2240Status    tmc_axis_configure(uint8_t ax, const axis_cfg_t *cfg);
-void             tmc_axis_mark_unconfigured(uint8_t ax);
-axis_hw_status_t tmc_axis_apply_profile(uint8_t ax, axis_profile_t profile, const axis_cfg_t *cfg);
+ *  configuration (RUN profile) and activate the chopper. ENN stays untouched.
+ */
+TMC2240Status tmc_axis_configure(uint8_t ax, const axis_cfg_t *cfg);
+void tmc_axis_mark_unconfigured(uint8_t ax);
+axis_hw_status_t tmc_axis_apply_profile(uint8_t ax, axis_profile_t profile,
+                                        const axis_cfg_t *cfg);
 axis_hw_status_t tmc_axis_set_sg_threshold(uint8_t ax, uint8_t thrs);
 axis_hw_status_t tmc_axis_read_sg(uint8_t ax, uint16_t *sg4, bool *stall_flag);
-tmc_health_t     tmc_axis_poll_health(uint8_t ax);
-void             tmc_axis_poll_adc(uint8_t ax);
+axis_hw_status_t tmc_axis_read_mscnt(uint8_t ax, uint16_t *mscnt);
+tmc_health_t tmc_axis_poll_health(uint8_t ax);
+void tmc_axis_poll_adc(uint8_t ax);
 const tmc_axis_info_t *tmc_axis_info(uint8_t ax);
-const char      *tmc_status_name(TMC2240Status st);
+const char *tmc_status_name(TMC2240Status st);
 /** Print a decoded register dump through 'print'. */
-void             tmc_axis_dump(uint8_t ax, void (*print)(const char *fmt, ...));
+void tmc_axis_dump(uint8_t ax, void (*print)(const char *fmt, ...));
 
 #ifdef __cplusplus
 }

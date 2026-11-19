@@ -20,6 +20,7 @@
 #include "console.h"
 #include "encoder.h"
 #include "main.h"
+#include "motion_profile.h"
 #include "stepgen.h"
 #include "tmc_axis.h"
 
@@ -28,6 +29,19 @@
 
 #define FW_NAME "MotionFirmware"
 #define FW_VERSION "2.0.0"
+
+/* Rotation (Theta) motor on MOTOR2_1 (TMC2240 #2, 1.8 deg/step x 16 = 3200
+ * usteps/rev) */
+#define ROT_DRIVER_ID 2U
+#define ROT_USTEPS_PER_REV 3200.0f
+#define ROT_USTEPS_PER_DEG                                                     \
+  (ROT_USTEPS_PER_REV / 360.0f) /* 8.888889 usteps/deg */
+#define ROT_DEG_PER_USTEP (360.0f / ROT_USTEPS_PER_REV) /* 0.1125 deg/ustep */
+#define ROT_DEFAULT_DEG_S 360.0f
+#define ROT_DEFAULT_ACCEL_DEG 1200.0f
+#define ROT_VMIN_DEG_S 15.0f
+#define ROT_RUN_CURRENT_MA 1000U
+#define ROT_STEALTH_MAX_DEG_S 120.0f
 
 extern I2C_HandleTypeDef hi2c1;
 extern I2C_HandleTypeDef hi2c4;
@@ -67,9 +81,17 @@ static uint32_t g_t_status;
 static uint32_t g_t_trace;
 static uint8_t g_health_rr;
 static uint32_t g_probe_fail[APP_AXIS_COUNT];
-static bool g_warned[APP_AXIS_COUNT];
+static uint32_t g_probe_fail_m2;
+static bool g_warned[TMC_AXIS_MAX];
 static bool g_enc_was_ok[APP_AXIS_COUNT];
 static bool g_temp_warned[APP_AXIS_COUNT];
+
+/* Rotation (Theta / MOTOR2_1) state */
+static int32_t g_rot_pos_steps;
+static bool g_rot_enabled;
+static uint32_t g_rot_step_level;
+static uint16_t g_rot_last_mscnt;
+static uint32_t g_rot_moves;
 
 static bool g_btn_raw;
 static bool g_btn_stable;
@@ -156,6 +178,27 @@ static void print_axis_status(uint8_t ax) {
       enc, drv, (unsigned long)st->cycles);
 }
 
+static void print_rot_status(void) {
+  const tmc_axis_info_t *ti = tmc_axis_info(ROT_DRIVER_ID);
+  char temp[12];
+  char drv[48];
+
+  if ((ti != NULL) && ti->configured) {
+    print_c10(temp, sizeof(temp), ti->temp_c10);
+    (void)snprintf(drv, sizeof(drv), "SG %3u CS %2u %s",
+                   (unsigned)ti->sg_result, (unsigned)ti->cs_actual,
+                   ti->adc_valid ? temp : "");
+  } else {
+    (void)snprintf(drv, sizeof(drv), "driver off");
+  }
+  console_printf(
+      "  R %-14s ang  %8.3f deg (%+ld ustep)  MSCNT %4u  %s  mv %lu\r\n",
+      g_rot_enabled ? "HOLD" : "IDLE",
+      (double)((float)g_rot_pos_steps * ROT_DEG_PER_USTEP),
+      (long)g_rot_pos_steps, (unsigned)g_rot_last_mscnt, drv,
+      (unsigned long)g_rot_moves);
+}
+
 static void print_status(void) {
   uint8_t ax;
   const uint32_t t = HAL_GetTick();
@@ -166,6 +209,174 @@ static void print_status(void) {
   for (ax = 0U; ax < APP_AXIS_COUNT; ax++) {
     print_axis_status(ax);
   }
+  print_rot_status();
+}
+
+/* ------------------------------------------------------------------------ */
+/* Rotation (Theta / MOTOR2_1) Motion & Angle Precision Runner              */
+/* ------------------------------------------------------------------------ */
+
+static void rot_driver_enable(bool enable) {
+  HAL_GPIO_WritePin(TMC_ENN2_GPIO_Port, TMC_ENN2_Pin,
+                    enable ? GPIO_PIN_RESET : GPIO_PIN_SET);
+  g_rot_enabled = enable;
+}
+
+static void dwt_ensure_started(void) {
+  if ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) == 0U) {
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  }
+  if ((DWT->CTRL & DWT_CTRL_CYCCNTENA_Msk) == 0U) {
+    DWT->CYCCNT = 0U;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+  }
+}
+
+static void dwt_delay_cycles(uint32_t cycles) {
+  const uint32_t start = DWT->CYCCNT;
+  while ((uint32_t)(DWT->CYCCNT - start) < cycles) {
+  }
+}
+
+static int32_t round_float_to_i32(float x) {
+  return (x >= 0.0f) ? (int32_t)(x + 0.5f) : (int32_t)(x - 0.5f);
+}
+
+static void rot_build_cfg(axis_cfg_t *out) {
+  *out = *axis_ctrl_cfg(APP_AXIS_X);
+  out->name = 'R';
+  out->steps_per_mm = ROT_USTEPS_PER_DEG;
+  out->tmc.run_current_ma = ROT_RUN_CURRENT_MA;
+  out->tmc.home_current_ma = 600U;
+  out->tmc.hold_current_pct = 50U;
+  /* Switch seamlessly from silent StealthChop2 (< 120 deg/s) into full-torque
+   * SpreadCycle (>= 120 deg/s) so rapid slews never suffer StealthChop2
+   * back-EMF current collapse. */
+  out->tmc.stealth_max_mm_s = ROT_STEALTH_MAX_DEG_S;
+}
+
+static bool rot_move_to_deg(float target_deg, float speed_deg_s,
+                            float accel_deg_s2) {
+  const tmc_axis_info_t *ti = tmc_axis_info(ROT_DRIVER_ID);
+  const int32_t target_steps =
+      round_float_to_i32(target_deg * ROT_USTEPS_PER_DEG);
+  const int32_t start_steps = g_rot_pos_steps;
+  const int32_t delta_steps = target_steps - start_steps;
+  const float actual_target_deg = (float)target_steps * ROT_DEG_PER_USTEP;
+  const float quant_err_deg = actual_target_deg - target_deg;
+  const float vmax = ((speed_deg_s > 1.0f) ? speed_deg_s : ROT_DEFAULT_DEG_S) *
+                     ROT_USTEPS_PER_DEG;
+  const float accel =
+      ((accel_deg_s2 > 10.0f) ? accel_deg_s2 : ROT_DEFAULT_ACCEL_DEG) *
+      ROT_USTEPS_PER_DEG;
+  const float vmin = ROT_VMIN_DEG_S * ROT_USTEPS_PER_DEG;
+  const float cpu_hz = (float)SystemCoreClock;
+  step_core_t core;
+  float v = 0.0f;
+  uint16_t mscnt_start = 0U;
+  uint16_t mscnt_end = 0U;
+  uint16_t sg4_end = 0U;
+  bool stall_flag = false;
+  uint32_t t0_ms;
+  uint32_t dt_ms;
+  int32_t d_mscnt_obs;
+  int32_t d_mscnt_exp;
+  int32_t phase_err_mscnt;
+  float phase_err_deg;
+
+  if ((ti == NULL) || !ti->configured) {
+    LOG("[ROT] MOTOR2_1 driver not configured");
+    return false;
+  }
+
+  dwt_ensure_started();
+  if (!g_rot_enabled) {
+    rot_driver_enable(true);
+    HAL_Delay(20U);
+  }
+  (void)tmc_axis_poll_health(ROT_DRIVER_ID);
+  if (tmc_axis_read_mscnt(ROT_DRIVER_ID, &mscnt_start) != AXIS_HW_OK) {
+    LOG("[ROT] failed to read initial MSCNT on MOTOR2_1");
+    return false;
+  }
+  g_rot_last_mscnt = mscnt_start;
+
+  t0_ms = HAL_GetTick();
+  if (delta_steps != 0) {
+    step_core_init(&core, vmax, accel, vmin);
+    core.pos = start_steps;
+    if (step_core_cmd_move(&core, target_steps, vmax, accel, &v)) {
+      uint32_t next_cyc;
+      TMC_DIR2_GPIO_Port->BSRR = (core.step_dir > 0)
+                                     ? (uint32_t)TMC_DIR2_Pin
+                                     : ((uint32_t)TMC_DIR2_Pin << 16U);
+      dwt_delay_cycles(400U); /* > 1 us DIR setup */
+      next_cyc = DWT->CYCCNT;
+      /* Pure glitch-free DWT step loop: zero SPI calls during motion. */
+      while (core.running) {
+        bool more = false;
+        bool dir_changed = false;
+        uint32_t wait_cyc = (v > 1.0f) ? (uint32_t)(cpu_hz / v) : 400000U;
+        if (wait_cyc < 2000U) {
+          wait_cyc = 2000U;
+        }
+        next_cyc += wait_cyc;
+        while ((int32_t)(DWT->CYCCNT - next_cyc) < 0) {
+        }
+        if (step_core_expire(&core, &more, &v, &dir_changed)) {
+          g_rot_step_level ^= 1U;
+          TMC_STEP2_GPIO_Port->BSRR = (g_rot_step_level != 0U)
+                                          ? (uint32_t)TMC_STEP2_Pin
+                                          : ((uint32_t)TMC_STEP2_Pin << 16U);
+        }
+        if (dir_changed) {
+          dwt_delay_cycles(200U);
+          TMC_DIR2_GPIO_Port->BSRR = (core.step_dir > 0)
+                                         ? (uint32_t)TMC_DIR2_Pin
+                                         : ((uint32_t)TMC_DIR2_Pin << 16U);
+          next_cyc = DWT->CYCCNT;
+        }
+        if (!more) {
+          break;
+        }
+      }
+    }
+    g_rot_pos_steps = core.pos;
+    g_rot_moves++;
+    /* Allow MicroPlyer (1/16 -> 1/256 step interpolator) to complete all 16
+     * sub-microsteps of the final step interval (~7.5 ms at vmin = 15 deg/s)
+     * before latching the terminal 10-bit MSCNT register. */
+    HAL_Delay(20U);
+  }
+  dt_ms = HAL_GetTick() - t0_ms;
+
+  (void)tmc_axis_read_mscnt(ROT_DRIVER_ID, &mscnt_end);
+  (void)tmc_axis_read_sg(ROT_DRIVER_ID, &sg4_end, &stall_flag);
+  (void)tmc_axis_poll_health(ROT_DRIVER_ID);
+  (void)tmc_axis_poll_adc(ROT_DRIVER_ID);
+  g_rot_last_mscnt = mscnt_end;
+
+  d_mscnt_obs = (int32_t)((mscnt_end - mscnt_start) & 0x3FFU);
+  {
+    const bool inv = axis_ctrl_cfg(APP_AXIS_X)->tmc.invert_dir;
+    const int32_t sign = inv ? 1 : -1;
+    d_mscnt_exp = (int32_t)(((uint32_t)(sign * delta_steps * 16)) & 0x3FFU);
+  }
+  phase_err_mscnt = (int32_t)((d_mscnt_obs - d_mscnt_exp) & 0x3FFU);
+  if (phase_err_mscnt > 512) {
+    phase_err_mscnt -= 1024;
+  }
+  phase_err_deg = ((float)phase_err_mscnt / 16.0f) * ROT_DEG_PER_USTEP;
+
+  LOG("[ROT] cmd %+.3f deg -> actual %+.3f deg (quant %+.4f deg) | usteps %+ld "
+      "(pos %+ld) | MSCNT %u->%u (obs %ld, exp %ld, err %+ld = %+.4f deg) | "
+      "SG4 %u CS %u %lu ms",
+      (double)target_deg, (double)actual_target_deg, (double)quant_err_deg,
+      (long)delta_steps, (long)g_rot_pos_steps, (unsigned)mscnt_start,
+      (unsigned)mscnt_end, (long)d_mscnt_obs, (long)d_mscnt_exp,
+      (long)phase_err_mscnt, (double)phase_err_deg, (unsigned)sg4_end,
+      (unsigned)ti->cs_actual, (unsigned long)dt_ms);
+  return true;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -269,6 +480,7 @@ static void action_off(void) {
     g_home_pending[ax] = false;
     axis_ctrl_disable(ax);
   }
+  rot_driver_enable(false);
   LOG("[SYS] drivers disabled (ENN high) - axes must be re-homed");
   if ((g_sys != SYS_FAULT) && (g_sys != SYS_WAIT_DRIVERS)) {
     set_sys(SYS_IDLE);
@@ -419,6 +631,48 @@ static void cmd_jog(int argc, char *argv[]) {
     return;
   }
   LOG("[JOG] %c: relative %+.2f mm", axis_name((uint8_t)ax), (double)delta_mm);
+}
+
+static void cmd_rot(int argc, char *argv[]) {
+  float deg = 0.0f;
+  float speed = ROT_DEFAULT_DEG_S;
+  float accel = ROT_DEFAULT_ACCEL_DEG;
+
+  if (argc < 2) {
+    console_printf("usage: rot <deg|zero|off> [speed_deg_s] [accel_deg_s2]\r\n");
+    return;
+  }
+  if (strcmp(argv[1], "zero") == 0) {
+    g_rot_pos_steps = 0;
+    (void)tmc_axis_read_mscnt(ROT_DRIVER_ID, &g_rot_last_mscnt);
+    LOG("[ROT] origin zeroed at MSCNT %u", (unsigned)g_rot_last_mscnt);
+    return;
+  }
+  if (strcmp(argv[1], "off") == 0) {
+    rot_driver_enable(false);
+    LOG("[ROT] MOTOR2_1 disabled (ENN2 high)");
+    return;
+  }
+  if (!cmd_parse_float(argv[1], &deg) || (deg < -36000.0f) ||
+      (deg > 36000.0f)) {
+    console_printf("usage: rot <-36000..36000> [speed_deg_s] [accel_deg_s2]\r\n");
+    return;
+  }
+  if (argc >= 3) {
+    if (!cmd_parse_float(argv[2], &speed) || (speed < 5.0f) ||
+        (speed > 3600.0f)) {
+      console_printf("rot speed must be 5..3600 deg/s\r\n");
+      return;
+    }
+  }
+  if (argc >= 4) {
+    if (!cmd_parse_float(argv[3], &accel) || (accel < 50.0f) ||
+        (accel > 20000.0f)) {
+      console_printf("rot accel must be 50..20000 deg/s2\r\n");
+      return;
+    }
+  }
+  (void)rot_move_to_deg(deg, speed, accel);
 }
 
 /* Tunable parameters for "set <axis> <param> <value>" / "get [axis]". */
@@ -661,9 +915,14 @@ static void print_encoder(uint8_t ax) {
 
 static void cmd_diag(int argc, char *argv[]) {
   uint8_t ax;
-  const int only = (argc >= 2) ? parse_axis(argv[1]) : -1;
+  const bool only_m2 =
+      (argc >= 2) &&
+      ((strcmp(argv[1], "2") == 0) || (strcmp(argv[1], "r") == 0) ||
+       (strcmp(argv[1], "R") == 0) || (strcmp(argv[1], "m2") == 0) ||
+       (strcmp(argv[1], "M2") == 0));
+  const int only = only_m2 ? -2 : ((argc >= 2) ? parse_axis(argv[1]) : -1);
 
-  for (ax = 0U; ax < APP_AXIS_COUNT; ax++) {
+  for (ax = 0U; !only_m2 && (ax < APP_AXIS_COUNT); ax++) {
     const axis_status_t *st = axis_ctrl_status(ax);
     if ((only >= 0) && ((int)ax != only)) {
       continue;
@@ -687,6 +946,14 @@ static void cmd_diag(int argc, char *argv[]) {
         (double)axis_ctrl_steps_to_mm(ax, st->max_dev_steps));
     tmc_axis_dump(ax, console_printf);
     print_encoder(ax);
+  }
+  if ((only < 0) || only_m2) {
+    console_printf("--- slot MOTOR2_1 (Rotation Theta, TMC2240 #2, CS=PC6, "
+                   "STEP=PF11, DIR=PG3, ENN=PG5): pos %.3f deg (%+ld ustep), "
+                   "moves %lu\r\n",
+                   (double)((float)g_rot_pos_steps * ROT_DEG_PER_USTEP),
+                   (long)g_rot_pos_steps, (unsigned long)g_rot_moves);
+    tmc_axis_dump(2U, console_printf);
   }
   console_printf("  console dropped %lu bytes, usb %s, step timer %lu Hz\r\n",
                  (unsigned long)console_dropped_bytes(),
@@ -717,6 +984,8 @@ static const cmd_t k_cmds[] = {
      cmd_home1},
     {"jog", "<axis> <delta>", "relative move in mm (works before homing)",
      cmd_jog},
+    {"rot", "<deg|zero|off> [v]", "move rotation motor MOTOR2_1 to angle (deg)",
+     cmd_rot},
     {"off", "", "disable the drivers (motors free)", cmd_off},
     {"clear", "", "clear faults (drivers re-initialise)", cmd_clear},
     {"mode", "soft|bounce", "cycle between soft limits / stop to stop",
@@ -724,7 +993,7 @@ static const cmd_t k_cmds[] = {
     {"move", "<axis> <mm>", "move a homed, idle axis", cmd_move},
     {"set", "<axis> <p> <v>", "change a parameter ('set' lists them)", cmd_set},
     {"get", "[axis]", "show the parameters", cmd_get},
-    {"diag", "[axis]", "TMC2240 registers, StallGuard, AS5600", cmd_diag},
+    {"diag", "[z|x|2]", "TMC2240 registers, StallGuard, AS5600", cmd_diag},
     {"log", "0|1|2", "telemetry: events / status / SG4 trace", cmd_log},
 };
 
@@ -802,6 +1071,33 @@ static void probe_drivers(void) {
       g_probe_fail[ax]++;
     }
   }
+
+  /* Also probe MOTOR2_1 (TMC2240 #2 on CS2/PC6) if not yet configured */
+  {
+    const tmc_axis_info_t *ti2 = tmc_axis_info(2U);
+    if ((ti2 != NULL) && !ti2->configured) {
+      axis_cfg_t rot_cfg;
+      TMC2240Status r2;
+      rot_build_cfg(&rot_cfg);
+      r2 = tmc_axis_configure(2U, &rot_cfg);
+      if (r2 == TMC2240_OK) {
+        (void)tmc_axis_read_mscnt(2U, &g_rot_last_mscnt);
+        LOG("[TMC] MOTOR2_1: TMC2240 #2 ready - %u mA run / %u mA hold "
+            "(range %u, GS %u), StealthChop2 + SpreadCycle > %.0f deg/s, "
+            "GSTAT at init 0x%02X, MSCNT %u",
+            (unsigned)ti2->current.irun_ma, (unsigned)ti2->current.ihold_ma,
+            (unsigned)ti2->current.range, (unsigned)ti2->current.gs,
+            (double)ROT_STEALTH_MAX_DEG_S, (unsigned)ti2->gstat_at_init,
+            (unsigned)g_rot_last_mscnt);
+        g_probe_fail_m2 = 0U;
+      } else {
+        if ((g_probe_fail_m2 % 20U) == 0U) {
+          LOG("[TMC] MOTOR2_1: TMC2240 #2 not ready (%s)", tmc_status_name(r2));
+        }
+        g_probe_fail_m2++;
+      }
+    }
+  }
 }
 
 /* A chip found unconfigured by any path (health poll, SG4 read, profile
@@ -821,8 +1117,9 @@ static void sync_driver_state(void) {
 }
 
 static void poll_health(void) {
-  const uint8_t ax = (uint8_t)(g_health_rr++ % APP_AXIS_COUNT);
+  const uint8_t ax = (uint8_t)(g_health_rr++ % TMC_AXIS_MAX);
   const tmc_axis_info_t *ti = tmc_axis_info(ax);
+  const char name = (ax < APP_AXIS_COUNT) ? axis_name(ax) : 'R';
   tmc_health_t h;
 
   if ((ti == NULL) || !ti->configured) {
@@ -836,7 +1133,7 @@ static void poll_health(void) {
   case TMC_HEALTH_WARN:
     if (!g_warned[ax]) {
       g_warned[ax] = true;
-      LOG("[TMC] %c: warning -%s%s (DRV_STATUS 0x%08lX)", axis_name(ax),
+      LOG("[TMC] %c: warning -%s%s (DRV_STATUS 0x%08lX)", name,
           ti->otpw ? " over-temperature pre-warning" : "",
           ti->open_load ? " open load (motor wiring?)" : "",
           (unsigned long)ti->drv_status);
@@ -844,14 +1141,19 @@ static void poll_health(void) {
     break;
   default:
     LOG("[TMC] %c: %s (SPI status 0x%02X, DRV_STATUS 0x%08lX) - driver stopped",
-        axis_name(ax),
+        name,
         (h == TMC_HEALTH_RESET) ? "chip reset (VM dropped?)"
         : (h == TMC_HEALTH_SPI) ? "SPI communication lost"
                                 : "driver shut down (over-temperature/short)",
         (unsigned)ti->spi_status, (unsigned long)ti->drv_status);
     tmc_axis_mark_unconfigured(ax);
-    axis_ctrl_fault(ax, (h == TMC_HEALTH_SPI) ? AX_FAULT_SPI : AX_FAULT_DRIVER);
-    axis_ctrl_set_driver_ready(ax, false);
+    if (ax < APP_AXIS_COUNT) {
+      axis_ctrl_fault(ax,
+                      (h == TMC_HEALTH_SPI) ? AX_FAULT_SPI : AX_FAULT_DRIVER);
+      axis_ctrl_set_driver_ready(ax, false);
+    } else {
+      rot_driver_enable(false);
+    }
     break;
   }
 }
@@ -880,6 +1182,9 @@ static void poll_adc(void) {
     if (ti->vm_mv < APP_VM_MIN_MV) {
       LOG("[TMC] %c: VM only %lu mV", axis_name(ax), (unsigned long)ti->vm_mv);
     }
+  }
+  if ((tmc_axis_info(2U) != NULL) && tmc_axis_info(2U)->configured) {
+    tmc_axis_poll_adc(2U);
   }
 }
 
@@ -934,7 +1239,7 @@ static void sequence(void) {
   case SYS_WAIT_DRIVERS:
     if (any_present) {
       set_sys(SYS_IDLE);
-      LOG("[SYS] press B1 or type 'home' / 'home1' / 'jog' ('help' for "
+      LOG("[SYS] press B1 or type 'home' / 'home1' / 'jog' / 'rot' ('help' for "
           "commands)");
     }
     break;
@@ -1095,7 +1400,7 @@ static void banner(void) {
       " [PROFILE] stallguard_cli (Interactive XZ Homing & SG4 CLI)\r\n");
   console_printf(" %s %s - XZ manipulator motion controller\r\n", FW_NAME,
                  FW_VERSION);
-  console_printf(" STM32H723 @ %lu MHz (SKR Octopus Pro V1.1), 2x TMC2240 "
+  console_printf(" STM32H723 @ %lu MHz (SKR Octopus Pro V1.1), 3x TMC2240 "
                  "(SPI1) + 2x AS5600 (I2C1, I2C4)\r\n",
                  (unsigned long)(SystemCoreClock / 1000000U));
   for (ax = 0U; ax < APP_AXIS_COUNT; ax++) {
@@ -1107,6 +1412,11 @@ static void banner(void) {
         (double)c->home_speed_mm_s, (double)c->cycle_speed_mm_s,
         (unsigned)c->tmc.run_current_ma, (unsigned)c->tmc.home_current_ma);
   }
+  console_printf(
+      " R (MOTOR2_1): %.0f usteps/rev (%.4f deg/ustep), %u mA run, "
+      "SpreadCycle > %.0f deg/s\r\n",
+      (double)ROT_USTEPS_PER_REV, (double)ROT_DEG_PER_USTEP,
+      (unsigned)ROT_RUN_CURRENT_MA, (double)ROT_STEALTH_MAX_DEG_S);
   console_printf(" console: USB-C CDC (XZ-MotionControls), USART2 115200, or "
                  "RTT terminal 0 - type 'help'\r\n");
   console_printf(
@@ -1114,9 +1424,10 @@ static void banner(void) {
 }
 
 void app_init(void) {
-  static const TMC2240_SPIConfig_t spi_cfgs[APP_AXIS_COUNT] = {
+  static const TMC2240_SPIConfig_t spi_cfgs[TMC_AXIS_MAX] = {
       {&hspi1, TMC_CS0_GPIO_Port, TMC_CS0_Pin, 10U},
       {&hspi1, TMC_CS1_GPIO_Port, TMC_CS1_Pin, 10U},
+      {&hspi1, TMC_CS2_GPIO_Port, TMC_CS2_Pin, 10U},
   };
   static const stepgen_hw_t step_hw[APP_AXIS_COUNT] = {
       {TIM2, TIM2_IRQn, TMC_STEP0_GPIO_Port, TMC_STEP0_Pin, TMC_DIR0_GPIO_Port,
@@ -1132,6 +1443,10 @@ void app_init(void) {
   for (ax = 0U; ax < APP_AXIS_COUNT; ax++) {
     axis_hw_driver_enable(ax, false);
   }
+  rot_driver_enable(false);
+  g_rot_step_level =
+      ((TMC_STEP2_GPIO_Port->ODR & TMC_STEP2_Pin) != 0U) ? 1U : 0U;
+  dwt_ensure_started();
   cmd_linebuf_init(&g_line);
   for (ax = 0U; ax < APP_AXIS_COUNT; ax++) {
     stepgen_init(ax, &step_hw[ax]);
@@ -1141,7 +1456,7 @@ void app_init(void) {
   console_init(&huart2);
   banner();
 
-  if (!tmc_axis_bus_init(spi_cfgs, APP_AXIS_COUNT)) {
+  if (!tmc_axis_bus_init(spi_cfgs, TMC_AXIS_MAX)) {
     LOG("[TMC] SPI transport initialisation failed");
   }
   watch_encoders();
@@ -1200,7 +1515,7 @@ void app_run(void) {
     g_t_probe = now;
     probe_drivers();
   }
-  if ((now - g_t_health) >= (APP_HEALTH_PERIOD_MS / APP_AXIS_COUNT)) {
+  if ((now - g_t_health) >= (APP_HEALTH_PERIOD_MS / TMC_AXIS_MAX)) {
     g_t_health = now;
     poll_health();
   }
