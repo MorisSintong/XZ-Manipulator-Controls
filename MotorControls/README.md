@@ -12,7 +12,7 @@ MotorControls/
 │   ├── AS5600/                      # MISRA C-oriented 12-bit magnetic rotary encoder driver
 │   ├── SEGGER_RTT/                  # SEGGER Real-Time Transfer telemetry library
 │   └── TMC2240-Driver/              # Trinamic TMC2240 SPI stepper driver package
-├── Emulation/                       # Python MockFirmwareServer + legacy Renode STM32F4 .resc bridge
+├── Emulation/                       # In-process Python MockFirmwareServer for offline UART protocol checks
 ├── MotionFirmware/                  # STM32CubeMX + CMake multi-profile H723 firmware suite
 │   ├── Apps/                        # motion_diagnostics, stallguard_cli & z_bounce_emulation
 │   └── tools/                       # Host Python bench CLI (diag/) & BTT bootloader binary (btt_bootloader/)
@@ -43,7 +43,7 @@ MotorControls/
 - **[`MotionFirmware/tools/diag/`](MotionFirmware/tools/diag/README.md):** Host Python `motion-diag` CLI (built on shared [`packages/motion_diagnostics/`](../packages/motion_diagnostics/)) for capturing binary records, running scored positioning sequences, and generating metrology reports.
 
 ### C. Emulation & Verification (`Emulation/` & `tests/emulation/`)
-- **[`Emulation/`](Emulation/README.md):** Host emulation runner (`renode_runner.py`), in-process `MockFirmwareServer`, and legacy `stm32f446_uart.resc` script for USART2 TCP bridge testing (note: Renode's built-in `stm32f4.repl` targets STM32F4, whereas compiled firmware targets STM32H723; use `--mode mock` for offline protocol checks).
+- **[`Emulation/`](Emulation/README.md):** In-process `MockFirmwareServer` (`mock_firmware_server.py`) for headless STM32H723 `VisionUart` TCP protocol testing.
 - **[`tests/emulation/`](tests/emulation/run_tests.py):** 11-test automated verification suite covering binary CRC16 framing, fault injection, burst stress testing, legacy ASCII compatibility, and Vision System protocol symmetry.
 
 ---

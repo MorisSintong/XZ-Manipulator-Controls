@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Automated Emulation Test Suite for STM32H723 UART Protocol.
+"""Automated Mock UART Emulation Test Suite for STM32H723 Protocol.
 
-Verifies the STM32H723 MCU's ability to receive, process, validate, and respond
-to UART messages sent by the Python Vision System across Renode emulation and QEMU.
-
+Verifies the STM32H723 UART protocol contract against the in-process
+MockFirmwareServer (emulating Apps/z_bounce_emulation/Src/vision_uart_protocol.c)
+or an external TCP UART endpoint.
 Coverage:
 - Boot banner and firmware initialization verification
 - ASCII commands (PING-PONG handshake, STATUS query)
@@ -44,13 +44,9 @@ logger = logging.getLogger("stm32_uart_test")
 # Workspace root resolution
 WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
 
-# Attempt to import RenodeController from Emulation.renode_runner
-try:
-    sys.path.insert(0, str(WORKSPACE_ROOT / "MotorControls"))
-    from Emulation.renode_runner import RenodeController
-except ImportError:
-    RenodeController = None
-
+# Import MockFirmwareServer from Emulation.mock_firmware_server
+sys.path.insert(0, str(WORKSPACE_ROOT / "MotorControls"))
+from Emulation.mock_firmware_server import MockFirmwareServer
 # Dynamically import uart_protocol from VisionSystem
 def _load_uart_protocol():
     proto_path = (
@@ -305,39 +301,30 @@ class STM32UartDirectClient:
 class TestSTM32UartEmulation(unittest.TestCase):
     """TestSuite verifying STM32H723 UART protocol parser implementation."""
 
-    controller: Optional[Any] = None
+    mock_server: Optional[MockFirmwareServer] = None
     client: Optional[STM32UartDirectClient] = None
     boot_banner: str = ""
-    mode: str = "auto"
+    mode: str = "mock"
     host: str = "127.0.0.1"
     port: int = 12345
     report: Optional[TestRunReport] = None
 
     @classmethod
     def setUpClass(cls):
-        """Initialize communication channel via RenodeController or direct socket."""
+        """Start in-process MockFirmwareServer (or connect to an existing TCP endpoint)."""
         if cls.report is None:
             cls.report = TestRunReport(target_host=cls.host, target_port=cls.port, mode=cls.mode)
 
-        logger.info(f"Setting up test harness (Mode: {cls.mode}, Target: {cls.host}:{cls.port})...")
+        logger.info("Setting up test harness (Mode: %s, Target: %s:%s)...", cls.mode, cls.host, cls.port)
 
-        if RenodeController is not None and cls.controller is None:
-            try:
-                cls.controller = RenodeController(
-                    host=cls.host,
-                    port=cls.port,
-                    mode=cls.mode,
-                )
-                cls.controller.start()
-                cls.boot_banner = cls.controller.drain_banner()
-            except Exception as e:
-                logger.warning(f"RenodeController startup error: {e}. Falling back to direct client.")
-                cls.controller = None
+        if cls.mode == "mock":
+            cls.mock_server = MockFirmwareServer(host=cls.host, port=cls.port)
+            cls.mock_server.start()
+            time.sleep(0.05)
 
-        if cls.controller is None:
-            cls.client = STM32UartDirectClient(host=cls.host, port=cls.port)
-            cls.client.connect()
-            cls.boot_banner = cls.client.boot_banner
+        cls.client = STM32UartDirectClient(host=cls.host, port=cls.port)
+        cls.client.connect()
+        cls.boot_banner = cls.client.boot_banner
 
     @classmethod
     def tearDownClass(cls):
@@ -346,39 +333,30 @@ class TestSTM32UartEmulation(unittest.TestCase):
             cls.client.disconnect()
             cls.client = None
 
-        if cls.controller:
-            cls.controller.stop()
-            cls.controller = None
+        if cls.mock_server:
+            cls.mock_server.stop()
+            cls.mock_server = None
 
     def setUp(self):
         """Ensure clean state before each test case."""
         self._flush_comm()
 
     def _flush_comm(self) -> None:
-        if self.controller:
-            self.controller.flush_rx()
-        elif self.client:
+        if self.client:
             self.client.flush_rx()
 
     def _send_raw(self, data: bytes) -> None:
-        if self.controller:
-            self.controller.send_raw(data)
-        elif self.client:
+        if self.client:
             self.client.send_raw(data)
 
     def _send_line(self, line: str) -> None:
-        if self.controller:
-            self.controller.send_line(line)
-        elif self.client:
+        if self.client:
             self.client.send_line(line)
 
     def _read_line(self, timeout: float = 2.5) -> str:
-        if self.controller:
-            return self.controller.read_line(timeout=timeout)
-        elif self.client:
+        if self.client:
             return self.client.read_line(timeout=timeout)
         raise ConnectionError("No active communication link.")
-
     def _record_result(self, test_id: str, name: str, desc: str, status: str, duration_ms: float, details: str, error: Optional[str] = None):
         if self.report:
             self.report.add_result(TestCaseResult(
@@ -831,7 +809,7 @@ class TestSTM32UartEmulation(unittest.TestCase):
 def run_tests_standalone(
     host: str = "127.0.0.1",
     port: int = 12345,
-    mode: str = "auto",
+    mode: str = "mock",
     json_path: Optional[Path] = None,
 ) -> int:
     """Run test suite and format report. Returns exit code 0 for pass, 1 for fail."""
@@ -862,9 +840,9 @@ def main():
     parser.add_argument("--port", type=int, default=12345, help="Target TCP port (default: 12345)")
     parser.add_argument(
         "--mode",
-        choices=["auto", "renode", "mock"],
-        default="auto",
-        help="Emulation execution mode: 'renode' (launch Renode), 'mock' (in-process mock server), 'auto' (detect/start)",
+        choices=["mock", "connect"],
+        default="mock",
+        help="Execution mode: 'mock' (in-process MockFirmwareServer, default) or 'connect' (existing TCP socket)",
     )
     parser.add_argument(
         "--json-report",

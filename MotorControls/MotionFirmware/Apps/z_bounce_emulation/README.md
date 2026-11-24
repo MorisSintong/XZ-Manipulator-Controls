@@ -55,4 +55,4 @@ cmake --build --preset Debug-ZBounce
 .\flash.cmd zbounce
 ```
 
-Offline UART protocol tests targeting this protocol contract live in [`MotorControls/tests/emulation/`](../../../tests/emulation/run_tests.py) (use `--mode mock`, since Renode's bundled `stm32f4.repl` targets STM32F4 rather than STM32H723).
+Offline UART protocol tests targeting this protocol contract live in [`MotorControls/tests/emulation/`](../../../tests/emulation/run_tests.py) (backed by the in-process `MockFirmwareServer`).

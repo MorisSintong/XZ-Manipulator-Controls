@@ -46,7 +46,7 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE} | Default FIRMWARE_APP: ${FIRMWA
 
 enable_language(C ASM)
 
-# Default executable (used by flash scripts, debuggers, and Renode runner)
+# Default executable (used by flash scripts and debuggers)
 add_executable(${CMAKE_PROJECT_NAME})
 
 # Add STM32CubeMX generated Core + HAL sources
@@ -121,7 +121,7 @@ set_property(SOURCE ${SG_DIR}/Src/stepgen.c ${SG_DIR}/Src/motion_profile.c
     APPEND PROPERTY COMPILE_OPTIONS -O2)
 
 # ---------------------------------------------------------------------------
-# App Profile 3: z_bounce_emulation (Z-Axis Bounce Demo + Renode UART Emulation)
+# App Profile 3: z_bounce_emulation (Z-Axis Bounce Demo + VisionUart Protocol)
 # ---------------------------------------------------------------------------
 set(ZB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Apps/z_bounce_emulation)
 set(ZB_SOURCES

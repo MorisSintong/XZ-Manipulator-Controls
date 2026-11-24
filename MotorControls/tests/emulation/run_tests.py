@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-"""Cross-platform Python Launcher for STM32 UART Emulation Test Suite.
+"""Cross-platform Python Launcher for STM32H723 Mock UART Protocol Test Suite.
 
 Usage:
     python MotorControls/tests/emulation/run_tests.py
     python MotorControls/tests/emulation/run_tests.py --mode mock
-    python MotorControls/tests/emulation/run_tests.py --mode renode --build
+    python MotorControls/tests/emulation/run_tests.py --mode connect --host 127.0.0.1 --port 12345
 """
 
 from __future__ import annotations
 
 import argparse
-import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -20,46 +18,9 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[2]
 
 
-def build_firmware_if_needed(force: bool = False) -> bool:
-    elf_path = (
-        REPO_ROOT
-        / "MotorControls"
-        / "MotionFirmware"
-        / "build"
-        / "Debug"
-        / "MotionFirmware_ZBounceEmulation.elf"
-    )
-    build_dir = REPO_ROOT / "MotorControls" / "MotionFirmware" / "build" / "Debug"
-    src_dir = REPO_ROOT / "MotorControls" / "MotionFirmware"
-
-    if force or not elf_path.exists():
-        print(f"[BUILD] Rebuilding MotionFirmware -> {elf_path}")
-        cmake_bin = shutil.which("cmake")
-        ninja_bin = shutil.which("ninja")
-
-        if not cmake_bin or not ninja_bin:
-            print("[WARN] cmake or ninja not found; skipping build step.")
-            return False
-
-        res = subprocess.run(
-            [cmake_bin, "-B", str(build_dir), "-S", str(src_dir)], cwd=str(REPO_ROOT)
-        )
-        if res.returncode != 0:
-            print("[ERROR] CMake configure failed!")
-            return False
-
-        res = subprocess.run([ninja_bin, "-C", str(build_dir)], cwd=str(REPO_ROOT))
-        if res.returncode != 0:
-            print("[ERROR] Ninja build failed!")
-            return False
-
-        print("[BUILD] Firmware build complete.")
-    return True
-
-
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Launcher for STM32 UART Emulation Test Suite"
+        description="Launcher for STM32H723 Mock UART Protocol Test Suite"
     )
     parser.add_argument(
         "--host", default="127.0.0.1", help="Target TCP host (default: 127.0.0.1)"
@@ -69,24 +30,16 @@ def main():
     )
     parser.add_argument(
         "--mode",
-        choices=["auto", "renode", "mock"],
-        default="auto",
-        help="Emulation mode (default: auto)",
+        choices=["mock", "connect"],
+        default="mock",
+        help="Execution mode: 'mock' (default) or 'connect' (existing TCP endpoint)",
     )
     parser.add_argument(
         "--json-report",
         default=str(SCRIPT_DIR / "test_results.json"),
         help="JSON output file path",
     )
-    parser.add_argument(
-        "--build",
-        action="store_true",
-        help="Force rebuild STM32 firmware before running tests",
-    )
     args = parser.parse_args()
-
-    if args.build or args.mode in ("auto", "renode"):
-        build_firmware_if_needed(force=args.build)
 
     test_script = SCRIPT_DIR / "test_stm32_uart_emulation.py"
     cmd = [
@@ -103,7 +56,7 @@ def main():
     ]
 
     print(f"[RUN] Executing: {' '.join(cmd)}")
-    res = subprocess.run(cmd, cwd=str(REPO_ROOT))
+    res = subprocess.run(cmd, check=False, cwd=str(REPO_ROOT))
     sys.exit(res.returncode)
 
 
