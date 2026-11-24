@@ -225,4 +225,5 @@ fp-info-cache
 # Python test artifacts
 .pytest-artifacts/
 .pytest_cache/
+MotorControls/tests/emulation/test_results.json
 
