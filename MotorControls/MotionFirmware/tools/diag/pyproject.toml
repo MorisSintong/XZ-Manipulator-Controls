@@ -6,6 +6,7 @@ dependencies = ["motion-diagnostics", "pyserial>=3.5"]
 
 [project.scripts]
 motion-diag = "diag.cli:main"
+motion-characterize = "diag.characterize:main"
 
 [tool.uv.sources]
 motion-diagnostics = { path = "../../../../packages/motion_diagnostics", editable = true }

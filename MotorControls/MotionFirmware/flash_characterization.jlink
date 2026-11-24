@@ -1,0 +1,6 @@
+r
+h
+loadfile "build/Release/MotionFirmware_Characterization.hex"
+r
+g
+q

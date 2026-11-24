@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.22)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
+set(CMAKE_OBJECT_PATH_MAX 210)
 
 # Define the build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -11,11 +12,11 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Select which firmware profile is built as the primary "MotionFirmware" (.elf/.hex/.bin)
-# Options: "motion_diagnostics" | "stallguard_cli" | "z_bounce_emulation" | "usb_cdc"
+# Options: "motion_diagnostics" | "stallguard_cli" | "z_bounce_emulation" | "usb_cdc" | "motion_characterization"
 set(FIRMWARE_APP "motion_diagnostics" CACHE STRING
     "Default firmware app profile for MotionFirmware.{elf,hex,bin}")
 set_property(CACHE FIRMWARE_APP PROPERTY STRINGS
-    "motion_diagnostics" "stallguard_cli" "z_bounce_emulation" "usb_cdc")
+    "motion_diagnostics" "stallguard_cli" "z_bounce_emulation" "usb_cdc" "motion_characterization")
 
 # Target-side configuration parameters for motion_diagnostics profile
 option(MOTION_DIAG_BOUNDS_CONFIRMED
@@ -137,6 +138,23 @@ set(USB_CDC_DEMO_SOURCES
     ${USB_CDC_DIR}/Src/usb_cdc_app.c
 )
 
+# ---------------------------------------------------------------------------
+# App Profile 5: motion_characterization (Passive-by-Default Bench Metrology)
+# ---------------------------------------------------------------------------
+set(MC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Apps/motion_characterization)
+set(MC_SOURCES
+    ${MC_DIR}/Src/mc_core.c
+    ${MC_DIR}/Src/mc_bench.c
+    ${SG_DIR}/Src/app_config.c
+    ${SG_DIR}/Src/tmc_calc.c
+    ${SG_DIR}/Src/tmc_axis.c
+    ${SG_DIR}/Src/motion_profile.c
+    ${SG_DIR}/Src/stepgen.c
+    ${SG_DIR}/Src/cmd_parse.c
+    ${DIAG_DIR}/Src/encoder_sampler.c
+    ${DIAG_DIR}/Src/encoder_unwrap.c
+)
+
 # Helper function to configure any firmware executable target
 function(configure_firmware_target target_name app_profile)
     if(NOT TARGET ${target_name})
@@ -174,6 +192,18 @@ function(configure_firmware_target target_name app_profile)
         set(app_srcs ${USB_CDC_DEMO_SOURCES})
         set(app_inc  ${USB_CDC_DIR}/Inc)
         add_usb_cdc_module(${target_name})
+    elseif(app_profile STREQUAL "motion_characterization")
+        set(app_srcs ${MC_SOURCES})
+        set(app_inc
+            ${MC_DIR}/Inc
+            ${SG_DIR}/Inc
+            ${DIAG_DIR}/Inc
+        )
+        add_usb_cdc_module(${target_name})
+        target_compile_definitions(${target_name} PRIVATE
+            USE_USB_CDC=1
+            STEPGEN_CHARACTERIZATION=1
+        )
     else()
         message(FATAL_ERROR "Unknown FIRMWARE_APP profile: ${app_profile}")
     endif()
@@ -204,3 +234,4 @@ configure_firmware_target(MotionFirmware_Diagnostics "motion_diagnostics")
 configure_firmware_target(MotionFirmware_StallGuardCLI "stallguard_cli")
 configure_firmware_target(MotionFirmware_ZBounceEmulation "z_bounce_emulation")
 configure_firmware_target(MotionFirmware_UsbCdc "usb_cdc")
+configure_firmware_target(MotionFirmware_Characterization "motion_characterization")

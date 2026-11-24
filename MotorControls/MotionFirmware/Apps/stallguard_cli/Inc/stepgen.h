@@ -51,6 +51,32 @@ uint32_t stepgen_timer_hz(uint8_t ax);
 /** Call from TIMx_IRQHandler (update interrupt). */
 void     stepgen_irq_handler(uint8_t ax);
 
+#ifdef STEPGEN_CHARACTERIZATION
+typedef struct {
+    uint32_t edges_emitted;
+    uint32_t edges_inhibited;
+    uint32_t first_edge_us;
+    uint32_t last_edge_us;
+    uint32_t min_dt_us;
+    uint32_t max_dt_us;
+    uint32_t max_lateness_us;
+    uint32_t late_edges;
+    uint32_t ramp_up_end_us;
+    uint32_t ramp_up_end_edges;
+    uint32_t cruise_end_us;
+    uint32_t cruise_end_edges;
+    bool     lateness_fault;
+    bool     timing_reject;
+} stepgen_char_stats_t;
+
+void stepgen_char_set_time_fn(uint32_t (*now_us_fn)(void));
+void stepgen_char_set_inhibit(uint8_t ax, bool inhibit);
+bool stepgen_char_is_inhibited(uint8_t ax);
+void stepgen_char_reset_stats(uint8_t ax);
+void stepgen_char_get_stats(uint8_t ax, stepgen_char_stats_t *out);
+bool stepgen_char_validate_rate(uint8_t ax, float vmax, float vmin);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

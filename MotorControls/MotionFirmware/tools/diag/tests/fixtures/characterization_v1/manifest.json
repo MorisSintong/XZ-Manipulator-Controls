@@ -1,0 +1,10 @@
+{
+  "capture_id": "synthetic_characterization_v1",
+  "synthetic_fixture": true,
+  "note": "EXPLICITLY SYNTHETIC TEST FIXTURE - NOT PHYSICAL BENCH HARDWARE DATA",
+  "schema_version": 1,
+  "session_mode": "xz",
+  "operator": "synthetic_ci",
+  "independent_reference_id": null,
+  "independent_reference_uncertainty_deg": null
+}
