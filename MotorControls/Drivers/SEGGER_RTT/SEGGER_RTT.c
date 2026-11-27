@@ -1,4 +1,5 @@
 #include "SEGGER_RTT.h"
+#include <stdint.h>
 #include <string.h>
 
 static char _acUpBuffer[BUFFER_SIZE_UP];
@@ -66,6 +67,9 @@ unsigned SEGGER_RTT_Write(unsigned BufferIndex, const void* pBuffer, unsigned Nu
   pRing = &_SEGGER_RTT.aUp[BufferIndex];
   WrOff = pRing->WrOff;
   RdOff = pRing->RdOff;
+  if (WrOff >= pRing->SizeOfBuffer || RdOff >= pRing->SizeOfBuffer) {
+    return 0;
+  }
 
   // Calculate available space
   unsigned Avail;
@@ -108,12 +112,52 @@ unsigned SEGGER_RTT_Write(unsigned BufferIndex, const void* pBuffer, unsigned Nu
       break;
     }
   }
+  __asm volatile ("dmb" ::: "memory");
   pRing->WrOff = WrOff;
   return NumBytes - NumBytesToWrite;
 }
 
 unsigned SEGGER_RTT_WriteString(unsigned BufferIndex, const char* s) {
   return SEGGER_RTT_Write(BufferIndex, s, (unsigned)strlen(s));
+}
+
+unsigned SEGGER_RTT_Read(unsigned BufferIndex, void* pBuffer, unsigned BufferSize) {
+  unsigned NumBytesRead = 0;
+  unsigned WrOff;
+  unsigned RdOff;
+  char* pDst = (char*)pBuffer;
+  SEGGER_RTT_BUFFER_DOWN* pRing;
+
+  if (BufferIndex >= 1 || pBuffer == NULL || BufferSize == 0) {
+    return 0;
+  }
+  pRing = &_SEGGER_RTT.aDown[BufferIndex];
+  RdOff = pRing->RdOff;
+  WrOff = pRing->WrOff;
+  if (WrOff >= pRing->SizeOfBuffer || RdOff >= pRing->SizeOfBuffer) {
+    return 0;
+  }
+
+  while (NumBytesRead < BufferSize && RdOff != WrOff) {
+    unsigned NumContig;
+    if (WrOff > RdOff) {
+      NumContig = WrOff - RdOff;
+    } else {
+      NumContig = pRing->SizeOfBuffer - RdOff;
+    }
+    if (NumContig > (BufferSize - NumBytesRead)) {
+      NumContig = BufferSize - NumBytesRead;
+    }
+    memcpy(pDst + NumBytesRead, pRing->pBuffer + RdOff, NumContig);
+    NumBytesRead += NumContig;
+    RdOff += NumContig;
+    if (RdOff >= pRing->SizeOfBuffer) {
+      RdOff = 0;
+    }
+  }
+  __asm volatile ("dmb" ::: "memory");
+  pRing->RdOff = RdOff;
+  return NumBytesRead;
 }
 
 int SEGGER_RTT_HasKey(void) {

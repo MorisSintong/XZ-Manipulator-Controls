@@ -12,11 +12,11 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Select which firmware profile is built as the primary "MotionFirmware" (.elf/.hex/.bin)
-# Options: "motion_diagnostics" | "stallguard_cli" | "z_bounce_emulation" | "usb_cdc" | "motion_characterization"
+# Options: "motion_diagnostics" | "stallguard_cli" | "z_bounce_emulation" | "usb_cdc" | "motion_characterization" | "as5600_tuner"
 set(FIRMWARE_APP "motion_diagnostics" CACHE STRING
     "Default firmware app profile for MotionFirmware.{elf,hex,bin}")
 set_property(CACHE FIRMWARE_APP PROPERTY STRINGS
-    "motion_diagnostics" "stallguard_cli" "z_bounce_emulation" "usb_cdc" "motion_characterization")
+    "motion_diagnostics" "stallguard_cli" "z_bounce_emulation" "usb_cdc" "motion_characterization" "as5600_tuner")
 
 # Target-side configuration parameters for motion_diagnostics profile
 option(MOTION_DIAG_BOUNDS_CONFIRMED
@@ -44,7 +44,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 project(${CMAKE_PROJECT_NAME})
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE} | Default FIRMWARE_APP: ${FIRMWARE_APP}")
 
-enable_language(C ASM)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+enable_language(C CXX ASM)
 
 # Default executable (used by flash scripts and debuggers)
 add_executable(${CMAKE_PROJECT_NAME})
@@ -54,6 +57,35 @@ add_subdirectory(cmake/stm32cubemx)
 
 # Remove wrong libob.a library dependency when using cpp files
 list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
+list(REMOVE_ITEM CMAKE_CXX_IMPLICIT_LINK_LIBRARIES ob)
+
+# ---------------------------------------------------------------------------
+# Scrutiny Debugger embedded instrumentation library (used by as5600_tuner)
+# ---------------------------------------------------------------------------
+option(ENABLE_SCRUTINY
+    "Fetch and link scrutiny-embedded over RTT in MotionFirmware_AS5600Tuner (set OFF for offline builds)"
+    ON)
+if(ENABLE_SCRUTINY)
+    include(FetchContent)
+    set(SCRUTINY_ENABLE_DATALOGGING 1 CACHE BOOL "" FORCE)
+    set(SCRUTINY_SUPPORT_64BITS 0 CACHE BOOL "" FORCE)
+    set(SCRUTINY_DATALOGGING_MAX_SIGNAL 16 CACHE STRING "" FORCE)
+    set(SCRUTINY_DATALOGGING_BUFFER_32BITS 0 CACHE BOOL "" FORCE)
+    set(SCRUTINY_SUPPORT_PROTECTED_REGIONS 1 CACHE BOOL "" FORCE)
+    set(SCRUTINY_BUILD_CWRAPPER 0 CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        scrutiny-embedded
+        GIT_REPOSITORY https://github.com/scrutinydebugger/scrutiny-embedded.git
+        GIT_TAG        cc7e7705c037caaa24d1c5be122e931200e79003 # v0.7.2
+        GIT_SHALLOW    FALSE
+    )
+    FetchContent_MakeAvailable(scrutiny-embedded)
+    find_program(SCRUTINY_CLI scrutiny)
+    find_program(ARM_CPPFILT arm-none-eabi-c++filt)
+    if(NOT SCRUTINY_CLI OR NOT ARM_CPPFILT)
+        message(WARNING "ENABLE_SCRUTINY is ON but scrutiny CLI (${SCRUTINY_CLI}) or arm-none-eabi-c++filt (${ARM_CPPFILT}) not found; SFD generation will be skipped")
+    endif()
+endif()
 
 set(DRIVERS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers)
 set(SHARED_DEVICE_DRIVERS_SRC
@@ -155,6 +187,19 @@ set(MC_SOURCES
     ${DIAG_DIR}/Src/encoder_unwrap.c
 )
 
+# ---------------------------------------------------------------------------
+# App Profile 6: as5600_tuner (Dedicated Passive AS5600 Alignment & Filter Tuner)
+# ---------------------------------------------------------------------------
+set(AS5600_TUNER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Apps/as5600_tuner)
+set(AS5600_TUNER_SOURCES
+    ${AS5600_TUNER_DIR}/Src/as5600_tuner_app.c
+    ${SG_DIR}/Src/cmd_parse.c
+    ${DIAG_DIR}/Src/encoder_unwrap.c
+)
+if(ENABLE_SCRUTINY)
+    list(APPEND AS5600_TUNER_SOURCES ${AS5600_TUNER_DIR}/Src/as5600_scrutiny_bridge.cpp)
+endif()
+
 # Helper function to configure any firmware executable target
 function(configure_firmware_target target_name app_profile)
     if(NOT TARGET ${target_name})
@@ -204,6 +249,21 @@ function(configure_firmware_target target_name app_profile)
             USE_USB_CDC=1
             STEPGEN_CHARACTERIZATION=1
         )
+    elseif(app_profile STREQUAL "as5600_tuner")
+        set(app_srcs ${AS5600_TUNER_SOURCES})
+        set(app_inc
+            ${AS5600_TUNER_DIR}/Inc
+            ${SG_DIR}/Inc
+            ${DIAG_DIR}/Inc
+        )
+        add_usb_cdc_module(${target_name})
+        target_compile_definitions(${target_name} PRIVATE USE_USB_CDC=1)
+        if(ENABLE_SCRUTINY)
+            target_compile_definitions(${target_name} PRIVATE ENABLE_SCRUTINY=1)
+            # Keep DWARF-4 debug symbols even in Release so scrutiny elf2varmap can extract variables.
+            target_compile_options(${target_name} PRIVATE -gdwarf-4)
+            target_link_libraries(${target_name} scrutiny-embedded)
+        endif()
     else()
         message(FATAL_ERROR "Unknown FIRMWARE_APP profile: ${app_profile}")
     endif()
@@ -219,11 +279,29 @@ function(configure_firmware_target target_name app_profile)
     target_compile_options(${target_name} PRIVATE -Wall -Wextra)
     target_link_libraries(${target_name} stm32cubemx m)
 
-    add_custom_command(TARGET ${target_name} POST_BUILD
-        COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${target_name}> ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.bin
-        COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${target_name}> ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.hex
-        COMMENT "Building binary and intel hex artifacts for ${target_name} (${app_profile})"
-    )
+    if(app_profile STREQUAL "as5600_tuner" AND ENABLE_SCRUTINY AND SCRUTINY_CLI AND ARM_CPPFILT)
+        set(_sfd_work ${CMAKE_CURRENT_BINARY_DIR}/${target_name}_sfd_work)
+        set(_sfd_out  ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.sfd)
+        add_custom_command(TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E rm -rf ${_sfd_work}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${_sfd_work}
+            COMMAND ${SCRUTINY_CLI} elf2varmap $<TARGET_FILE:${target_name}> --cppfilt ${ARM_CPPFILT} --output ${_sfd_work}
+            COMMAND ${SCRUTINY_CLI} get-firmware-id $<TARGET_FILE:${target_name}> --output ${_sfd_work}
+            COMMAND ${SCRUTINY_CLI} tag-firmware-id $<TARGET_FILE:${target_name}> --inplace
+            COMMAND ${SCRUTINY_CLI} make-metadata --output ${_sfd_work} --project-name "XZ-Manipulator-AS5600Tuner" --version "1.0.0" --author "XZ-Manipulator-Controls"
+            COMMAND ${SCRUTINY_CLI} add-alias ${_sfd_work} --file ${AS5600_TUNER_DIR}/as5600_aliases.json
+            COMMAND ${SCRUTINY_CLI} make-sfd ${_sfd_work} ${_sfd_out} --install
+            COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${target_name}> ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.bin
+            COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${target_name}> ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.hex
+            COMMENT "Tagging Scrutiny firmware ID, generating/installing ${_sfd_out}, and building .bin/.hex for ${target_name}"
+        )
+    else()
+        add_custom_command(TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${target_name}> ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.bin
+            COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${target_name}> ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.hex
+            COMMENT "Building binary and intel hex artifacts for ${target_name} (${app_profile})"
+        )
+    endif()
 endfunction()
 
 # 1. Configure default target MotionFirmware according to FIRMWARE_APP
@@ -235,3 +313,4 @@ configure_firmware_target(MotionFirmware_StallGuardCLI "stallguard_cli")
 configure_firmware_target(MotionFirmware_ZBounceEmulation "z_bounce_emulation")
 configure_firmware_target(MotionFirmware_UsbCdc "usb_cdc")
 configure_firmware_target(MotionFirmware_Characterization "motion_characterization")
+configure_firmware_target(MotionFirmware_AS5600Tuner "as5600_tuner")

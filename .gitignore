@@ -227,3 +227,18 @@ fp-info-cache
 .pytest_cache/
 MotorControls/tests/emulation/test_results.json
 
+
+# ------------------------------------------------------------------------------
+# 9. MATLAB & Simulink (MotorControls/matlab/)
+# ------------------------------------------------------------------------------
+slprj/
+sfprj/
+*.asv
+*.autosave
+*.slxc
+*.slx.r20*
+*.slx.autosave
+*.mdl.r20*
+*.mex*
+*.mat
+*.fig

@@ -262,6 +262,15 @@ static int32_t counts_to_usteps_signed(int32_t counts, int8_t sign) {
     return (int32_t)((scaled - (MC_ENC_COUNTS_PER_REV / 2)) / MC_ENC_COUNTS_PER_REV);
 }
 
+static void enc_noise_abort_restore(mc_core_t *mc) {
+    if (mc->active_test != MC_TEST_ENC_NOISE || mc->noise_sf_code == 3U ||
+        mc->hal.enc_set_slow_filter == NULL) {
+        return;
+    }
+    uint16_t rb = 0U;
+    (void)mc->hal.enc_set_slow_filter(mc->hal.ctx, mc->noise_bus, 3U, &rb);
+}
+
 void mc_core_latch_fault(mc_core_t *mc, mc_fault_t fault, bool disable_stage) {
     if (mc == NULL || fault == MC_FAULT_NONE) {
         return;
@@ -286,6 +295,7 @@ void mc_core_latch_fault(mc_core_t *mc, mc_fault_t fault, bool disable_stage) {
     }
     const mc_axis_t prev_axis = mc->armed_axis;
     mc->state = MC_STATE_FAULT;
+    enc_noise_abort_restore(mc);
     mc->active_test = MC_TEST_NONE;
     mc->lease_active = false;
     mc->armed_axis = MC_AXIS_NONE;
@@ -384,6 +394,10 @@ void mc_core_init(mc_core_t *mc, const mc_hal_t *hal) {
     mc->fault = MC_FAULT_NONE;
     mc->opt_stress_s = 60U;
     mc->opt_stress_spi_div = 32U;
+    mc->opt_noise_sf = 3U;        /* SF=2x default (CONF=0x0300) */
+    mc->opt_noise_rate_hz = 500U; /* 2 ms uniform cadence */
+    mc->opt_noise_n = 2048U;
+    mc->opt_noise_hold = false;
 
     for (uint8_t i = 0U; i < MC_MAX_AXES; ++i) {
         mc->policy[i].encoder_sign = 1;
@@ -674,6 +688,173 @@ static void run_static_or_reference(mc_core_t *mc, uint32_t req_id,
               (unsigned long)ok_n, (unsigned long)err_n,
               (unsigned)uw.last_raw, (long)mean_x100, (long)p2p,
               (unsigned)status, (unsigned)agc, (unsigned)mag);
+}
+
+static uint8_t sf_code_to_factor(uint8_t sf_code) {
+    switch (sf_code & 3U) {
+        case 0U: return 16U;
+        case 1U: return 8U;
+        case 2U: return 4U;
+        default: return 2U;
+    }
+}
+
+static bool start_enc_noise(mc_core_t *mc, uint32_t req_id, mc_axis_t axis) {
+    const uint8_t bus = mc_axis_to_enc_bus(mc->session_mode, axis);
+    if (bus == 0xFFU) {
+        emit_reject(mc, req_id, mc_axis_name(axis), "no_shaft_feedback");
+        return false;
+    }
+    if (mc->opt_noise_hold) {
+        if (mc->state != MC_STATE_ARMED || axis != mc->armed_axis) {
+            emit_reject(mc, req_id, mc_axis_name(axis), "axis_not_armed");
+            return false;
+        }
+    } else {
+        if (mc->state != MC_STATE_DISARMED) {
+            emit_reject(mc, req_id, mc_axis_name(axis), "must_be_disarmed");
+            return false;
+        }
+    }
+    uint16_t conf_rb = ENCODER_CONF_EXPECTED;
+    if (mc->hal.enc_set_slow_filter != NULL) {
+        if (!mc->hal.enc_set_slow_filter(mc->hal.ctx, bus, mc->opt_noise_sf, &conf_rb)) {
+            if (mc->hal.enc_set_slow_filter != NULL && mc->opt_noise_sf != 3U) {
+                uint16_t restore_rb = 0U;
+                (void)mc->hal.enc_set_slow_filter(mc->hal.ctx, bus, 3U, &restore_rb);
+            }
+            emit_reject(mc, req_id, mc_axis_name(axis), "conf_write_failed");
+            return false;
+        }
+    }
+    uint8_t status = 0U, agc = 0U;
+    uint16_t mag = 0U;
+    if (mc->hal.enc_read_health != NULL) {
+        (void)mc->hal.enc_read_health(mc->hal.ctx, bus, &status, &agc, &mag);
+    }
+    if ((status & 0x38U) != 0x20U) {
+        if (mc->hal.enc_set_slow_filter != NULL && mc->opt_noise_sf != 3U) {
+            uint16_t dummy = 0U;
+            (void)mc->hal.enc_set_slow_filter(mc->hal.ctx, bus, 3U, &dummy);
+        }
+        emit_json(mc, "result", req_id, mc->trial_id, mc_axis_name(axis),
+                  "\"ok\":false,\"test\":\"enc_noise\",\"reason\":\"bad_magnet_status\","
+                  "\"status\":%u,\"agc\":%u,\"mag\":%u",
+                  (unsigned)status, (unsigned)agc, (unsigned)mag);
+        return false;
+    }
+
+    mc->trial_id++;
+    mc->active_request_id = req_id;
+    mc->active_test = MC_TEST_ENC_NOISE;
+    mc->noise_return_state = mc->state;
+    mc->state = MC_STATE_RUNNING;
+    mc->noise_axis = axis;
+    mc->noise_bus = bus;
+    mc->noise_sf_code = mc->opt_noise_sf & 3U;
+    mc->noise_conf_rb = conf_rb;
+    mc->noise_rate_hz = mc->opt_noise_rate_hz;
+    mc->noise_period_us = 1000000U / mc->opt_noise_rate_hz;
+    mc->noise_next_us = now_us(mc);
+    mc->noise_target_n = mc->opt_noise_n;
+    mc->noise_idx = 0U;
+    mc->noise_ok_n = 0U;
+    mc->noise_err_n = 0U;
+    mc->noise_overruns = 0U;
+    memset(&mc->noise_uw, 0, sizeof(mc->noise_uw));
+    mc->noise_min_c = INT32_MAX;
+    mc->noise_max_c = INT32_MIN;
+    mc->noise_sum_c = 0;
+    mc->noise_status = status;
+    mc->noise_agc = agc;
+    mc->noise_mag = mag;
+    return true;
+}
+
+static void poll_active_enc_noise(mc_core_t *mc) {
+    const uint32_t t_now = now_us(mc);
+    if ((int32_t)(t_now - mc->noise_next_us) < 0) {
+        return;
+    }
+    if ((uint32_t)(t_now - mc->noise_next_us) > mc->noise_period_us) {
+        mc->noise_overruns++;
+        mc->noise_next_us = t_now + mc->noise_period_us;
+    } else {
+        mc->noise_next_us += mc->noise_period_us;
+    }
+
+    uint16_t raw = 0U;
+    uint8_t err = 1U;
+    if (mc->hal.enc_read_raw != NULL) {
+        err = mc->hal.enc_read_raw(mc->hal.ctx, mc->noise_bus, &raw);
+    }
+    const uint32_t idx = mc->noise_idx++;
+    if (err == 0U && raw <= 4095U) {
+        if (!mc->noise_uw.initialized) {
+            enc_unwrap_init(&mc->noise_uw, raw);
+        } else {
+            (void)enc_unwrap_update(&mc->noise_uw, raw);
+        }
+        const int32_t c = mc->noise_uw.total_counts;
+        if (c < mc->noise_min_c) mc->noise_min_c = c;
+        if (c > mc->noise_max_c) mc->noise_max_c = c;
+        mc->noise_sum_c += c;
+        mc->noise_ok_n++;
+        emit_json(mc, "sample", mc->active_request_id, mc->trial_id,
+                  mc_axis_name(mc->noise_axis),
+                  "\"test\":\"enc_noise\",\"idx\":%lu,\"raw\":%u,\"unwrapped\":%ld",
+                  (unsigned long)idx, (unsigned)raw, (long)c);
+        if (mc->state != MC_STATE_RUNNING) {
+            /* TX ring overflow latched MC_FAULT_RING_OVERFLOW; restore SF=2x without clearing fault. */
+            if (mc->hal.enc_set_slow_filter != NULL && mc->noise_sf_code != 3U) {
+                uint16_t rb = 0U;
+                (void)mc->hal.enc_set_slow_filter(mc->hal.ctx, mc->noise_bus, 3U, &rb);
+            }
+            return;
+        }
+    } else {
+        mc->noise_err_n++;
+    }
+
+    if (mc->noise_idx >= mc->noise_target_n) {
+        /* Restore default SF=2x (CONF=0x0300) if modified. */
+        bool restored = true;
+        if (mc->hal.enc_set_slow_filter != NULL && mc->noise_sf_code != 3U) {
+            uint16_t rb = 0U;
+            restored = mc->hal.enc_set_slow_filter(mc->hal.ctx, mc->noise_bus, 3U, &rb);
+        }
+        const int32_t p2p = (mc->noise_ok_n > 0U)
+                                ? (mc->noise_max_c - mc->noise_min_c)
+                                : 0;
+        const int32_t mean_x100 = (mc->noise_ok_n > 0U)
+                                      ? (int32_t)((mc->noise_sum_c * 100LL) /
+                                                  (int64_t)mc->noise_ok_n)
+                                      : 0;
+        const bool ok = (mc->noise_ok_n == mc->noise_target_n) &&
+                        (mc->noise_err_n == 0U) &&
+                        !mc->noise_uw.suspect_alias && restored;
+        emit_json(mc, "result", mc->active_request_id, mc->trial_id,
+                  mc_axis_name(mc->noise_axis),
+                  "\"ok\":%s,\"test\":\"enc_noise\",\"sf\":%u,\"conf\":%u,"
+                  "\"rate_hz\":%lu,\"hold\":%s,\"n\":%lu,\"errors\":%lu,"
+                  "\"overruns\":%lu,\"mean_rel_x100\":%ld,\"p2p_cnt\":%ld,"
+                  "\"status\":%u,\"agc\":%u,\"mag\":%u",
+                  ok ? "true" : "false",
+                  (unsigned)sf_code_to_factor(mc->noise_sf_code),
+                  (unsigned)mc->noise_conf_rb,
+                  (unsigned long)mc->noise_rate_hz,
+                  mc->opt_noise_hold ? "true" : "false",
+                  (unsigned long)mc->noise_ok_n,
+                  (unsigned long)mc->noise_err_n,
+                  (unsigned long)mc->noise_overruns,
+                  (long)mean_x100, (long)p2p,
+                  (unsigned)mc->noise_status, (unsigned)mc->noise_agc,
+                  (unsigned)mc->noise_mag);
+        if (mc->state == MC_STATE_RUNNING) {
+            mc->state = mc->noise_return_state;
+            mc->active_test = MC_TEST_NONE;
+        }
+    }
 }
 
 static void run_spi_rate(mc_core_t *mc, uint32_t req_id, const char *target) {
@@ -1220,6 +1401,47 @@ static void handle_set(mc_core_t *mc, uint32_t req_id, int argc, char *argv[]) {
         emit_ack(mc, req_id, "none", "set");
         return;
     }
+    if (strcmp(key, "noise_sf") == 0) {
+        uint32_t v = 0U;
+        if (!cmd_parse_u32(val, &v)) { emit_reject(mc, req_id, "none", "invalid_value"); return; }
+        if (v == 16U) mc->opt_noise_sf = 0U;
+        else if (v == 8U) mc->opt_noise_sf = 1U;
+        else if (v == 4U) mc->opt_noise_sf = 2U;
+        else if (v == 2U) mc->opt_noise_sf = 3U;
+        else { emit_reject(mc, req_id, "none", "invalid_noise_sf"); return; }
+        emit_ack(mc, req_id, "none", "set");
+        return;
+    }
+    if (strcmp(key, "noise_rate_hz") == 0) {
+        uint32_t v = 0U;
+        if (!cmd_parse_u32(val, &v) || v < 50U || v > 1000U) {
+            emit_reject(mc, req_id, "none", "invalid_noise_rate");
+            return;
+        }
+        mc->opt_noise_rate_hz = v;
+        emit_ack(mc, req_id, "none", "set");
+        return;
+    }
+    if (strcmp(key, "noise_n") == 0) {
+        uint32_t v = 0U;
+        if (!cmd_parse_u32(val, &v) || v < 64U || v > 4096U) {
+            emit_reject(mc, req_id, "none", "invalid_noise_n");
+            return;
+        }
+        mc->opt_noise_n = v;
+        emit_ack(mc, req_id, "none", "set");
+        return;
+    }
+    if (strcmp(key, "noise_hold") == 0) {
+        uint32_t v = 0U;
+        if (!cmd_parse_u32(val, &v) || v > 1U) {
+            emit_reject(mc, req_id, "none", "invalid_value");
+            return;
+        }
+        mc->opt_noise_hold = (v == 1U);
+        emit_ack(mc, req_id, "none", "set");
+        return;
+    }
 
     /* Per-axis keys: SET <key> <axis> <value> */
     if (argc < 5) {
@@ -1408,6 +1630,7 @@ static void handle_disarm(mc_core_t *mc, uint32_t req_id) {
     }
     mc->armed_axis = MC_AXIS_NONE;
     mc->state = MC_STATE_DISARMED;
+    enc_noise_abort_restore(mc);
     mc->active_test = MC_TEST_NONE;
     mc->fault = MC_FAULT_NONE;
     mc->b1_latched = false;
@@ -1577,6 +1800,17 @@ static void handle_line(mc_core_t *mc, char *line) {
             run_spi_rate(mc, req_id, target);
             return;
         }
+        if (strcmp(test, "enc_noise") == 0) {
+            mc_axis_t ax = MC_AXIS_NONE;
+            if (!parse_axis(target, &ax)) {
+                emit_reject(mc, req_id, target, "unknown_axis");
+                return;
+            }
+            if (start_enc_noise(mc, req_id, ax)) {
+                emit_ack(mc, req_id, target, "run_enc_noise");
+            }
+            return;
+        }
 
         /* Motion tests require ARMED on the exact single axis (never both/all). */
         mc_axis_t ax = MC_AXIS_NONE;
@@ -1675,7 +1909,11 @@ void mc_core_poll(mc_core_t *mc) {
     }
 
     if (mc->state == MC_STATE_RUNNING) {
-        poll_active_motion(mc);
+        if (mc->active_test == MC_TEST_ENC_NOISE) {
+            poll_active_enc_noise(mc);
+        } else {
+            poll_active_motion(mc);
+        }
     }
 
     tx_drain(mc);

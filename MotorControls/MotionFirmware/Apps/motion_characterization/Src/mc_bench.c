@@ -407,6 +407,38 @@ static bool hw_enc_set_fast_mode(void *ctx, uint8_t bus, bool fast,
     return true;
 }
 
+static bool hw_enc_set_slow_filter(void *ctx, uint8_t bus, uint8_t sf_code,
+                                   uint16_t *conf_rb) {
+    (void)ctx;
+    if (!enc_ensure_bound(bus) || sf_code > 3U) {
+        return false;
+    }
+    as5600_config_t cfg;
+    if (as5600_default_config(&cfg) != AS5600_OK) {
+        return false;
+    }
+    cfg.power = AS5600_POWER_NORMAL;
+    cfg.hysteresis = AS5600_HYSTERESIS_OFF;
+    cfg.output = AS5600_OUTPUT_ANALOG_FULL;
+    cfg.pwm_frequency = AS5600_PWM_115_HZ;
+    cfg.slow_filter = (as5600_slow_filter_t)sf_code;
+    cfg.fast_filter = AS5600_FAST_FILTER_OFF;
+    cfg.watchdog = false;
+    if (as5600_write_config(&g_enc[bus], &cfg, 5U) != AS5600_OK) {
+        return false;
+    }
+    HAL_Delay(AS5600_POWER_UP_MS);
+    uint8_t bytes[2] = {0U, 0U};
+    if (HAL_I2C_Mem_Read(bus_to_hi2c(bus), (uint16_t)(AS5600_I2C_ADDRESS << 1U),
+                         0x07U, I2C_MEMADD_SIZE_8BIT, bytes, 2U, 5U) != HAL_OK) {
+        return false;
+    }
+    if (conf_rb != NULL) {
+        *conf_rb = (uint16_t)(((uint16_t)bytes[0] << 8U) | bytes[1]);
+    }
+    return true;
+}
+
 /* ------------------------------------------------------------------------- */
 /* TMC2240 SPI & configuration binding                                       */
 /* ------------------------------------------------------------------------- */
@@ -620,6 +652,7 @@ void fw_app_init(void) {
     hal.enc_read_health       = hw_enc_read_health;
     hal.enc_read_sample       = hw_enc_read_sample;
     hal.enc_set_fast_mode     = hw_enc_set_fast_mode;
+    hal.enc_set_slow_filter   = hw_enc_set_slow_filter;
     hal.tmc_configure         = hw_tmc_configure;
     hal.tmc_poll_status       = hw_tmc_poll_status;
     hal.tmc_poll_adc          = hw_tmc_poll_adc;

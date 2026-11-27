@@ -64,6 +64,7 @@ typedef enum {
     MC_TEST_STATIC,
     MC_TEST_REFERENCE,
     MC_TEST_SPI_RATE,
+    MC_TEST_ENC_NOISE,
     MC_TEST_JOG,
     MC_TEST_MOVE,
     MC_TEST_STRESS
@@ -218,6 +219,8 @@ typedef struct {
     uint8_t  (*enc_read_sample)(void *ctx, uint8_t bus, mc_enc_full_t *out);
     bool     (*enc_set_fast_mode)(void *ctx, uint8_t bus, bool fast,
                                   uint32_t *timingr_out);
+    bool     (*enc_set_slow_filter)(void *ctx, uint8_t bus, uint8_t sf_code,
+                                    uint16_t *conf_rb);
 
     /* TMC2240 SPI seam. */
     bool     (*tmc_configure)(void *ctx, uint8_t axis, mc_axis_policy_t *policy);
@@ -271,6 +274,32 @@ typedef struct {
     uint32_t          opt_stress_s;     /* default 60 */
     bool              opt_stress_extra_spi;
     uint32_t          opt_stress_spi_div;
+    uint8_t           opt_noise_sf;     /* 0=16x, 1=8x, 2=4x, 3=2x (default 3) */
+    uint32_t          opt_noise_rate_hz;/* 50..1000 Hz (default 500) */
+    uint32_t          opt_noise_n;      /* 64..4096 samples (default 2048) */
+    bool              opt_noise_hold;   /* true = require ARMED holding torque */
+
+    /* Active enc_noise capture state. */
+    mc_state_t        noise_return_state;
+    mc_axis_t         noise_axis;
+    uint8_t           noise_bus;
+    uint8_t           noise_sf_code;
+    uint16_t          noise_conf_rb;
+    uint32_t          noise_rate_hz;
+    uint32_t          noise_period_us;
+    uint32_t          noise_next_us;
+    uint32_t          noise_target_n;
+    uint32_t          noise_idx;
+    uint32_t          noise_ok_n;
+    uint32_t          noise_err_n;
+    uint32_t          noise_overruns;
+    enc_unwrap_t      noise_uw;
+    int32_t           noise_min_c;
+    int32_t           noise_max_c;
+    int64_t           noise_sum_c;
+    uint8_t           noise_status;
+    uint8_t           noise_agc;
+    uint16_t          noise_mag;
 
     /* Active motion trial supervision state. */
     int32_t           move_start_steps;

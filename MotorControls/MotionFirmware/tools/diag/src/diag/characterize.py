@@ -94,7 +94,42 @@ class CharacterizationClient:
         self.events_log.write(json.dumps(rec, sort_keys=True) + "\n")
         self.events_log.flush()
 
-    def send_command(self, cmd: str, timeout_s: float = 5.0) -> list[dict[str, Any]]:
+    def _pop_record(self) -> dict[str, Any] | None:
+        """Pop one complete JSON line from the RX buffer, log it, and return it."""
+        while b"\n" in self._rx_buf:
+            idx = self._rx_buf.index(b"\n")
+            raw_line = bytes(self._rx_buf[:idx]).decode("utf-8", errors="replace").strip()
+            del self._rx_buf[: idx + 1]
+            if not raw_line:
+                continue
+            try:
+                obj = json.loads(raw_line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(obj, dict):
+                continue
+            self.events_log.write(json.dumps(obj, sort_keys=True) + "\n")
+            self.events_log.flush()
+            return obj
+        return None
+
+    def _next_record(self, deadline: float) -> dict[str, Any] | None:
+        """Return the next record (buffered first, then from serial) or None at deadline."""
+        while True:
+            obj = self._pop_record()
+            if obj is not None:
+                return obj
+            if time.monotonic() >= deadline:
+                return None
+            chunk = self.ser.read(512)
+            if chunk:
+                self.wire_log.write(chunk)
+                self.wire_log.flush()
+                self._rx_buf.extend(chunk)
+            else:
+                time.sleep(0.002)
+
+    def _write_command(self, cmd: str) -> int:
         self._req_id += 1
         rid = self._req_id
         wire = f"{rid} {cmd}\n".encode("ascii")
@@ -103,35 +138,49 @@ class CharacterizationClient:
             written = self.ser.write(wire)
             if written != len(wire):
                 raise OSError("short serial write: uncertain execution")
+        return rid
 
+    def send_command(self, cmd: str, timeout_s: float = 5.0) -> list[dict[str, Any]]:
+        rid = self._write_command(cmd)
         deadline = time.monotonic() + timeout_s
         collected: list[dict[str, Any]] = []
-        while time.monotonic() < deadline:
-            chunk = self.ser.read(512)
-            if chunk:
-                self.wire_log.write(chunk)
-                self.wire_log.flush()
-                self._rx_buf.extend(chunk)
-                while b"\n" in self._rx_buf:
-                    idx = self._rx_buf.index(b"\n")
-                    raw_line = bytes(self._rx_buf[:idx]).decode("utf-8", errors="replace").strip()
-                    del self._rx_buf[: idx + 1]
-                    if not raw_line:
-                        continue
-                    try:
-                        obj = json.loads(raw_line)
-                    except json.JSONDecodeError:
-                        continue
-                    self.events_log.write(json.dumps(obj, sort_keys=True) + "\n")
-                    self.events_log.flush()
-                    collected.append(obj)
-                    if obj.get("request_id") == rid and obj.get("kind") in ("hello", "result"):
-                        return collected
-                    if obj.get("kind") == "event" and obj.get("event") == "fault_latched":
-                        return collected
-            else:
-                time.sleep(0.002)
-        raise TimeoutError(f"Timed out waiting for response to request {rid}: {cmd}")
+        while True:
+            obj = self._next_record(deadline)
+            if obj is None:
+                raise TimeoutError(f"Timed out waiting for response to request {rid}: {cmd}")
+            collected.append(obj)
+            if obj.get("request_id") == rid and obj.get("kind") in ("hello", "result"):
+                return collected
+            if obj.get("kind") == "event" and obj.get("event") == "fault_latched":
+                return collected
+
+    def set_param(self, cmd: str, timeout_s: float = 5.0) -> dict[str, Any]:
+        """Send a SET command and require an ``ok`` result; raise RuntimeError otherwise."""
+        recs = self.send_command(cmd, timeout_s=timeout_s)
+        return _require_ok(recs, cmd)
+
+    def run_until_result(self, cmd: str, test: str, timeout_s: float) -> dict[str, Any]:
+        """Send RUN, require an accepted ack, then wait for the terminal ``test`` result."""
+        deadline = time.monotonic() + timeout_s
+        recs = self.send_command(cmd, timeout_s=timeout_s)
+        ack = _require_ok(recs, cmd)
+        rid = self._req_id
+        if ack.get("status") != "accepted":
+            raise RuntimeError(f"{cmd} not accepted: {ack}")
+        while True:
+            rec = self._next_record(deadline)
+            if rec is None:
+                raise TimeoutError(f"Timed out waiting for terminal {test} result to {cmd}")
+            if rec.get("kind") == "event" and rec.get("event") == "fault_latched":
+                raise RuntimeError(f"Fault latched during {cmd}: {rec}")
+            if (
+                rec.get("kind") == "result"
+                and rec.get("test") == test
+                and rec.get("request_id", rid) == rid
+            ):
+                if rec.get("ok") is not True:
+                    raise RuntimeError(f"{cmd} failed: {rec}")
+                return rec
 
     def send_stop(self) -> None:
         self._keep_enabled = False
@@ -320,6 +369,79 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _require_ok(recs: list[dict[str, Any]], cmd: str) -> dict[str, Any]:
+    """Return the result record from ``recs``; raise RuntimeError unless it has ok is True."""
+    for rec in recs:
+        if rec.get("kind") == "event" and rec.get("event") == "fault_latched":
+            raise RuntimeError(f"Fault latched during {cmd!r}: {rec}")
+    res = next((r for r in reversed(recs) if r.get("kind") == "result"), None)
+    if res is None:
+        raise RuntimeError(f"No result for {cmd!r}: {recs}")
+    if res.get("ok") is not True:
+        reason = res.get("reason") or res.get("error") or res
+        raise RuntimeError(f"{cmd!r} rejected: {reason}")
+    return res
+
+
+def cmd_enc_noise(
+    args: argparse.Namespace,
+    serial_factory: Callable[[str], Any] = open_serial,
+) -> int:
+    out_dir: Path = args.out
+
+    if not 50 <= args.rate_hz <= 1000:
+        raise ValueError(f"--rate-hz must be within [50, 1000], got {args.rate_hz}")
+    if not 64 <= args.samples <= 4096:
+        raise ValueError(f"--samples must be within [64, 4096], got {args.samples}")
+    if args.axis == "theta" and args.session != "theta_fixture":
+        raise ValueError("--axis theta requires --session theta_fixture")
+    sf_values = [int(x.strip()) for x in args.sf.split(",") if x.strip()]
+    for sf in sf_values:
+        if sf not in (2, 4, 8, 16):
+            raise ValueError(f"Unsupported AS5600 slow filter factor: {sf} (use 2,4,8,16)")
+
+    if out_dir.exists():
+        raise FileExistsError(f"Output directory already exists: {out_dir}")
+    out_dir.mkdir(parents=True)
+
+    manifest = {
+        "schema_version": EXPECTED_SCHEMA,
+        "capture_id": out_dir.name,
+        "session_mode": args.session,
+        "stage": "enc_noise",
+        "axis": args.axis,
+        "sf_sweep": sf_values,
+        "rate_hz": args.rate_hz,
+        "samples_per_run": args.samples,
+        "hold": False,
+    }
+    (out_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    client = CharacterizationClient(args.port, out_dir, serial_factory=serial_factory)
+    try:
+        hello = client.send_command("HELLO", timeout_s=3.0)
+        hello_rec = next((r for r in hello if r.get("kind") == "hello"), None)
+        if not hello_rec or hello_rec.get("profile") != EXPECTED_PROFILE:
+            raise RuntimeError(f"Unexpected firmware profile: {hello_rec}")
+        client.set_param(f"SET session {args.session}")
+        client.set_param(f"SET noise_rate_hz {args.rate_hz}")
+        client.set_param(f"SET noise_n {args.samples}")
+        client.set_param("SET noise_hold 0")
+        timeout_s = max(5.0, (args.samples / float(args.rate_hz)) * 2.5 + 3.0)
+        for sf in sf_values:
+            client.set_param(f"SET noise_sf {sf}")
+            res = client.run_until_result(
+                f"RUN enc_noise {args.axis}", "enc_noise", timeout_s=timeout_s
+            )
+            print(f"enc_noise axis={args.axis} sf={sf}x -> {res}")
+    finally:
+        client.close()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="motion-characterize",
@@ -338,6 +460,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_rep = sub.add_parser("report", help="Replay a capture directory without opening serial")
     p_rep.add_argument("run_dir", type=Path)
+
+    p_noise = sub.add_parser(
+        "enc-noise",
+        help="Run uniform-cadence AS5600 noise capture across SF=2/4/8/16 for FFT/filter analysis",
+    )
+    p_noise.add_argument("--port", required=True)
+    p_noise.add_argument("--axis", required=True, choices=("x", "z", "theta"))
+    p_noise.add_argument("--out", required=True, type=Path)
+    p_noise.add_argument("--sf", default="2,4,8,16", help="Comma-separated SF factors (2,4,8,16)")
+    p_noise.add_argument("--rate-hz", type=int, default=500, help="Uniform sample rate (50..1000 Hz)")
+    p_noise.add_argument("--samples", type=int, default=2048, help="Samples per SF setting (64..4096)")
+    p_noise.add_argument("--session", default="xz", choices=("xz", "theta_fixture"))
     return p
 
 
@@ -349,6 +483,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_run(args)
     if args.subcommand == "report":
         return cmd_report(args)
+    if args.subcommand == "enc-noise":
+        return cmd_enc_noise(args)
     raise ValueError(f"Unknown subcommand: {args.subcommand}")
 
 

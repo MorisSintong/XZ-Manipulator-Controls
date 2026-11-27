@@ -37,7 +37,7 @@ extern "C" {
 #define BUFFER_SIZE_UP    (4096)
 #endif
 #ifndef BUFFER_SIZE_DOWN
-#define BUFFER_SIZE_DOWN  (64)
+#define BUFFER_SIZE_DOWN  (256)
 #endif
 
 typedef struct {
@@ -72,6 +72,7 @@ void     SEGGER_RTT_Init(void);
 unsigned SEGGER_RTT_Write(unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
 unsigned SEGGER_RTT_WriteString(unsigned BufferIndex, const char* s);
 int      SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...);
+unsigned SEGGER_RTT_Read(unsigned BufferIndex, void* pBuffer, unsigned BufferSize);
 int      SEGGER_RTT_GetKey(void);
 int      SEGGER_RTT_HasKey(void);
 

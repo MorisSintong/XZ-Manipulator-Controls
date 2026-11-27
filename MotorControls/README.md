@@ -16,6 +16,7 @@ MotorControls/
 ├── MotionFirmware/                  # STM32CubeMX + CMake multi-profile H723 firmware suite
 │   ├── Apps/                        # motion_diagnostics, stallguard_cli & z_bounce_emulation
 │   └── tools/                       # Host Python bench CLI (diag/) & BTT bootloader binary (btt_bootloader/)
+├── matlab/                          # MATLAB/Simulink plant models, analysis scripts & thesis figures
 └── tests/
     └── emulation/                   # Automated STM32 UART protocol verification test suite
 ```

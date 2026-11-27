@@ -1,0 +1,6 @@
+r
+h
+loadfile "build/Release/MotionFirmware_AS5600Tuner.hex"
+r
+g
+q

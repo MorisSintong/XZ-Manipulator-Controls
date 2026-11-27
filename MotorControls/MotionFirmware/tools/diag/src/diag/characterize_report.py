@@ -135,6 +135,47 @@ def quadratic_fit_accel(t_s: list[float], y: list[float]) -> tuple[float | None,
     return 2.0 * c2, rms
 
 
+
+def compute_settle_time_ms(
+    trial_samples: list[dict[str, Any]],
+    last_edge_us: int | None,
+    settle_band_cnt: int = 2,
+) -> float | None:
+    """Compute post-move settle time (ms) from last_edge_us until counts stay within settle_band_cnt."""
+    if last_edge_us is None or last_edge_us <= 0 or not trial_samples:
+        return None
+    raw_t = [int(s.get("t1_us", s.get("t_us", 0))) for s in trial_samples]
+    ext_t = extend_timestamps_us(raw_t)
+    delta = (int(last_edge_us) - (raw_t[0] & 0xFFFFFFFF)) & 0xFFFFFFFF
+    if delta >= 0x80000000:
+        delta -= 0x100000000
+    last_edge_ext = ext_t[0] + delta
+
+    post = [
+        (t_us, int(s["counts"]))
+        for t_us, s in zip(ext_t, trial_samples, strict=True)
+        if t_us >= last_edge_ext
+    ]
+    if len(post) < 2:
+        return None
+
+    tail_n = min(8, max(1, len(post) // 4))
+    final_cnt = statistics.median(c for _, c in post[-tail_n:])
+    band = max(2, int(settle_band_cnt))
+
+    last_out_idx: int | None = None
+    for idx, (_, cnt) in enumerate(post):
+        if abs(cnt - final_cnt) > band:
+            last_out_idx = idx
+
+    if last_out_idx is None:
+        settle_us = max(0, post[0][0] - last_edge_ext)
+    elif last_out_idx == len(post) - 1:
+        return None
+    else:
+        settle_us = max(0, post[last_out_idx + 1][0] - last_edge_ext)
+    return round(settle_us / 1000.0, 2)
+
 def _load_events(events_path: Path) -> list[dict[str, Any]]:
     events: list[dict[str, Any]] = []
     if not events_path.exists():
@@ -387,6 +428,24 @@ def _analyze_motion_trials(
             if slope is not None:
                 meas_speed_steps_s = abs(slope)
 
+        # Peak in-flight |residual_usteps| from samples and/or firmware result summary
+        peak_candidates: list[float] = [
+            abs(float(s["residual_usteps"]))
+            for s in trial_samples
+            if s.get("residual_usteps") is not None
+        ]
+        if res.get("max_moving_err_usteps") is not None:
+            peak_candidates.append(abs(float(res["max_moving_err_usteps"])))
+        peak_abs_res: float | None = round(max(peak_candidates), 3) if peak_candidates else None
+
+        settle_band_cnt = max(2, int(res.get("settle_spread_cnt", 0) or 0))
+        last_edge_raw = res.get("last_edge_us")
+        settle_time_ms = compute_settle_time_ms(
+            trial_samples,
+            int(last_edge_raw) if last_edge_raw is not None else None,
+            settle_band_cnt=settle_band_cnt,
+        )
+
         row = {
             "trial_id": tid,
             "axis": axis,
@@ -397,6 +456,8 @@ def _analyze_motion_trials(
             "delta_counts": delta_cnt,
             "residual_usteps": round(res_usteps, 3),
             "residual_fullsteps_equiv": round(res_usteps / 16.0, 4),
+            "peak_abs_residual_usteps": peak_abs_res,
+            "settle_time_ms": settle_time_ms,
             "requested_speed_steps_s": req_speed,
             "requested_accel_steps_s2": req_accel,
             "measured_speed_steps_s": round(meas_speed_steps_s, 2) if meas_speed_steps_s else None,
@@ -415,6 +476,9 @@ def _analyze_motion_trials(
                 "last_pass_speed_steps_s": None,
                 "first_fail_speed_steps_s": None,
                 "speed_limit_classification": "not_measured",
+                "peak_abs_residual_usteps": None,
+                "max_settle_time_ms": None,
+                "median_settle_time_ms": None,
                 "stress_status": "not_measured",
             }
             continue
@@ -451,6 +515,18 @@ def _analyze_motion_trials(
         else:
             classification = "not_measured"
 
+        passing_all = [r for r in rows if r["ok"]]
+        peak_residuals = [
+            r["peak_abs_residual_usteps"]
+            for r in passing_all
+            if r["peak_abs_residual_usteps"] is not None
+        ]
+        settle_times = [
+            r["settle_time_ms"]
+            for r in passing_all
+            if r["settle_time_ms"] is not None
+        ]
+
         axis_summary[axis] = {
             "mechanical_status": "measured" if rows else "not_measured",
             "trials": len(rows),
@@ -461,6 +537,9 @@ def _analyze_motion_trials(
             "first_fail_speed_steps_s": first_fail,
             "first_fail_reason": first_fail_reason,
             "speed_limit_classification": classification,
+            "peak_abs_residual_usteps": round(max(peak_residuals), 3) if peak_residuals else None,
+            "max_settle_time_ms": round(max(settle_times), 2) if settle_times else None,
+            "median_settle_time_ms": round(statistics.median(settle_times), 2) if settle_times else None,
         }
 
     return trials_rows, axis_summary
@@ -515,6 +594,8 @@ def generate_report(run_dir: Path) -> dict[str, Any]:
         "delta_counts",
         "residual_usteps",
         "residual_fullsteps_equiv",
+        "peak_abs_residual_usteps",
+        "settle_time_ms",
         "requested_speed_steps_s",
         "requested_accel_steps_s2",
         "measured_speed_steps_s",
@@ -589,15 +670,17 @@ def generate_report(run_dir: Path) -> dict[str, Any]:
             "",
             "## Motion Limits & Bracketing",
             "",
-            "| Axis | Status | Classification | Last Pass (steps/s) | First Fail (steps/s) | First Fail Reason |",
-            "|------|--------|----------------|---------------------|----------------------|-------------------|",
+            "| Axis | Status | Classification | Last Pass (steps/s) | First Fail (steps/s) | Peak Residual (usteps) | Max Settle (ms) | First Fail Reason |",
+            "|------|--------|----------------|---------------------|----------------------|------------------------|-----------------|-------------------|",
         ]
     )
     for ax in ("x", "z", "theta"):
         m = axis_motion[ax]
         lines.append(
             f"| `{ax}` | `{m['mechanical_status']}` | `{m['speed_limit_classification']}` | "
-            f"`{m['last_pass_speed_steps_s']}` | `{m['first_fail_speed_steps_s']}` | `{m.get('first_fail_reason') or m.get('reason')}` |"
+            f"`{m['last_pass_speed_steps_s']}` | `{m['first_fail_speed_steps_s']}` | "
+            f"`{m.get('peak_abs_residual_usteps')}` | `{m.get('max_settle_time_ms')}` | "
+            f"`{m.get('first_fail_reason') or m.get('reason')}` |"
         )
 
     lines.extend(["", "## Caveats", ""])
